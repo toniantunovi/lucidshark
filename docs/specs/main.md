@@ -937,7 +937,7 @@ Example:
     "finishedAt": "2025-01-01T10:00:07Z",
     "durationMs": 7123,
     "scanners": [
-      { "name": "trivy", "version": "0.58.1", "dbUpdatedAt": "2025-01-01T07:00:00Z" },
+      { "name": "trivy", "version": "0.68.1", "dbUpdatedAt": "2025-01-01T07:00:00Z" },
       { "name": "checkov", "version": "3.2.346" },
       { "name": "semgrep", "version": "1.102.0" }
     ]
@@ -1523,10 +1523,10 @@ Each scan returns a `ScanResult`:
   "issues": [ { "...Issue..." } ],
   "metadata": {
     "lucidscanVersion": "0.7.0",
-    "trivyVersion": "0.58.1",
+    "trivyVersion": "0.68.1",
     "trivyDbUpdatedAt": "2025-01-10T12:00:00Z",
-    "semgrepVersion": "1.102.0",
-    "checkovVersion": "3.2.346",
+    "semgrepVersion": "1.145.0",
+    "checkovVersion": "3.2.495",
     "scanStartedAt": "...",
     "scanFinishedAt": "...",
     "projectRoot": "/path/to/project"
@@ -1843,7 +1843,7 @@ It does **not** contain scanner binaries, keeping the wheel small (target: < 5 M
 Platform-specific tool bundles are published to GitHub Releases:
 
 ```text
-https://github.com/<org>/lucidscan/releases/download/v{version}/lucidscan-bundle-{platform}-{arch}.tar.gz
+https://github.com/voldeq/lucidscan/releases/download/v{version}/lucidscan-bundle-{platform}-{arch}.tar.gz
 ```
 
 Example bundle names:
@@ -1899,7 +1899,7 @@ The bootstrapper identifies:
 `lucidscan` downloads a platform-specific tarball or zip file from GitHub Releases:
 
 ```text
-https://github.com/<org>/lucidscan/releases/download/v{version}/lucidscan-bundle-{platform}-{arch}.tar.gz
+https://github.com/voldeq/lucidscan/releases/download/v{version}/lucidscan-bundle-{platform}-{arch}.tar.gz
 ```
 
 Each bundle contains:
@@ -2009,9 +2009,9 @@ Example:
 ```json
 {
   "lucidscan": "0.7.0",
-  "trivy": "0.58.1",
-  "semgrep": "1.102.0",
-  "checkov": "3.2.346",
+  "trivy": "0.68.1",
+  "semgrep": "1.145.0",
+  "checkov": "3.2.495",
   "python": "3.11",
   "platform": "linux-amd64",
   "bundleVersion": "2025.01.25"
@@ -2149,19 +2149,27 @@ For each platform, the build process:
    bundle/venv/bin/pip install checkov==${CHECKOV_VERSION}
    ```
 
-6. **Download Trivy binary** — Fetch the pinned Trivy release for the platform:
+6. **Download Trivy binary** — Fetch the pinned Trivy release for the platform from `get.trivy.dev`:
    ```bash
-   # Example for Linux amd64
-   curl -sfL https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz | tar xzf - -C bundle/bin trivy
+   # macOS arm64
+   curl -sfL "https://get.trivy.dev/trivy?type=tar.gz&version=${TRIVY_VERSION}&os=macos&arch=arm64" | tar xzf - -C bundle/bin trivy
+   # macOS amd64
+   curl -sfL "https://get.trivy.dev/trivy?type=tar.gz&version=${TRIVY_VERSION}&os=macos&arch=amd64" | tar xzf - -C bundle/bin trivy
+   # Linux amd64
+   curl -sfL "https://get.trivy.dev/trivy?type=tar.gz&version=${TRIVY_VERSION}&os=linux&arch=amd64" | tar xzf - -C bundle/bin trivy
+   # Linux arm64
+   curl -sfL "https://get.trivy.dev/trivy?type=tar.gz&version=${TRIVY_VERSION}&os=linux&arch=arm64" | tar xzf - -C bundle/bin trivy
+   # Windows amd64
+   curl -sfL "https://get.trivy.dev/trivy?type=zip&version=${TRIVY_VERSION}&os=windows&arch=amd64" -o trivy.zip
    ```
 
 7. **Generate versions.json** — Record all tool versions from `pyproject.toml`:
    ```json
    {
      "lucidscan": "0.7.0",
-     "trivy": "0.58.1",
-     "semgrep": "1.102.0",
-     "checkov": "3.2.346",
+     "trivy": "0.68.1",
+     "semgrep": "1.145.0",
+     "checkov": "3.2.495",
      "python": "3.11",
      "platform": "linux-amd64",
      "bundleVersion": "2025.01.25"

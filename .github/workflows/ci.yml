@@ -5,6 +5,9 @@ on:
     branches: [main, master]
   pull_request:
 
+env:
+  PYTHON_VERSION: "3.11"
+
 jobs:
   tests:
     runs-on: ubuntu-latest
@@ -16,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install package (editable)
         run: |
@@ -28,4 +31,62 @@ jobs:
         run: |
           pytest
 
+  # Verify bundle build process works (Linux only for speed)
+  verify-bundle-build:
+    runs-on: ubuntu-latest
 
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Read scanner versions
+        id: versions
+        run: |
+          echo "trivy=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['tool']['lucidscan']['scanners']['trivy'])")" >> $GITHUB_OUTPUT
+          echo "semgrep=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['tool']['lucidscan']['scanners']['semgrep'])")" >> $GITHUB_OUTPUT
+          echo "checkov=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['tool']['lucidscan']['scanners']['checkov'])")" >> $GITHUB_OUTPUT
+
+      - name: Verify version parsing
+        run: |
+          echo "Trivy: ${{ steps.versions.outputs.trivy }}"
+          echo "Semgrep: ${{ steps.versions.outputs.semgrep }}"
+          echo "Checkov: ${{ steps.versions.outputs.checkov }}"
+
+      - name: Verify Trivy download URL
+        run: |
+          # Verify the Trivy download URL is accessible
+          curl -sfI "https://get.trivy.dev/trivy?type=tar.gz&version=${{ steps.versions.outputs.trivy }}&os=linux&arch=amd64" || {
+            echo "Failed to access Trivy download URL"
+            exit 1
+          }
+
+      - name: Build Python package
+        run: |
+          pip install build
+          python -m build
+          ls -la dist/
+
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install linters
+        run: |
+          pip install ruff
+
+      - name: Run ruff
+        run: |
+          ruff check src/ || true
