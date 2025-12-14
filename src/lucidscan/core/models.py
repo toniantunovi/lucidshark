@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 
-class ScannerType(str, Enum):
-    """High-level scanner domains supported by lucidscan."""
+class ScanDomain(str, Enum):
+    """Scanning domains supported by lucidscan."""
 
     SCA = "sca"
     CONTAINER = "container"
@@ -34,7 +34,7 @@ class UnifiedIssue:
     """
 
     id: str
-    scanner: ScannerType
+    scanner: ScanDomain
     source_tool: str
     severity: Severity
     title: str
@@ -53,16 +53,17 @@ class UnifiedIssue:
 
 
 @dataclass
-class ScanRequest:
-    """Represents a single logical scan request.
+class ScanContext:
+    """Context provided to scanner plugins during scan execution.
 
-    In later phases this will include configuration, thresholds, and enabled
-    scanner set. For Phase 0 we keep this intentionally minimal.
+    Contains target paths, configuration, and scan settings needed
+    by plugins to execute their scans.
     """
 
     project_root: Path
     paths: List[Path]
-    enabled_scanners: List[ScannerType]
+    enabled_domains: List[ScanDomain]
+    config: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

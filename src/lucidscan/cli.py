@@ -9,7 +9,8 @@ from importlib.metadata import version, PackageNotFoundError
 from lucidscan.core.logging import configure_logging, get_logger
 from lucidscan.bootstrap.paths import get_lucidscan_home, LucidscanPaths
 from lucidscan.bootstrap.platform import get_platform_info
-from lucidscan.bootstrap.validation import validate_tools, ToolStatus
+from lucidscan.bootstrap.validation import validate_binary, ToolStatus
+from lucidscan.scanners import discover_scanner_plugins
 
 
 LOGGER = get_logger(__name__)
@@ -106,7 +107,7 @@ def build_parser() -> argparse.ArgumentParser:
 def _handle_status() -> int:
     """Handle --status command.
 
-    Shows scanner plugin status and validation results.
+    Shows scanner plugin status and environment information.
 
     Returns:
         Exit code (0 for success).
@@ -120,25 +121,32 @@ def _handle_status() -> int:
     print(f"Binary cache: {home}/bin/")
     print()
 
-    # Validate tools
-    print("Scanner plugin status:")
-    validation = validate_tools(paths)
+    # Discover plugins via entry points
+    print("Scanner plugins:")
+    plugins = discover_scanner_plugins()
 
-    def _status_symbol(status: ToolStatus) -> str:
-        if status == ToolStatus.PRESENT:
-            return "✓ installed"
-        elif status == ToolStatus.MISSING:
-            return "✗ not downloaded (will download on first use)"
-        else:
-            return "✗ not executable"
+    if plugins:
+        for name, plugin_class in sorted(plugins.items()):
+            try:
+                plugin = plugin_class()
+                domains = ", ".join(d.value.upper() for d in plugin.domains)
+                binary_dir = paths.plugin_bin_dir(name, plugin.get_version())
+                binary_path = binary_dir / name
 
-    print(f"  trivy:    {_status_symbol(validation.trivy)}")
-    print(f"  opengrep: {_status_symbol(validation.opengrep)}")
-    print(f"  checkov:  {_status_symbol(validation.checkov)}")
+                status = validate_binary(binary_path)
+                if status == ToolStatus.PRESENT:
+                    status_str = f"v{plugin.get_version()} installed"
+                else:
+                    status_str = f"v{plugin.get_version()} (not downloaded)"
 
-    if not validation.all_valid():
-        print()
-        print("Scanner binaries are downloaded automatically on first use.")
+                print(f"  {name}: {status_str} [{domains}]")
+            except Exception as e:
+                print(f"  {name}: error loading plugin ({e})")
+    else:
+        print("  No plugins discovered.")
+
+    print()
+    print("Scanner binaries are downloaded automatically on first use.")
 
     return EXIT_SUCCESS
 

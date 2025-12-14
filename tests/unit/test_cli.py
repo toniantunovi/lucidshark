@@ -10,7 +10,6 @@ import pytest
 
 import lucidscan.cli as cli
 from lucidscan.bootstrap.paths import LucidscanPaths
-from lucidscan.bootstrap.validation import ToolStatus
 
 
 class TestBuildParser:
@@ -56,7 +55,7 @@ class TestMainCommand:
 
 
 class TestStatusFlag:
-    """Tests for --status CLI flag (tool validation)."""
+    """Tests for --status CLI flag."""
 
     def test_status_flag_exists(self) -> None:
         parser = cli.build_parser()
@@ -65,27 +64,43 @@ class TestStatusFlag:
             for a in parser._actions
         )
 
-    def test_status_shows_tool_validation(self, capsys, tmp_path: Path) -> None:
-        """Test that --status shows scanner plugin status."""
+    def test_status_shows_plugin_info(self, capsys, tmp_path: Path) -> None:
+        """Test that --status shows scanner plugin information."""
         home = tmp_path / ".lucidscan"
         home.mkdir(parents=True)
 
         with patch("lucidscan.cli.get_lucidscan_home", return_value=home):
-            with patch("lucidscan.cli.validate_tools") as mock_validate:
-                from lucidscan.bootstrap.validation import ToolValidationResult
+            exit_code = cli.main(["--status"])
 
-                mock_validate.return_value = ToolValidationResult(
-                    trivy=ToolStatus.PRESENT,
-                    opengrep=ToolStatus.MISSING,
-                    checkov=ToolStatus.NOT_EXECUTABLE,
-                )
+            captured = capsys.readouterr()
+            assert "scanner plugins" in captured.out.lower()
+            assert exit_code == 0
 
-                exit_code = cli.main(["--status"])
+    def test_status_shows_discovered_plugins(self, capsys, tmp_path: Path) -> None:
+        """Test that --status shows plugins discovered via entry points."""
+        home = tmp_path / ".lucidscan"
+        home.mkdir(parents=True)
 
-                captured = capsys.readouterr()
-                assert "trivy" in captured.out.lower()
-                assert "opengrep" in captured.out.lower()
-                assert "checkov" in captured.out.lower()
+        with patch("lucidscan.cli.get_lucidscan_home", return_value=home):
+            exit_code = cli.main(["--status"])
+
+            captured = capsys.readouterr()
+            # Trivy plugin should be discovered via entry points
+            assert "trivy" in captured.out.lower()
+            assert "sca" in captured.out.lower()
+            assert exit_code == 0
+
+    def test_status_shows_plugin_not_downloaded(self, capsys, tmp_path: Path) -> None:
+        """Test that --status shows 'not downloaded' for plugins without binary."""
+        home = tmp_path / ".lucidscan"
+        home.mkdir(parents=True)
+
+        with patch("lucidscan.cli.get_lucidscan_home", return_value=home):
+            exit_code = cli.main(["--status"])
+
+            captured = capsys.readouterr()
+            assert "not downloaded" in captured.out.lower()
+            assert exit_code == 0
 
     def test_status_shows_platform_info(self, capsys, tmp_path: Path) -> None:
         """Test that --status shows platform information."""

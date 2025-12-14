@@ -1,21 +1,51 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import List
 
-from lucidscan.core.models import ScanRequest, UnifiedIssue
+from lucidscan.core.models import ScanContext, ScanDomain, UnifiedIssue
 
 
-class ScannerAdapter(ABC):
-    """Abstract base class for all scanner adapters.
+class ScannerPlugin(ABC):
+    """Base class for all scanner plugins.
 
-    Concrete implementations (Trivy, Checkov, Semgrep, etc.) will be added in
-    later phases. For Phase 0 we only define the interface.
+    Each scanner plugin wraps an underlying security tool and exposes it
+    through a common interface. Plugins are self-contained and manage
+    their own binary lifecycle.
     """
 
+    @property
     @abstractmethod
-    def run(self, request: ScanRequest) -> List[UnifiedIssue]:
-        """Execute a scan for the given request and return unified issues."""
-        raise NotImplementedError
+    def name(self) -> str:
+        """Plugin identifier (e.g., 'trivy', 'opengrep')."""
+
+    @property
+    @abstractmethod
+    def domains(self) -> List[ScanDomain]:
+        """Scan domains this plugin supports (SCA, SAST, IAC, CONTAINER)."""
+
+    @abstractmethod
+    def ensure_binary(self) -> Path:
+        """Ensure the scanner binary is available, downloading if needed.
+
+        Returns:
+            Path to the scanner binary.
+        """
+
+    @abstractmethod
+    def get_version(self) -> str:
+        """Return the version of the underlying scanner."""
+
+    @abstractmethod
+    def scan(self, context: ScanContext) -> List[UnifiedIssue]:
+        """Execute scan and return normalized issues.
+
+        Args:
+            context: Scan context containing target paths and configuration.
+
+        Returns:
+            List of unified issues found during the scan.
+        """
 
 

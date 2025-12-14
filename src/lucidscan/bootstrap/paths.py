@@ -87,7 +87,7 @@ class LucidscanPaths:
         """Get the binary directory for a specific plugin version.
 
         Args:
-            plugin_name: Name of the plugin (trivy, opengrep, checkov).
+            plugin_name: Name of the plugin (e.g., 'trivy', 'opengrep').
             version: Version string.
 
         Returns:
@@ -95,52 +95,16 @@ class LucidscanPaths:
         """
         return self.bin_dir / plugin_name / version
 
-    @property
-    def trivy_bin(self) -> Path:
-        """Path to the trivy binary (uses 'current' symlink or first available version)."""
-        trivy_dir = self.bin_dir / "trivy"
-        current_link = trivy_dir / "current"
-        if current_link.exists():
-            return current_link / "trivy"
-        # Fallback: find any version directory
-        if trivy_dir.exists():
-            for version_dir in trivy_dir.iterdir():
-                if version_dir.is_dir() and version_dir.name != "current":
-                    return version_dir / "trivy"
-        return trivy_dir / "trivy"  # Fallback path
+    def plugin_cache_dir(self, plugin_name: str) -> Path:
+        """Get the cache directory for a specific plugin.
 
-    @property
-    def opengrep_bin(self) -> Path:
-        """Path to the opengrep binary (uses 'current' symlink or first available version)."""
-        opengrep_dir = self.bin_dir / "opengrep"
-        current_link = opengrep_dir / "current"
-        if current_link.exists():
-            return current_link / "opengrep"
-        # Fallback: find any version directory
-        if opengrep_dir.exists():
-            for version_dir in opengrep_dir.iterdir():
-                if version_dir.is_dir() and version_dir.name != "current":
-                    return version_dir / "opengrep"
-        return opengrep_dir / "opengrep"  # Fallback path
+        Args:
+            plugin_name: Name of the plugin.
 
-    @property
-    def checkov_bin(self) -> Path:
-        """Path to the checkov binary in its virtualenv."""
-        checkov_dir = self.bin_dir / "checkov"
-        current_link = checkov_dir / "current"
-        if current_link.exists():
-            return current_link / "venv" / "bin" / "checkov"
-        # Fallback: find any version directory
-        if checkov_dir.exists():
-            for version_dir in checkov_dir.iterdir():
-                if version_dir.is_dir() and version_dir.name != "current":
-                    return version_dir / "venv" / "bin" / "checkov"
-        return checkov_dir / "venv" / "bin" / "checkov"  # Fallback path
-
-    @property
-    def trivy_cache(self) -> Path:
-        """Path to Trivy cache directory."""
-        return self.cache_dir / "trivy"
+        Returns:
+            Path to the plugin's cache directory.
+        """
+        return self.cache_dir / plugin_name
 
     def ensure_directories(self) -> None:
         """Create all required directories if they don't exist."""
@@ -150,7 +114,6 @@ class LucidscanPaths:
             self.cache_dir,
             self.config_dir,
             self.logs_dir,
-            self.trivy_cache,
         ]
         for directory in directories:
             directory.mkdir(parents=True, exist_ok=True)

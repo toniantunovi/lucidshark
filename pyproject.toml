@@ -20,6 +20,9 @@ dev = ["pytest>=7.0"]
 [project.scripts]
 lucidscan = "lucidscan.cli:main"
 
+[project.entry-points."lucidscan.scanners"]
+trivy = "lucidscan.scanners.trivy:TrivyScanner"
+
 # Default scanner plugin versions
 # These are the source of truth for the build process
 [tool.lucidscan.scanners]

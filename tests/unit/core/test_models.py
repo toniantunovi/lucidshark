@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from lucidscan.core.models import ScanRequest, ScanResult, ScannerType, Severity, UnifiedIssue
+from lucidscan.core.models import ScanContext, ScanDomain, ScanResult, Severity, UnifiedIssue
 
 
 def test_unified_issue_minimal_construction() -> None:
     issue = UnifiedIssue(
         id="test-1",
-        scanner=ScannerType.SCA,
+        scanner=ScanDomain.SCA,
         source_tool="trivy",
         severity=Severity.HIGH,
         title="Example issue",
@@ -18,19 +18,19 @@ def test_unified_issue_minimal_construction() -> None:
     )
 
     assert issue.id == "test-1"
-    assert issue.scanner is ScannerType.SCA
+    assert issue.scanner is ScanDomain.SCA
     assert issue.severity is Severity.HIGH
     assert issue.scanner_metadata == {}
 
 
-def test_scan_request_and_result_roundtrip() -> None:
+def test_scan_context_and_result_roundtrip() -> None:
     project_root = Path("/tmp/example")
     paths = [project_root / "src"]
 
-    request = ScanRequest(project_root=project_root, paths=paths, enabled_scanners=[ScannerType.SCA])
+    context = ScanContext(project_root=project_root, paths=paths, enabled_domains=[ScanDomain.SCA])
     issue = UnifiedIssue(
         id="issue-1",
-        scanner=ScannerType.SCA,
+        scanner=ScanDomain.SCA,
         source_tool="trivy",
         severity=Severity.LOW,
         title="Low severity issue",
@@ -39,7 +39,7 @@ def test_scan_request_and_result_roundtrip() -> None:
 
     result = ScanResult(issues=[issue])
 
-    assert request.enabled_scanners == [ScannerType.SCA]
+    assert context.enabled_domains == [ScanDomain.SCA]
     assert result.issues[0].id == "issue-1"
     assert result.schema_version.startswith("0.")
 
