@@ -106,7 +106,7 @@ jobs:
           FROM python:3.11-slim
 
           # Install system dependencies
-          RUN apt-get update && apt-get install -y curl unzip && rm -rf /var/lib/apt/lists/*
+          RUN apt-get update && apt-get install -y curl unzip git && rm -rf /var/lib/apt/lists/*
 
           # Create lucidscan directories
           RUN mkdir -p /root/.lucidscan/bin/trivy/${{ steps.versions.outputs.trivy }} \
