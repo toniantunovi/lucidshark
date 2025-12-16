@@ -1,4 +1,4 @@
-# lucidscan
+# LucidScan
 
 [![CI](https://github.com/voldeq/lucidscan/actions/workflows/ci.yml/badge.svg)](https://github.com/voldeq/lucidscan/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/voldeq/lucidscan/graph/badge.svg)](https://codecov.io/gh/voldeq/lucidscan)
@@ -138,7 +138,3 @@ pytest tests/
 ## Documentation
 
 See [docs/main.md](docs/main.md) for the full specification.
-
-## License
-
-Apache-2.0 - Copyright 2025 Voldeq GmbH, Zollikofen, Switzerland
