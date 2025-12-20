@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import sys
 from datetime import datetime, timezone
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional
 
@@ -16,6 +17,12 @@ from lucidscan.core.models import (
     ScanResult,
     UnifiedIssue,
 )
+from lucidscan.config import (
+    LucidScanConfig,
+    load_config,
+    DEFAULT_PLUGINS,
+)
+from lucidscan.config.loader import ConfigError
 from lucidscan.bootstrap.paths import get_lucidscan_home, LucidscanPaths
 from lucidscan.bootstrap.platform import get_platform_info
 from lucidscan.bootstrap.validation import validate_binary, ToolStatus
@@ -73,8 +80,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--format",
         choices=["json", "table", "sarif", "summary"],
-        default="json",
-        help="Output format (default: json).",
+        default=None,
+        help="Output format (default: json, or as specified in config file).",
     )
 
     # Status flag
@@ -136,6 +143,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Exit with code 1 if issues at or above this severity are found.",
     )
 
+    # Configuration
+    parser.add_argument(
+        "--config",
+        metavar="PATH",
+        type=Path,
+        help="Path to config file (default: .lucidscan.yml in project root).",
+    )
+
+    # List scanners command
+    parser.add_argument(
+        "--list-scanners",
+        action="store_true",
+        help="List all available scanner plugins and exit.",
+    )
+
     return parser
 
 
@@ -186,31 +208,182 @@ def _handle_status() -> int:
     return EXIT_SUCCESS
 
 
-def _get_enabled_domains(args: argparse.Namespace) -> List[ScanDomain]:
-    """Determine which scan domains are enabled based on CLI arguments."""
-    domains: List[ScanDomain] = []
+def _handle_list_scanners() -> int:
+    """Handle --list-scanners command.
 
-    if args.all:
-        # Enable all domains we have plugins for
-        domains = [ScanDomain.SCA, ScanDomain.CONTAINER, ScanDomain.SAST, ScanDomain.IAC]
+    Lists all available scanner plugins with their domains.
+
+    Returns:
+        Exit code (0 for success).
+    """
+    plugins = discover_scanner_plugins()
+
+    print("Available scanner plugins:")
+    print()
+
+    if plugins:
+        for name, plugin_class in sorted(plugins.items()):
+            try:
+                plugin = plugin_class()
+                domains = ", ".join(d.value.upper() for d in plugin.domains)
+                version_str = plugin.get_version()
+                print(f"  {name}")
+                print(f"    Domains: {domains}")
+                print(f"    Version: {version_str}")
+                print()
+            except Exception as e:
+                print(f"  {name}: error loading plugin ({e})")
+                print()
     else:
-        if args.sca:
-            domains.append(ScanDomain.SCA)
-        if args.container:
-            domains.append(ScanDomain.CONTAINER)
-        if args.iac:
-            domains.append(ScanDomain.IAC)
-        if args.sast:
-            domains.append(ScanDomain.SAST)
+        print("  No plugins discovered.")
+        print()
+        print("Install plugins via pip, e.g.: pip install lucidscan-snyk")
 
-    return domains
+    return EXIT_SUCCESS
 
 
-def _run_scan(args: argparse.Namespace) -> ScanResult:
-    """Execute the scan based on CLI arguments.
+def cli_args_to_config_overrides(args: argparse.Namespace) -> Dict[str, Any]:
+    """Convert CLI arguments to config override dict.
+
+    CLI arguments take precedence over config file values.
 
     Args:
         args: Parsed CLI arguments.
+
+    Returns:
+        Dictionary of config overrides.
+    """
+    overrides: Dict[str, Any] = {}
+
+    # Domain toggles - only set if explicitly provided on CLI
+    scanners: Dict[str, Dict[str, Any]] = {}
+
+    if args.all:
+        # Enable all domains
+        for domain in ["sca", "sast", "iac", "container"]:
+            scanners[domain] = {"enabled": True}
+    else:
+        if args.sca:
+            scanners["sca"] = {"enabled": True}
+        if args.sast:
+            scanners["sast"] = {"enabled": True}
+        if args.iac:
+            scanners["iac"] = {"enabled": True}
+        if args.container:
+            scanners["container"] = {"enabled": True}
+
+    # Container images go into container scanner options
+    if args.images:
+        if "container" not in scanners:
+            scanners["container"] = {}
+        scanners["container"]["enabled"] = True
+        scanners["container"]["images"] = args.images
+
+    if scanners:
+        overrides["scanners"] = scanners
+
+    # Fail-on threshold
+    if args.fail_on:
+        overrides["fail_on"] = args.fail_on
+
+    # Note: output.format is handled in main() to allow config file to set default
+    # We don't add it here because args.format always has a default value
+
+    return overrides
+
+
+def _get_enabled_domains_from_config(
+    config: LucidScanConfig,
+    cli_args: argparse.Namespace,
+) -> List[ScanDomain]:
+    """Determine which scan domains are enabled.
+
+    If CLI flags (--sca, --sast, etc.) are provided, use those.
+    Otherwise, use domains enabled in config file.
+
+    Args:
+        config: Loaded configuration.
+        cli_args: Parsed CLI arguments.
+
+    Returns:
+        List of enabled ScanDomain values.
+    """
+    # Check if any domain flags were explicitly set on CLI
+    cli_domains_set = any([
+        cli_args.sca,
+        cli_args.sast,
+        cli_args.iac,
+        cli_args.container,
+        cli_args.all,
+    ])
+
+    if cli_domains_set:
+        # CLI flags take precedence - use what was explicitly requested
+        domains: List[ScanDomain] = []
+        if cli_args.all:
+            domains = [ScanDomain.SCA, ScanDomain.SAST, ScanDomain.IAC, ScanDomain.CONTAINER]
+        else:
+            if cli_args.sca:
+                domains.append(ScanDomain.SCA)
+            if cli_args.sast:
+                domains.append(ScanDomain.SAST)
+            if cli_args.iac:
+                domains.append(ScanDomain.IAC)
+            if cli_args.container:
+                domains.append(ScanDomain.CONTAINER)
+        return domains
+
+    # Use config file settings
+    enabled_domains: List[ScanDomain] = []
+    for domain_name in config.get_enabled_domains():
+        try:
+            enabled_domains.append(ScanDomain(domain_name))
+        except ValueError:
+            LOGGER.warning(f"Unknown domain in config: {domain_name}")
+
+    return enabled_domains
+
+
+def _filter_ignored_paths(
+    paths: List[Path],
+    ignore_patterns: List[str],
+    root: Path,
+) -> List[Path]:
+    """Filter paths that match any ignore pattern.
+
+    Args:
+        paths: List of paths to filter.
+        ignore_patterns: Glob patterns for files/directories to ignore.
+        root: Project root for relative path calculation.
+
+    Returns:
+        Filtered list of paths.
+    """
+    if not ignore_patterns:
+        return paths
+
+    result: List[Path] = []
+    for path in paths:
+        try:
+            rel_path = path.relative_to(root)
+        except ValueError:
+            rel_path = path
+
+        rel_str = str(rel_path)
+        if not any(fnmatch(rel_str, pattern) for pattern in ignore_patterns):
+            result.append(path)
+        else:
+            LOGGER.debug(f"Ignoring path: {rel_path}")
+
+    return result
+
+
+def _run_scan(args: argparse.Namespace, config: LucidScanConfig) -> ScanResult:
+    """Execute the scan based on CLI arguments and config.
+
+    Args:
+        args: Parsed CLI arguments.
+        config: Loaded configuration.
 
     Returns:
         ScanResult containing all issues found.
@@ -221,19 +394,20 @@ def _run_scan(args: argparse.Namespace) -> ScanResult:
     if not project_root.exists():
         raise FileNotFoundError(f"Path does not exist: {project_root}")
 
-    enabled_domains = _get_enabled_domains(args)
+    enabled_domains = _get_enabled_domains_from_config(config, args)
     if not enabled_domains:
         LOGGER.warning("No scan domains enabled")
         return ScanResult()
 
-    # Build scan context
-    config: Dict[str, Any] = {}
-    if args.images:
-        config["container_images"] = args.images
+    # Apply ignore patterns to paths
+    paths = [project_root]
+    if config.ignore:
+        paths = _filter_ignored_paths(paths, config.ignore, project_root)
 
+    # Build scan context with typed config
     context = ScanContext(
         project_root=project_root,
-        paths=[project_root],
+        paths=paths,
         enabled_domains=enabled_domains,
         config=config,
     )
@@ -241,22 +415,15 @@ def _run_scan(args: argparse.Namespace) -> ScanResult:
     all_issues: List[UnifiedIssue] = []
     scanners_used: List[Dict[str, Any]] = []
 
-    # Map domains to scanner plugins
-    domain_to_scanner = {
-        ScanDomain.SCA: "trivy",
-        ScanDomain.CONTAINER: "trivy",
-        ScanDomain.SAST: "opengrep",
-        ScanDomain.IAC: "checkov",
-    }
-
-    # Collect unique scanners needed
+    # Collect unique scanners needed based on config
     needed_scanners: set[str] = set()
     for domain in enabled_domains:
-        scanner_name = domain_to_scanner.get(domain)
+        # Get plugin from config, falling back to defaults
+        scanner_name = config.get_plugin_for_domain(domain.value)
         if scanner_name:
             needed_scanners.add(scanner_name)
         else:
-            LOGGER.warning(f"No scanner available for domain: {domain.value}")
+            LOGGER.warning(f"No scanner plugin configured for domain: {domain.value}")
 
     # Run each scanner
     for scanner_name in needed_scanners:
@@ -361,22 +528,52 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     if args.status:
         return _handle_status()
 
-    # Scanner execution
-    if any([args.sca, args.container, args.iac, args.sast, args.all]):
-        try:
-            result = _run_scan(args)
+    if args.list_scanners:
+        return _handle_list_scanners()
 
-            # Get reporter plugin
-            reporter = get_reporter_plugin(args.format)
+    # Load configuration
+    project_root = Path(args.path).resolve()
+    cli_overrides = cli_args_to_config_overrides(args)
+
+    try:
+        config = load_config(
+            project_root=project_root,
+            cli_config_path=args.config,
+            cli_overrides=cli_overrides,
+        )
+    except ConfigError as e:
+        LOGGER.error(str(e))
+        return EXIT_INVALID_USAGE
+
+    # Check if we should run a scan (CLI flags or config file enables domains)
+    cli_scan_requested = any([args.sca, args.container, args.iac, args.sast, args.all])
+    config_has_enabled_domains = bool(config.get_enabled_domains())
+
+    if cli_scan_requested or config_has_enabled_domains:
+        try:
+            result = _run_scan(args, config)
+
+            # Determine output format: CLI > config > default (json)
+            if args.format:
+                # CLI explicitly specified format
+                output_format = args.format
+            elif config.output.format:
+                # Use config file format
+                output_format = config.output.format
+            else:
+                # Default to json
+                output_format = "json"
+            reporter = get_reporter_plugin(output_format)
             if not reporter:
-                LOGGER.error(f"Reporter plugin '{args.format}' not found")
+                LOGGER.error(f"Reporter plugin '{output_format}' not found")
                 return EXIT_SCANNER_ERROR
 
             # Write output to stdout
             reporter.report(result, sys.stdout)
 
-            # Check severity threshold for exit code
-            if _check_severity_threshold(result, args.fail_on):
+            # Check severity threshold - CLI overrides config
+            threshold = args.fail_on if args.fail_on else config.fail_on
+            if _check_severity_threshold(result, threshold):
                 return EXIT_ISSUES_FOUND
 
             return EXIT_SUCCESS
@@ -386,6 +583,9 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
             return EXIT_INVALID_USAGE
         except Exception as e:
             LOGGER.error(f"Scan failed: {e}")
+            if args.debug:
+                import traceback
+                traceback.print_exc()
             return EXIT_SCANNER_ERROR
 
     # If no scanners are selected, show help to guide users.

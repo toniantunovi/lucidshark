@@ -266,18 +266,19 @@ lucidscan --fail-on high           # CI gate
 Project-level configuration via `.lucidscan.yml`:
 
 ```yaml
+fail_on: medium
+
+ignore:
+  - "vendor/**"
+  - "tests/**"
+
 scanners:
   sca:
     enabled: true
   sast:
     enabled: true
-    rulesets: ["security", "best-practices"]
-
-severity_threshold: medium
-
-ignore:
-  - path: "vendor/**"
-  - rule: "generic.secrets.*"
+    ruleset:
+      - auto
 ```
 
 #### 2.7.3 CI/CD Integration
@@ -2693,21 +2694,27 @@ The CLI loads configuration in this order:
 
 1. CLI flags (highest precedence).
 2. `.lucidscan.yml` in project root.
-3. Global config in `~/.lucidscan/config/user-config.yml`.
+3. Global config in `~/.lucidscan/config/config.yml`.
 4. Built-in defaults (lowest precedence).
 
 Example `.lucidscan.yml`:
 
 ```yaml
-sca: true
-sast: true
-iac: false
-failOn: medium
+fail_on: medium
+
 ignore:
-  - "tests/"
+  - "tests/**"
   - "**/*.md"
-opengrep:
-  ruleset: "p/ci"
+
+scanners:
+  sca:
+    enabled: true
+  sast:
+    enabled: true
+    ruleset:
+      - p/ci
+  iac:
+    enabled: false
 ```
 
 ### 11.9 Ignore System
@@ -2845,62 +2852,70 @@ This ensures:
 
 ### 12.2 Configuration File Format
 
-The configuration file is YAML and supports the following top-level keys:
+The configuration file is YAML and supports a plugin-centric design where:
+- Core configuration is validated by the framework
+- Plugin-specific options are passed through without validation (plugins handle their own config)
+- Third-party plugins work automatically without core changes
 
 ```yaml
-sca: true
-sast: true
-iac: true
+# Core configuration (validated by framework)
+fail_on: high              # Severity threshold for exit code 1
 
-failOn: medium
-
-ignore:
-  - "tests/"
+ignore:                    # Global ignore patterns (glob syntax)
+  - "tests/**"
+  - "node_modules/**"
   - "*.md"
 
-opengrep:
-  ruleset: "p/default"
-  additionalRules:
-    - "rules/custom-security.yml"
-
-trivy:
-  skipDbUpdate: false
-  ignoreUnfixed: true
-
-checkov:
-  softFail: false
-  framework:
-    - terraform
-    - kubernetes
-
-ai:
-  explanations: false
-
 output:
-  format: table
+  format: json             # json | table | sarif | summary
+
+# Scanner configuration (per-domain, plugin-specific options pass through)
+scanners:
+  sca:
+    enabled: true
+    plugin: trivy          # Which plugin serves this domain (default: trivy)
+    # Plugin-specific options (passed to TrivyScanner):
+    ignore_unfixed: true
+    severity:
+      - CRITICAL
+      - HIGH
+
+  sast:
+    enabled: true
+    plugin: opengrep       # Default SAST plugin
+    ruleset:
+      - auto
+    timeout: 300
+
+  iac:
+    enabled: true
+    plugin: checkov
+    framework:
+      - terraform
+      - kubernetes
+    skip_checks:
+      - CKV_AWS_23
+
+  container:
+    enabled: false
+    plugin: trivy
+    images: []
+
+# Enricher configuration (future)
+enrichers:
+  ai:
+    enabled: false
 ```
 
 Every field is optional. `lucidscan` provides sensible defaults.
 
 ### 12.3 Core Keys
 
-#### 12.3.1 `sca`, `sast`, `iac`
+Core keys are validated by the framework. Unknown keys generate warnings with typo suggestions.
 
-Boolean values enabling or disabling specific scanners.
+#### 12.3.1 `fail_on`
 
-Example:
-
-```yaml
-sca: true
-sast: false
-iac: true
-```
-
-If none are defined, `--all` is assumed.
-
-#### 12.3.2 `failOn`
-
-Controls exit code severity threshold.
+Controls exit code severity threshold. When issues at or above this severity are found, lucidscan exits with code 1.
 
 Valid values:
 
@@ -2908,272 +2923,300 @@ Valid values:
 - `high`
 - `medium`
 - `low`
-- `info`
-- `none` (always exit 0)
 
 Example:
 
 ```yaml
-failOn: high
+fail_on: high
 ```
 
-Used heavily in CI.
+Used heavily in CI pipelines to fail builds on security issues.
 
-#### 12.3.3 `ignore`
+#### 12.3.2 `ignore`
 
-List of file or directory patterns to exclude.
+List of file or directory patterns to exclude from scanning. Uses Python's `fnmatch` glob syntax.
 
 Supports:
 
 - Globs (e.g., `*.md`).
-- Directories (e.g., `tests/`).
-- Recursive wildcards (e.g., `**/generated/*`).
-- Negation rules (e.g., `!src/keep-this.js`).
+- Directories (e.g., `tests/**`).
+- Recursive wildcards (e.g., `**/generated/**`).
 
 Example:
 
 ```yaml
 ignore:
-  - "dist/"
+  - ".venv/**"
+  - "node_modules/**"
   - "**/*.lock"
   - "*.md"
 ```
 
-These patterns are merged with `.lucidscanignore` (if present).
+#### 12.3.3 `output`
 
-### 12.4 OpenGrep Configuration
-
-OpenGrep-specific config is nested under `opengrep`.
-
-#### 12.4.1 `ruleset`
-
-One of:
-
-- OpenGrep built-in packs (e.g., `p/security-audit`, `p/r2c`).
-- Multiple rulepacks possible.
-
-Example:
-
-```yaml
-opengrep:
-  ruleset:
-    - "p/security-audit"
-    - "p/secrets"
-```
-
-#### 12.4.2 `additionalRules`
-
-Allows teams to specify project-level rules:
-
-```yaml
-opengrep:
-  additionalRules:
-    - "opengrep/custom/*.yml"
-```
-
-#### 12.4.3 `timeout`
-
-Override OpenGrep scan timeout:
-
-```yaml
-opengrep:
-  timeout: 120
-```
-
-### 12.5 Trivy Configuration (SCA)
-
-Trivy-specific settings fall under `trivy`.
-
-#### 12.5.1 `skipDbUpdate`
-
-For speed or reproducibility:
-
-```yaml
-trivy:
-  skipDbUpdate: true
-```
-
-#### 12.5.2 `ignoreUnfixed`
-
-Ignore vulnerabilities without fixes:
-
-```yaml
-trivy:
-  ignoreUnfixed: true
-```
-
-#### 12.5.3 `severity`
-
-Filter severity levels:
-
-```yaml
-trivy:
-  severity:
-    - HIGH
-    - CRITICAL
-```
-
-### 12.6 Checkov Configuration (IaC)
-
-Checkov options live under `checkov`.
-
-#### 12.6.1 `softFail`
-
-Warn instead of failing the pipeline:
-
-```yaml
-checkov:
-  softFail: true
-```
-
-#### 12.6.2 `framework`
-
-Restrict scanning to specific frameworks:
-
-```yaml
-checkov:
-  framework:
-    - terraform
-    - kubernetes
-```
-
-#### 12.6.3 `skipChecks`
-
-Ignore specific checks:
-
-```yaml
-checkov:
-  skipChecks:
-    - CKV_AWS_23
-    - CKV_GCP_19
-```
-
-### 12.7 AI Configuration
-
-The AIExplainer enricher plugin is optional and disabled by default. The configuration schema supports a toggle:
-
-```yaml
-ai:
-  explanations: true
-```
-
-Future versions may support:
-
-- Local caching.
-- Remote or LLM API inference.
-- Severity-aware explanation.
-
-### 12.8 Output Configuration
-
-Control presentation:
+Controls output presentation.
 
 ```yaml
 output:
-  format: json     # json | table | sarif
-  colors: true
+  format: json     # json | table | sarif | summary
 ```
 
-Defaults:
+The `--format` CLI flag overrides this setting.
 
-- Local: `table`.
-- CI: `json`.
+#### 12.3.4 `scanners`
 
-### 12.9 Environment Variables
+Per-domain scanner configuration. Each domain (`sca`, `sast`, `iac`, `container`) can be configured independently.
 
-`lucidscan` respects environment variables for scripting, CI, and automation:
+```yaml
+scanners:
+  sca:
+    enabled: true           # Enable/disable this domain
+    plugin: trivy           # Which plugin serves this domain
+    # ... plugin-specific options
+```
+
+See Section 12.4 for scanner configuration details.
+
+### 12.4 Scanner Configuration
+
+Scanner configuration uses a plugin-centric design where:
+- Each domain (`sca`, `sast`, `iac`, `container`) has its own section under `scanners:`
+- The `enabled` key controls whether the domain is active
+- The `plugin` key specifies which scanner plugin to use (defaults provided)
+- Additional keys are plugin-specific options passed through to the scanner
+
+#### 12.4.1 Default Plugin Mapping
+
+When `plugin:` is not specified, these defaults are used:
+
+| Domain     | Default Plugin |
+|------------|----------------|
+| `sca`      | `trivy`        |
+| `container`| `trivy`        |
+| `sast`     | `opengrep`     |
+| `iac`      | `checkov`      |
+
+#### 12.4.2 SCA Scanner Configuration (Trivy)
+
+```yaml
+scanners:
+  sca:
+    enabled: true
+    plugin: trivy              # Can be swapped for third-party plugins
+    # Trivy-specific options:
+    ignore_unfixed: true       # Ignore vulnerabilities without fixes
+    skip_db_update: false      # Skip vulnerability database update
+    severity:                  # Filter by severity levels
+      - CRITICAL
+      - HIGH
+```
+
+#### 12.4.3 SAST Scanner Configuration (OpenGrep)
+
+```yaml
+scanners:
+  sast:
+    enabled: true
+    plugin: opengrep
+    # OpenGrep-specific options:
+    ruleset:                   # Rulesets to use
+      - auto                   # Auto-detect based on project languages
+      - p/security-audit       # Or specify registry rulesets
+    timeout: 300               # Scan timeout in seconds
+```
+
+#### 12.4.4 IaC Scanner Configuration (Checkov)
+
+```yaml
+scanners:
+  iac:
+    enabled: true
+    plugin: checkov
+    # Checkov-specific options:
+    framework:                 # Restrict to specific frameworks
+      - terraform
+      - kubernetes
+    skip_checks:               # Ignore specific checks
+      - CKV_AWS_23
+      - CKV_GCP_19
+```
+
+#### 12.4.5 Container Scanner Configuration (Trivy)
+
+```yaml
+scanners:
+  container:
+    enabled: true
+    plugin: trivy
+    images:                    # Container images to scan
+      - "myapp:latest"
+      - "ghcr.io/org/image:v1.0"
+    # Trivy-specific options:
+    ignore_unfixed: true
+    severity:
+      - CRITICAL
+      - HIGH
+```
+
+### 12.5 Third-Party Plugin Example
+
+The plugin-centric design enables third-party scanner plugins to work without core changes:
+
+```yaml
+# After: pip install lucidscan-snyk
+scanners:
+  sca:
+    plugin: snyk               # Uses SnykScanner instead of Trivy
+    api_token: ${SNYK_TOKEN}   # Environment variable expansion
+    org: my-organization       # Plugin-specific options
+```
+
+### 12.6 Plugin-Specific Options
+
+Plugin-specific options are not validated by the framework - they are passed through to the plugin. This allows:
+- Third-party plugins to define their own configuration schema
+- Future plugin updates without requiring core changes
+- Backwards compatibility with existing configurations
+
+Each plugin should document its supported options. The framework only validates core keys (`fail_on`, `ignore`, `output`, `scanners`, `enrichers`).
+
+### 12.7 Enricher Configuration
+
+Enrichers are plugins that enhance scan results (e.g., AI-powered explanations). Configuration is under the `enrichers:` section:
+
+```yaml
+enrichers:
+  ai:
+    enabled: false
+    # provider: anthropic
+    # send_code_snippets: false
+```
+
+Enricher configuration follows the same plugin-centric design as scanners - framework validates existence of the enricher key, but specific options are passed through to the enricher plugin.
+
+### 12.8 Output Configuration
+
+Control output presentation. The `--format` CLI flag overrides config file settings.
+
+```yaml
+output:
+  format: json     # json | table | sarif | summary
+```
+
+Default output format is `json`.
+
+### 12.9 Environment Variable Expansion
+
+Configuration values support environment variable expansion using shell-like syntax:
+
+```yaml
+scanners:
+  sca:
+    plugin: snyk
+    api_token: ${SNYK_TOKEN}           # Required variable
+    org: ${SNYK_ORG:-my-default-org}   # With default value
+```
+
+Supported syntax:
+- `${VAR}` - Expands to variable value, empty string if unset
+- `${VAR:-default}` - Uses default value if variable is unset
+
+This enables secure handling of API tokens and other secrets without hardcoding them in configuration files.
+
+### 12.10 Runtime Environment Variables
+
+`lucidscan` respects these environment variables for scripting, CI, and automation:
 
 | Variable                | Purpose                                   |
 |-------------------------|-------------------------------------------|
-| `lucidscan_CONFIG`       | Path to config file.                      |
-| `lucidscan_HOME`         | Override default `~/.lucidscan` directory.  |
-| `lucidscan_DEBUG`        | Enable debug logs.                        |
-| `lucidscan_NO_COLOR`     | Disable colored output.                   |
-| `lucidscan_SKIP_DB_UPDATE` | Global override for Trivy DB updates.  |
+| `LUCIDSCAN_HOME`        | Override default `~/.lucidscan` directory.|
+| `LUCIDSCAN_DEBUG`       | Enable debug logs.                        |
 
 Example:
 
 ```bash
-lucidscan_SKIP_DB_UPDATE=1 lucidscan --sca
+LUCIDSCAN_HOME=/custom/path lucidscan --sca
 ```
 
-### 12.10 Merging Rules
+### 12.11 Merging Rules
 
-Configuration merging works as follows:
+Configuration merging uses deep merge with later sources overriding earlier:
 
 1. Start with built-in defaults.
-2. Overlay global config (`~/.lucidscan/config/user-config.yml`).
+2. Overlay global config (`~/.lucidscan/config/config.yml`).
 3. Overlay project config (`.lucidscan.yml`).
 4. Override with CLI flags.
 
-This makes the system predictable and transparent.
+For dictionaries (like `scanners`), keys are merged recursively. For lists, the overlay replaces the base entirely.
 
-### 12.11 Configuration Validation
+### 12.12 Configuration Validation
 
-Invalid configuration entries:
-
-- Generate a clear error.
-- List the invalid keys.
-- Show examples of correct syntax.
-
-Example:
+Unknown configuration keys generate warnings with typo suggestions:
 
 ```text
-Invalid key 'scann' in .lucidscan.yml
-Did you mean 'sca'?
+Warning: Unknown key 'fail_ob' in .lucidscan.yml (did you mean 'fail_on'?)
 ```
 
-This prevents silent misconfiguration.
+The framework validates core keys but allows unknown keys (with warnings) to support:
+- Future compatibility
+- Plugin-specific options that the framework doesn't know about
+- Gradual migration between config versions
 
-### 12.12 Minimal Configuration Example
+### 12.13 Minimal Configuration Example
 
 ```yaml
-sca: true
-sast: true
-iac: false
-failOn: medium
+fail_on: high
 
-ignore:
-  - "tests/"
+scanners:
+  sca:
+    enabled: true
 ```
 
-### 12.13 Full Configuration Example
+### 12.14 Full Configuration Example
 
 ```yaml
-sca: true
-sast: true
-iac: true
-
-failOn: high
+fail_on: high
 
 ignore:
-  - "dist/"
-  - "**/*.md"
-
-opengrep:
-  ruleset:
-    - "p/security-audit"
-    - "p/secrets"
-  additionalRules:
-    - "rules/custom/*.yml"
-
-trivy:
-  skipDbUpdate: false
-  ignoreUnfixed: true
-
-checkov:
-  softFail: false
-  framework:
-    - terraform
-    - kubernetes
-  skipChecks:
-    - CKV_AWS_23
-
-ai:
-  explanations: true
+  - ".venv/**"
+  - "node_modules/**"
+  - "tests/**"
 
 output:
-  format: table
-  colors: true
+  format: json
+
+scanners:
+  sca:
+    enabled: true
+    plugin: trivy
+    ignore_unfixed: true
+    severity:
+      - CRITICAL
+      - HIGH
+
+  sast:
+    enabled: true
+    plugin: opengrep
+    ruleset:
+      - auto
+
+  iac:
+    enabled: true
+    plugin: checkov
+    framework:
+      - terraform
+      - kubernetes
+    skip_checks:
+      - CKV_AWS_23
+
+  container:
+    enabled: false
+    plugin: trivy
+    images: []
+
+enrichers:
+  ai:
+    enabled: false
 ```
 
 ## 13. CI/CD Integration

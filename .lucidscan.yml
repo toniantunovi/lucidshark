@@ -1,0 +1,23 @@
+# Test config file
+fail_on: high
+
+ignore:
+  - ".venv/**"
+  - "tests/**"
+
+output:
+  format: summary
+
+scanners:
+  sca:
+    enabled: true
+    ignore_unfixed: true
+    severity:
+      - CRITICAL
+      - HIGH
+  sast:
+    enabled: false
+  iac:
+    enabled: false
+  container:
+    enabled: false

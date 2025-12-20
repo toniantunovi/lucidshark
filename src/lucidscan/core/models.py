@@ -3,7 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
+
+if TYPE_CHECKING:
+    from lucidscan.config.models import LucidScanConfig
 
 
 class ScanDomain(str, Enum):
@@ -63,7 +66,20 @@ class ScanContext:
     project_root: Path
     paths: List[Path]
     enabled_domains: List[ScanDomain]
-    config: Dict[str, Any] = field(default_factory=dict)
+    config: "LucidScanConfig" = None  # type: ignore[assignment]
+
+    def get_scanner_options(self, domain: str) -> Dict[str, Any]:
+        """Get plugin-specific options for a domain.
+
+        Args:
+            domain: Domain name (sca, sast, iac, container).
+
+        Returns:
+            Dictionary of plugin-specific options.
+        """
+        if self.config is None:
+            return {}
+        return self.config.get_scanner_options(domain)
 
 
 @dataclass

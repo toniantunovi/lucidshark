@@ -170,6 +170,9 @@ class CheckovScanner(ScannerPlugin):
         Returns:
             List of unified issues from the IaC scan.
         """
+        # Get IaC-specific config options
+        iac_config = context.get_scanner_options("iac")
+
         # Build command
         cmd = [
             str(binary),
@@ -180,13 +183,13 @@ class CheckovScanner(ScannerPlugin):
         ]
 
         # Add framework filter if specified in config
-        frameworks = context.config.get("checkov_frameworks")
+        frameworks = iac_config.get("framework", [])
         if frameworks:
             for framework in frameworks:
                 cmd.extend(["--framework", framework])
 
         # Add skip checks if specified
-        skip_checks = context.config.get("checkov_skip_checks", [])
+        skip_checks = iac_config.get("skip_checks", [])
         if skip_checks:
             cmd.extend(["--skip-check", ",".join(skip_checks)])
 

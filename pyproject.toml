@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lucidscan"
-version = "0.1.6"
+version = "0.1.7"
 description = "LucidScan unified security scanner CLI"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,7 +12,7 @@ license = { text = "Apache-2.0" }
 authors = [
   { name = "Voldeq GmbH", email = "toni.antunovic@voldeq.com" }
 ]
-dependencies = ["lucidscan"]
+dependencies = ["PyYAML>=6.0"]
 
 [project.optional-dependencies]
 dev = ["pytest>=7.0"]

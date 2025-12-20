@@ -149,7 +149,8 @@ class TrivyScanner(ScannerPlugin):
 
         if ScanDomain.CONTAINER in context.enabled_domains:
             # Container scanning uses image targets from config
-            image_targets = context.config.get("container_images", [])
+            container_config = context.get_scanner_options("container")
+            image_targets = container_config.get("images", [])
             for image in image_targets:
                 issues.extend(self._run_image_scan(binary, image, cache_dir))
 
@@ -168,6 +169,9 @@ class TrivyScanner(ScannerPlugin):
         Returns:
             List of unified issues from the filesystem scan.
         """
+        # Get SCA-specific config options
+        sca_config = context.get_scanner_options("sca")
+
         cmd = [
             str(binary),
             "fs",
@@ -175,8 +179,20 @@ class TrivyScanner(ScannerPlugin):
             "--format", "json",
             "--quiet",
             "--scanners", "vuln",
-            str(context.project_root),
         ]
+
+        # Apply config options
+        if sca_config.get("ignore_unfixed", False):
+            cmd.append("--ignore-unfixed")
+
+        if sca_config.get("skip_db_update", False):
+            cmd.append("--skip-db-update")
+
+        severity = sca_config.get("severity")
+        if severity and isinstance(severity, list):
+            cmd.extend(["--severity", ",".join(severity)])
+
+        cmd.append(str(context.project_root))
 
         LOGGER.debug(f"Running: {' '.join(cmd)}")
 

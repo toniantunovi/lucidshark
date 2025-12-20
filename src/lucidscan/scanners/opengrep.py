@@ -163,8 +163,15 @@ class OpenGrepScanner(ScannerPlugin):
         Returns:
             List of unified issues from the SAST scan.
         """
+        # Get SAST-specific config options
+        sast_config = context.get_scanner_options("sast")
+
         # Get ruleset configuration
-        ruleset = context.config.get("opengrep_rules", "auto")
+        ruleset_list = sast_config.get("ruleset", ["auto"])
+        if isinstance(ruleset_list, list) and ruleset_list:
+            ruleset = ruleset_list[0]  # Use first ruleset
+        else:
+            ruleset = "auto"
 
         cmd = [
             str(binary),
@@ -172,6 +179,11 @@ class OpenGrepScanner(ScannerPlugin):
             "--json",
             "--quiet",
         ]
+
+        # Add timeout if specified
+        timeout = sast_config.get("timeout")
+        if timeout:
+            cmd.extend(["--timeout", str(timeout)])
 
         # Add ruleset if specified (auto uses default rules)
         if ruleset and ruleset != "auto":
