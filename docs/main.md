@@ -2977,6 +2977,32 @@ scanners:
 
 See Section 12.4 for scanner configuration details.
 
+#### 12.3.5 `enrichers`
+
+Enricher plugin configuration. Each enricher can be enabled/disabled and configured with plugin-specific options.
+
+```yaml
+enrichers:
+  ai:
+    enabled: false
+    provider: anthropic
+```
+
+See Section 12.7 for enricher configuration details.
+
+#### 12.3.6 `pipeline`
+
+Pipeline execution configuration controlling parallelism and enricher ordering.
+
+```yaml
+pipeline:
+  enrichers:
+    - ai
+  max_workers: 4
+```
+
+See Section 12.8 for pipeline configuration details.
+
 ### 12.4 Scanner Configuration
 
 Scanner configuration uses a plugin-centric design where:
@@ -3078,7 +3104,7 @@ Plugin-specific options are not validated by the framework - they are passed thr
 - Future plugin updates without requiring core changes
 - Backwards compatibility with existing configurations
 
-Each plugin should document its supported options. The framework only validates core keys (`fail_on`, `ignore`, `output`, `scanners`, `enrichers`).
+Each plugin should document its supported options. The framework only validates core keys (`fail_on`, `ignore`, `output`, `scanners`, `enrichers`, `pipeline`).
 
 ### 12.7 Enricher Configuration
 
@@ -3094,7 +3120,27 @@ enrichers:
 
 Enricher configuration follows the same plugin-centric design as scanners - framework validates existence of the enricher key, but specific options are passed through to the enricher plugin.
 
-### 12.8 Output Configuration
+### 12.8 Pipeline Configuration
+
+The `pipeline` section controls scan execution behavior:
+
+```yaml
+pipeline:
+  enrichers:
+    - ai
+    - epss
+  max_workers: 4
+```
+
+#### `enrichers` (list)
+
+Order in which enrichers run after scanning. Each enricher receives the output of the previous one. If not specified, enrichers run in the order they appear in the `enrichers:` section.
+
+#### `max_workers` (integer)
+
+Maximum number of parallel scanner workers. Default: `4`. Scanners run concurrently when multiple domains are enabled (e.g., `--all`). Use `--sequential` CLI flag to disable parallelism for debugging.
+
+### 12.9 Output Configuration
 
 Control output presentation. The `--format` CLI flag overrides config file settings.
 
@@ -3105,7 +3151,7 @@ output:
 
 Default output format is `json`.
 
-### 12.9 Environment Variable Expansion
+### 12.10 Environment Variable Expansion
 
 Configuration values support environment variable expansion using shell-like syntax:
 
@@ -3123,7 +3169,7 @@ Supported syntax:
 
 This enables secure handling of API tokens and other secrets without hardcoding them in configuration files.
 
-### 12.10 Runtime Environment Variables
+### 12.11 Runtime Environment Variables
 
 `lucidscan` respects these environment variables for scripting, CI, and automation:
 
@@ -3138,7 +3184,7 @@ Example:
 LUCIDSCAN_HOME=/custom/path lucidscan --sca
 ```
 
-### 12.11 Merging Rules
+### 12.12 Merging Rules
 
 Configuration merging uses deep merge with later sources overriding earlier:
 
@@ -3149,7 +3195,7 @@ Configuration merging uses deep merge with later sources overriding earlier:
 
 For dictionaries (like `scanners`), keys are merged recursively. For lists, the overlay replaces the base entirely.
 
-### 12.12 Configuration Validation
+### 12.13 Configuration Validation
 
 Unknown configuration keys generate warnings with typo suggestions:
 
@@ -3162,7 +3208,7 @@ The framework validates core keys but allows unknown keys (with warnings) to sup
 - Plugin-specific options that the framework doesn't know about
 - Gradual migration between config versions
 
-### 12.13 Minimal Configuration Example
+### 12.14 Minimal Configuration Example
 
 ```yaml
 fail_on: high
@@ -3172,7 +3218,7 @@ scanners:
     enabled: true
 ```
 
-### 12.14 Full Configuration Example
+### 12.15 Full Configuration Example
 
 ```yaml
 fail_on: high
@@ -3217,6 +3263,11 @@ scanners:
 enrichers:
   ai:
     enabled: false
+
+pipeline:
+  enrichers:
+    - ai  # Order in which enrichers run
+  max_workers: 4  # Parallel scanner workers
 ```
 
 ## 13. CI/CD Integration
