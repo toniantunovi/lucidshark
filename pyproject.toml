@@ -12,6 +12,38 @@ license = { text = "Apache-2.0" }
 authors = [
   { name = "Voldeq GmbH", email = "toni.antunovic@voldeq.com" }
 ]
+keywords = [
+  "security",
+  "scanner",
+  "devsecops",
+  "sast",
+  "sca",
+  "iac",
+  "container",
+  "vulnerability",
+  "trivy",
+  "semgrep",
+  "checkov",
+  "cli",
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Information Technology",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: Apache Software License",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Security",
+  "Topic :: Software Development :: Quality Assurance",
+  "Topic :: Software Development :: Testing",
+  "Typing :: Typed",
+]
 dependencies = ["PyYAML>=6.0", "pathspec>=0.12.0"]
 
 [project.optional-dependencies]

@@ -1,0 +1,146 @@
+name: 'LucidScan Security Scan'
+description: 'Run LucidScan security scans (SCA, SAST, IaC, Container) with unified output'
+author: 'Voldeq GmbH'
+
+branding:
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  scan-types:
+    description: 'Comma-separated scan types: sca, sast, iac, container, or all'
+    required: false
+    default: 'all'
+  fail-on:
+    description: 'Fail if issues at this severity or higher are found: critical, high, medium, low'
+    required: false
+    default: ''
+  format:
+    description: 'Output format: table, json, summary, sarif'
+    required: false
+    default: 'table'
+  image:
+    description: 'Container image to scan (for container scans)'
+    required: false
+    default: ''
+  config:
+    description: 'Path to .lucidscan.yml config file'
+    required: false
+    default: ''
+  working-directory:
+    description: 'Directory to scan'
+    required: false
+    default: '.'
+  version:
+    description: 'LucidScan version to use (default: latest)'
+    required: false
+    default: 'latest'
+  sarif-file:
+    description: 'Path to write SARIF output (enables GitHub Code Scanning integration)'
+    required: false
+    default: ''
+
+outputs:
+  exit-code:
+    description: 'LucidScan exit code (0=success, 1=issues found, 2=scanner error)'
+    value: ${{ steps.scan.outputs.exit-code }}
+  issues-found:
+    description: 'Whether security issues were found (true/false)'
+    value: ${{ steps.scan.outputs.issues-found }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install LucidScan
+      shell: bash
+      run: |
+        if [ "${{ inputs.version }}" = "latest" ]; then
+          pip install lucidscan
+        else
+          pip install "lucidscan==${{ inputs.version }}"
+        fi
+
+    - name: Build scan command
+      id: build-command
+      shell: bash
+      run: |
+        CMD="lucidscan"
+
+        # Parse scan types
+        SCAN_TYPES="${{ inputs.scan-types }}"
+        if [ "$SCAN_TYPES" = "all" ]; then
+          CMD="$CMD --all"
+        else
+          IFS=',' read -ra TYPES <<< "$SCAN_TYPES"
+          for type in "${TYPES[@]}"; do
+            type=$(echo "$type" | xargs)  # trim whitespace
+            case "$type" in
+              sca) CMD="$CMD --sca" ;;
+              sast) CMD="$CMD --sast" ;;
+              iac) CMD="$CMD --iac" ;;
+              container) CMD="$CMD --container" ;;
+            esac
+          done
+        fi
+
+        # Add optional flags
+        if [ -n "${{ inputs.fail-on }}" ]; then
+          CMD="$CMD --fail-on ${{ inputs.fail-on }}"
+        fi
+
+        if [ -n "${{ inputs.format }}" ]; then
+          CMD="$CMD --format ${{ inputs.format }}"
+        fi
+
+        if [ -n "${{ inputs.image }}" ]; then
+          CMD="$CMD --image ${{ inputs.image }}"
+        fi
+
+        if [ -n "${{ inputs.config }}" ]; then
+          CMD="$CMD --config ${{ inputs.config }}"
+        fi
+
+        echo "command=$CMD" >> $GITHUB_OUTPUT
+
+    - name: Run LucidScan
+      id: scan
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        set +e
+        ${{ steps.build-command.outputs.command }}
+        EXIT_CODE=$?
+        set -e
+
+        echo "exit-code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+        if [ $EXIT_CODE -eq 1 ]; then
+          echo "issues-found=true" >> $GITHUB_OUTPUT
+        else
+          echo "issues-found=false" >> $GITHUB_OUTPUT
+        fi
+
+        # Exit with the original code to fail the step if needed
+        exit $EXIT_CODE
+
+    - name: Generate SARIF output
+      if: inputs.sarif-file != ''
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      run: |
+        # Re-run with SARIF format to generate the file
+        set +e
+        ${{ steps.build-command.outputs.command }} --format sarif > "${{ inputs.sarif-file }}" 2>/dev/null || true
+        set -e
+
+    - name: Upload SARIF to GitHub Code Scanning
+      if: inputs.sarif-file != ''
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.sarif-file }}
+      continue-on-error: true
