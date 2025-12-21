@@ -740,11 +740,13 @@ The tool MUST support an optional config file `.lucidscan.yml` including:
 
 #### 5.6.2 Inline Ignores
 
-The framework MUST support inline ignore annotations (where supported by the underlying scanner), such as:
+The framework supports inline ignore annotations natively through each scanner:
 
-- OpenGrep inline comments.
-- Checkov skip annotations.
-- Custom ignore IDs.
+- **OpenGrep/Semgrep**: `# nosemgrep` or `# nosemgrep: rule-id` comments
+- **Checkov**: `# checkov:skip=CKV_XXX:reason` annotations
+- **Trivy**: `.trivyignore` file for CVE-level ignores
+
+These annotations are handled by the underlying scanners; lucidscan passes through results unchanged.
 
 ### 5.7 Extensibility Requirements
 
@@ -922,16 +924,23 @@ The resolved project root and scan path are passed to the orchestrator and scann
 
 #### 6.3.2 Ignore Rules & Effective Scan Set
 
-The CLI computes an **effective scan set** of files and directories by applying multiple layers of ignore rules:
+The CLI computes an **effective scan set** by applying ignore patterns from multiple sources:
 
-- **Project-level ignore file**
-  - Respect a project-specific ignore file (e.g., `.lucidscanignore`) for excluding paths and file patterns from scans.
-- **VCS ignores**
-  - Fall back to `.gitignore` rules when applicable to avoid scanning build artifacts and generated content.
-- **CLI-level excludes**
-  - Support additional excludes via flags (e.g., `--exclude node_modules/`, `--exclude dist/`, large binary directories).
+- **`.lucidscanignore`** file in project root (gitignore-style syntax)
+- **`ignore`** section in `.lucidscan.yml` configuration
 
-Scanner adapters receive only the effective scan set, reducing noise and improving performance.
+Patterns support full gitignore syntax via the `pathspec` library:
+- `**` recursive globs (e.g., `**/test_*.py`, `vendor/**`)
+- `!` negation patterns (e.g., `*.log` followed by `!important.log`)
+- `#` comments for documentation
+- Directory patterns with trailing `/` (e.g., `node_modules/`)
+
+Ignore patterns are passed to scanner plugins via their native CLI flags:
+- **Trivy**: `--skip-dirs`, `--skip-files`
+- **OpenGrep**: `--exclude`
+- **Checkov**: `--skip-path`
+
+This approach ensures efficient filtering within each scanner's file discovery mechanism.
 
 #### 6.3.3 Security Considerations (Local-Only)
 
@@ -2547,19 +2556,23 @@ Everything is flag-driven to keep the CLI small and memorable.
 
 | Command / Flag               | Description                                              |
 |-----------------------------|----------------------------------------------------------|
-| `--all`                     | Run all scanners (default behavior).                     |
-| `--sca`                     | Run Trivy dependency analysis.                           |
-| `--sast`                    | Run OpenGrep static analysis.                             |
-| `--iac`                     | Run Checkov IaC scanning.                                |
-| `--path <dir>`              | Scan a specific directory (default: current directory).  |
-| `--format table|json|sarif` | Select output format.                                    |
-| `--fail-on <severity>`      | Exit with non-zero code if issues ≥ severity.           |
-| `--skip-db-update`          | Skip Trivy DB update for speed / reproducibility.        |
-| `--ignore-file <file>`      | Additional ignore file.                                  |
-| `--config <file>`           | Load `.lucidscan.yml` from a custom path.                  |
-| `--debug`                   | Verbose logs for troubleshooting.                        |
-| `--version`                 | Show tool + scanner versions.                            |
-| `--clear-cache [tool]`      | Clear cached scanner binaries.                           |
+| `--all`                     | Enable all scanner types (SCA, SAST, IaC, Container).    |
+| `--sca`                     | Scan dependencies for known vulnerabilities (Trivy).     |
+| `--sast`                    | Static application security testing (OpenGrep).          |
+| `--iac`                     | Scan Infrastructure-as-Code (Checkov).                   |
+| `--container`               | Scan container images for vulnerabilities.               |
+| `--image <ref>`             | Container image to scan (can be specified multiple times).|
+| `<path>`                    | Path to scan (default: current directory).               |
+| `--format table|json|sarif|summary` | Select output format.                            |
+| `--fail-on <severity>`      | Exit with code 1 if issues ≥ severity.                   |
+| `--config <file>`           | Load config from a custom path.                          |
+| `--sequential`              | Disable parallel scanner execution (for debugging).      |
+| `--debug`                   | Enable debug logging.                                    |
+| `--verbose`                 | Enable verbose (info-level) logging.                     |
+| `--quiet`                   | Reduce logging output to errors only.                    |
+| `--version`                 | Show lucidscan version and exit.                         |
+| `--status`                  | Show scanner plugin status and installed versions.       |
+| `--list-scanners`           | List all available scanner plugins and exit.             |
 
 **Internal maintenance commands** (hidden by default in help):
 
@@ -2719,14 +2732,28 @@ scanners:
 
 ### 11.9 Ignore System
 
-`lucidscan` uses combined ignore rules from:
+`lucidscan` uses combined ignore rules from multiple sources, merged in order:
 
-- `.lucidscanignore`.
-- `.gitignore` (optional, configurable).
-- `.lucidscan.yml` `ignore` section.
-- CLI flags (`--ignore-file`).
+1. **`.lucidscanignore`** file in project root (gitignore-style syntax)
+2. **`ignore`** section in `.lucidscan.yml`
 
-Ignored paths are excluded consistently for all scanners.
+Patterns support full gitignore syntax via the `pathspec` library:
+- `**` recursive globs (e.g., `**/test_*.py`)
+- `!` negation patterns (e.g., `!important.log`)
+- `#` comments
+- Directory patterns (e.g., `vendor/`)
+
+Patterns are passed to each scanner via native CLI flags:
+- **Trivy**: `--skip-dirs`, `--skip-files`
+- **OpenGrep**: `--exclude`
+- **Checkov**: `--skip-path`
+
+**Inline ignores** are supported natively by scanners:
+- **OpenGrep/Semgrep**: `# nosemgrep` or `# nosemgrep: rule-id`
+- **Checkov**: `# checkov:skip=CKV_XXX:reason`
+- **Trivy**: Uses `.trivyignore` file for CVE-level ignores
+
+See `docs/ignore-patterns.md` for detailed documentation.
 
 ### 11.10 Logging & Verbosity
 
