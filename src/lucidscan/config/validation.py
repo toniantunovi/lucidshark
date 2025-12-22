@@ -70,6 +70,7 @@ VALID_AI_KEYS: Set[str] = {
     "base_url",
     "temperature",
     "max_tokens",
+    "timeout",
     "cache_enabled",
     "prompt_version",
 }

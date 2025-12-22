@@ -8,6 +8,10 @@ ignore:
 output:
   format: summary
 
+ai:
+  provider: openai
+  timeout: 30
+
 scanners:
   sca:
     enabled: true

@@ -302,6 +302,7 @@ def dict_to_config(data: Dict[str, Any]) -> LucidScanConfig:
         base_url=ai_data.get("base_url"),
         temperature=ai_data.get("temperature", 0.3),
         max_tokens=ai_data.get("max_tokens", 500),
+        timeout=ai_data.get("timeout", 30),
         cache_enabled=ai_data.get("cache_enabled", True),
         prompt_version=ai_data.get("prompt_version", "v1"),
     )

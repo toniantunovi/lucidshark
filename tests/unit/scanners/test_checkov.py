@@ -7,7 +7,7 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
-from lucidscan.scanners.checkov import CheckovScanner, DEFAULT_VERSION
+from lucidscan.scanners.checkov import CheckovScanner, DEFAULT_VERSION, _glob_to_regex
 from lucidscan.scanners.base import ScannerPlugin
 from lucidscan.core.models import ScanDomain, Severity
 
@@ -434,3 +434,48 @@ class TestCheckovScannerCheckConversion:
 
         assert issue is not None
         assert issue.file_path == Path("/project/main.tf")
+
+
+class TestGlobToRegex:
+    """Tests for glob-to-regex conversion used for Checkov --skip-path."""
+
+    def test_double_star_converts_to_dotstar(self) -> None:
+        """Test that ** converts to .* for recursive matching."""
+        assert _glob_to_regex(".venv/**") == r"\.venv/.*"
+        assert _glob_to_regex("tests/**") == "tests/.*"
+        assert _glob_to_regex("**/*.tf") == r".*/[^/]*\.tf"
+
+    def test_single_star_converts_to_non_slash_match(self) -> None:
+        """Test that * converts to [^/]* to match non-slash characters."""
+        assert _glob_to_regex("*.tf") == r"[^/]*\.tf"
+        assert _glob_to_regex("test_*.py") == r"test_[^/]*\.py"
+
+    def test_dot_is_escaped(self) -> None:
+        """Test that dots are escaped for regex."""
+        assert _glob_to_regex(".venv") == r"\.venv"
+        assert _glob_to_regex("file.txt") == r"file\.txt"
+
+    def test_question_mark_converts_to_single_char(self) -> None:
+        """Test that ? converts to [^/] for single character matching."""
+        assert _glob_to_regex("file?.txt") == r"file[^/]\.txt"
+
+    def test_regex_special_chars_escaped(self) -> None:
+        """Test that regex special characters are properly escaped."""
+        assert _glob_to_regex("test[1].txt") == r"test\[1\]\.txt"
+        assert _glob_to_regex("foo(bar)") == r"foo\(bar\)"
+        assert _glob_to_regex("a+b") == r"a\+b"
+        assert _glob_to_regex("a^b$c") == r"a\^b\$c"
+
+    def test_combined_patterns(self) -> None:
+        """Test realistic combined patterns."""
+        # Pattern from the original issue
+        assert _glob_to_regex(".venv/**") == r"\.venv/.*"
+        assert _glob_to_regex("tests/**") == "tests/.*"
+        # More complex patterns
+        assert _glob_to_regex("src/**/*.py") == r"src/.*/[^/]*\.py"
+        assert _glob_to_regex("node_modules/**") == "node_modules/.*"
+
+    def test_plain_paths_unchanged(self) -> None:
+        """Test that plain paths without glob chars stay mostly unchanged."""
+        assert _glob_to_regex("src/main") == "src/main"
+        assert _glob_to_regex("README") == "README"

@@ -66,13 +66,35 @@ class TestGetLLM:
         with pytest.raises(ProviderError, match="No model specified"):
             get_llm(config)
 
+    def test_openai_requires_api_key(self) -> None:
+        """Test OpenAI raises error when no API key available."""
+        with patch.dict("os.environ", {}, clear=True):
+            config = AIConfig(provider="openai", model="gpt-4", api_key="")
+            with pytest.raises(ProviderError, match="requires an API key"):
+                get_llm(config)
+
+    def test_anthropic_requires_api_key(self) -> None:
+        """Test Anthropic raises error when no API key available."""
+        with patch.dict("os.environ", {}, clear=True):
+            config = AIConfig(provider="anthropic", model="claude-3", api_key="")
+            with pytest.raises(ProviderError, match="requires an API key"):
+                get_llm(config)
+
+    def test_ollama_does_not_require_api_key(self) -> None:
+        """Test Ollama works without API key (local provider)."""
+        with patch("lucidscan.enrichers.ai.providers._init_ollama") as mock:
+            mock.return_value = MagicMock()
+            config = AIConfig(provider="ollama", model="llama3", api_key="")
+            get_llm(config)
+            mock.assert_called_once()
+
     @patch("lucidscan.enrichers.ai.providers._init_openai")
     def test_openai_provider_calls_init_openai(
         self, mock_init: MagicMock
     ) -> None:
         """Test OpenAI provider calls correct init function."""
         mock_init.return_value = MagicMock()
-        config = AIConfig(provider="openai", model="gpt-4")
+        config = AIConfig(provider="openai", model="gpt-4", api_key="test-key")
         get_llm(config)
         mock_init.assert_called_once_with(config, "gpt-4")
 
@@ -82,7 +104,7 @@ class TestGetLLM:
     ) -> None:
         """Test Anthropic provider calls correct init function."""
         mock_init.return_value = MagicMock()
-        config = AIConfig(provider="anthropic", model="claude-3")
+        config = AIConfig(provider="anthropic", model="claude-3", api_key="test-key")
         get_llm(config)
         mock_init.assert_called_once_with(config, "claude-3")
 
@@ -100,7 +122,7 @@ class TestGetLLM:
         """Test provider name is case insensitive."""
         with patch("lucidscan.enrichers.ai.providers._init_openai") as mock:
             mock.return_value = MagicMock()
-            config = AIConfig(provider="OpenAI", model="gpt-4")
+            config = AIConfig(provider="OpenAI", model="gpt-4", api_key="test-key")
             get_llm(config)
             mock.assert_called_once()
 

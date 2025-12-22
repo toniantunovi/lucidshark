@@ -46,6 +46,7 @@ class AIConfig:
     base_url: Optional[str] = None  # Custom API endpoint (Ollama/self-hosted)
     temperature: float = 0.3  # Low for consistent explanations
     max_tokens: int = 500  # Limit explanation length
+    timeout: int = 30  # Request timeout in seconds
     cache_enabled: bool = True  # Enable on-disk caching
     prompt_version: str = "v1"  # Used in cache key for prompt invalidation
 

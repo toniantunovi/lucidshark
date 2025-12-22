@@ -44,6 +44,8 @@ def get_llm(config: "AIConfig") -> "BaseChatModel":
     Raises:
         ProviderError: If provider is unknown or initialization fails.
     """
+    import os
+
     provider = config.provider.lower()
     model = config.model or DEFAULT_MODELS.get(provider)
 
@@ -51,6 +53,15 @@ def get_llm(config: "AIConfig") -> "BaseChatModel":
         raise ProviderError(
             f"No model specified and no default for provider: {provider}"
         )
+
+    # Check for API key (config or env var) for cloud providers
+    if provider in ("openai", "anthropic"):
+        env_var = "OPENAI_API_KEY" if provider == "openai" else "ANTHROPIC_API_KEY"
+        if not config.api_key and not os.environ.get(env_var):
+            raise ProviderError(
+                f"{provider.title()} provider requires an API key. "
+                f"Set ai.api_key in config or {env_var} environment variable."
+            )
 
     LOGGER.debug(f"Initializing {provider} provider with model {model}")
 
@@ -89,6 +100,7 @@ def _init_openai(config: "AIConfig", model: str) -> "BaseChatModel":
         "model": model,
         "temperature": config.temperature,
         "max_tokens": config.max_tokens,
+        "timeout": config.timeout,
     }
 
     if config.api_key:
@@ -126,6 +138,7 @@ def _init_anthropic(config: "AIConfig", model: str) -> "BaseChatModel":
         "model": model,
         "temperature": config.temperature,
         "max_tokens": config.max_tokens,
+        "timeout": config.timeout,
     }
 
     if config.api_key:
@@ -162,6 +175,7 @@ def _init_ollama(config: "AIConfig", model: str) -> "BaseChatModel":
     kwargs: dict[str, Any] = {
         "model": model,
         "temperature": config.temperature,
+        "timeout": config.timeout,
     }
 
     if config.base_url:

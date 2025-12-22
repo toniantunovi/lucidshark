@@ -17,6 +17,48 @@ from lucidscan.core.logging import get_logger
 
 LOGGER = get_logger(__name__)
 
+
+def _glob_to_regex(pattern: str) -> str:
+    """Convert a gitignore-style glob pattern to a regex pattern.
+
+    Checkov's Bicep runner (and possibly others) treats --skip-path
+    values as regex patterns, so we need to convert glob patterns.
+
+    Args:
+        pattern: Gitignore-style glob pattern (e.g., ".venv/**", "*.tf").
+
+    Returns:
+        Equivalent regex pattern.
+    """
+    # Escape regex special characters except * and ?
+    # These are the special chars in regex that need escaping
+    result = ""
+    i = 0
+    while i < len(pattern):
+        c = pattern[i]
+
+        if c == "*":
+            # Check for ** (match anything including path separators)
+            if i + 1 < len(pattern) and pattern[i + 1] == "*":
+                result += ".*"
+                i += 2
+                continue
+            else:
+                # Single * matches anything except path separator
+                result += "[^/]*"
+        elif c == "?":
+            # ? matches any single character except path separator
+            result += "[^/]"
+        elif c in r"\.^$+{}[]|()":
+            # Escape regex special characters
+            result += "\\" + c
+        else:
+            result += c
+
+        i += 1
+
+    return result
+
 # Default version from pyproject.toml [tool.lucidscan.scanners]
 DEFAULT_VERSION = "3.2.495"
 
@@ -194,9 +236,12 @@ class CheckovScanner(ScannerPlugin):
             cmd.extend(["--skip-check", ",".join(skip_checks)])
 
         # Apply ignore patterns from .lucidscanignore and config
+        # Convert glob patterns to regex since Checkov's Bicep runner
+        # (and possibly others) treats --skip-path as regex
         exclude_patterns = context.get_exclude_patterns()
         for pattern in exclude_patterns:
-            cmd.extend(["--skip-path", pattern])
+            regex_pattern = _glob_to_regex(pattern)
+            cmd.extend(["--skip-path", regex_pattern])
 
         LOGGER.debug(f"Running: {' '.join(cmd)}")
 
