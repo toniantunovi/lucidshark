@@ -6,65 +6,126 @@
 [![Python](https://img.shields.io/pypi/pyversions/lucidscan)](https://pypi.org/project/lucidscan/)
 [![License](https://img.shields.io/github/license/voldeq/lucidscan)](https://github.com/voldeq/lucidscan/blob/main/LICENSE)
 
-A unified CLI for running multiple security scanners (Trivy, OpenGrep, Checkov) with consistent output.
+**The trust layer for AI-assisted development.**
 
-## Installation
+LucidScan is a unified code quality pipeline that auto-configures linting, type checking, security scanning, testing, and coverage — then integrates with AI coding tools like Claude Code and Cursor to create an automated feedback loop.
+
+```
+AI writes code → LucidScan checks → LucidScan tells AI what to fix → AI fixes → repeat
+```
+
+## Why LucidScan?
+
+AI coding assistants generate code fast, but developers can't blindly trust it. The current workflow is painful:
+
+1. AI writes code
+2. You run ESLint... then Ruff... then mypy... then Trivy...
+3. You copy error messages back to the AI
+4. AI fixes, you re-run everything
+5. Repeat 5-10 times
+
+**LucidScan fixes this** by unifying all quality tools behind one command and feeding results directly back to AI agents.
+
+## Quick Start
 
 ```bash
 pip install lucidscan
+
+# Auto-configure for your project
+lucidscan init
+
+# Run the full quality pipeline
+lucidscan scan
+
+# Auto-fix what's possible
+lucidscan scan --fix
 ```
 
-## Usage
+## What It Does
+
+One command runs your entire quality pipeline:
+
+| Domain | Tools | What It Catches |
+|--------|-------|-----------------|
+| **Linting** | Ruff, ESLint, Biome | Style issues, code smells |
+| **Type Checking** | mypy, TypeScript | Type errors |
+| **Security** | Trivy, OpenGrep, Checkov | Vulnerabilities, misconfigs |
+| **Testing** | pytest, Jest | Test failures |
+| **Coverage** | coverage.py, Istanbul | Coverage gaps |
+
+All results normalized to a common format. One exit code for CI.
+
+## The `init` Command
 
 ```bash
-# Scan dependencies for vulnerabilities
-lucidscan --sca
-
-# Scan code for security issues
-lucidscan --sast
-
-# Scan Terraform/Kubernetes configs
-lucidscan --iac
-
-# Scan container images
-lucidscan --container --image nginx:latest
-
-# Run all scanners
-lucidscan --all
-
-# Output formats
-lucidscan --all --format json
-lucidscan --all --format table
-lucidscan --all --format sarif
-
-# Fail CI if high severity issues found
-lucidscan --all --fail-on high
+lucidscan init
 ```
 
-Scanner binaries are downloaded automatically on first use.
+LucidScan analyzes your codebase and asks targeted questions:
 
-## What it does
+```
+Detected: Python 3.11, FastAPI, pytest
 
-lucidscan wraps these tools behind a single CLI:
+? Linter: [Ruff (recommended)] / Flake8 / Skip
+? Type checker: [mypy (recommended)] / Pyright / Skip
+? Security scanner: [Trivy + OpenGrep (recommended)] / Trivy only / Skip
+? CI platform: [GitHub Actions (detected)] / GitLab / Bitbucket / Skip
+```
 
-| Domain | Scanner | Detects |
-|--------|---------|---------|
-| SCA | [Trivy](https://github.com/aquasecurity/trivy) | Vulnerable dependencies |
-| Container | [Trivy](https://github.com/aquasecurity/trivy) | Image vulnerabilities |
-| SAST | [OpenGrep](https://github.com/opengrep/opengrep) | Code security issues |
-| IaC | [Checkov](https://github.com/bridgecrewio/checkov) | Infrastructure misconfigs |
+Then generates:
+- `lucidscan.yml` — unified configuration
+- `.github/workflows/lucidscan.yml` — CI pipeline (or GitLab/Bitbucket equivalent)
 
-All results are normalized to a common JSON schema:
+## AI Integration
+
+LucidScan integrates with AI coding tools to create an automated feedback loop.
+
+### Claude Code / Cursor (MCP Server)
+
+```bash
+lucidscan serve --mcp
+```
+
+Configure in your AI tool to give it access to quality checks:
 
 ```json
 {
-  "id": "trivy-a1b2c3d4",
-  "scanner": "sca",
-  "source_tool": "trivy",
-  "severity": "high",
-  "title": "CVE-2024-1234: RCE in lodash",
-  "file_path": "package.json",
-  "recommendation": "Upgrade to 4.17.21"
+  "mcpServers": {
+    "lucidscan": {
+      "command": "lucidscan",
+      "args": ["serve", "--mcp"]
+    }
+  }
+}
+```
+
+The AI can now:
+- Run quality checks on code it writes
+- Get structured fix instructions
+- Apply fixes automatically
+
+### Output for AI Agents
+
+```bash
+lucidscan scan --format ai
+```
+
+Returns actionable instructions:
+
+```json
+{
+  "instructions": [
+    {
+      "action": "FIX_SECURITY_VULNERABILITY",
+      "file": "src/auth.py",
+      "line": 23,
+      "problem": "Hardcoded password detected",
+      "fix_steps": [
+        "Replace with os.environ.get('DB_PASSWORD')",
+        "Add DB_PASSWORD to .env.example"
+      ]
+    }
+  ]
 }
 ```
 
@@ -73,20 +134,33 @@ All results are normalized to a common JSON schema:
 ### GitHub Actions
 
 ```yaml
-- name: Security scan
-  run: |
-    pip install lucidscan
-    lucidscan --all --fail-on high
+name: Quality
+
+on: [push, pull_request]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: pip install lucidscan
+      - run: lucidscan scan --ci
 ```
 
-### With SARIF upload
+### GitLab CI
 
 ```yaml
-- name: Security scan
-  run: |
-    pip install lucidscan
-    lucidscan --all --format sarif > results.sarif
+lucidscan:
+  image: python:3.11
+  script:
+    - pip install lucidscan
+    - lucidscan scan --ci
+```
 
+### With SARIF Upload (GitHub Code Scanning)
+
+```yaml
+- run: lucidscan scan --format sarif --output results.sarif
 - uses: github/codeql-action/upload-sarif@v3
   with:
     sarif_file: results.sarif
@@ -94,37 +168,72 @@ All results are normalized to a common JSON schema:
 
 ## Configuration
 
-Optional `.lucidscan.yml`:
+`lucidscan.yml`:
 
 ```yaml
-scanners:
-  sca:
+version: 1
+
+pipeline:
+  linting:
     enabled: true
-  sast:
+    tools:
+      - name: ruff
+
+  type_checking:
     enabled: true
-  iac:
+    tools:
+      - name: mypy
+        strict: true
+
+  security:
     enabled: true
+    tools:
+      - name: trivy
+      - name: opengrep
+
+  testing:
+    enabled: true
+    tools:
+      - name: pytest
+
+  coverage:
+    enabled: true
+    threshold: 80
+
+fail_on:
+  linting: error
+  security: high
+  testing: any
 
 ignore:
-  - path: "vendor/**"
-  - path: "node_modules/**"
-
-severity_threshold: medium
+  - "**/node_modules/**"
+  - "**/.venv/**"
 ```
 
-## Plugin Architecture
-
-Scanners are implemented as plugins. Built-in:
-
-- `TrivyScanner` - SCA + container scanning
-- `OpenGrepScanner` - static code analysis
-- `CheckovScanner` - IaC scanning
-
-Third-party plugins can be installed from PyPI:
+## CLI Reference
 
 ```bash
-pip install lucidscan-snyk  # hypothetical
+# Initialize project
+lucidscan init [--ci github|gitlab|bitbucket] [--non-interactive]
+
+# Run quality pipeline
+lucidscan scan [--domain linting|security|testing|...] [--fix] [--format table|json|sarif|ai]
+
+# Start server for AI integration
+lucidscan serve [--mcp] [--watch]
+
+# Show status
+lucidscan status [--tools]
 ```
+
+## Exit Codes
+
+| Code | Meaning |
+|------|---------|
+| 0 | All checks passed |
+| 1 | Issues found above threshold |
+| 2 | Tool execution error |
+| 3 | Configuration error |
 
 ## Development
 
@@ -137,4 +246,11 @@ pytest tests/
 
 ## Documentation
 
-See [docs/main.md](docs/main.md) for the full specification.
+- [Full Specification](docs/main.md)
+- [Roadmap](docs/roadmap.md)
+- [CI Integration Guide](docs/ci-integration.md)
+- [Ignore Patterns](docs/ignore-patterns.md)
+
+## License
+
+Apache 2.0
