@@ -9,26 +9,26 @@ LucidScan unifies code quality tools (linting, type checking, security, testing,
 ## Roadmap Overview
 
 ```
-         v0.1.x                v0.2 ✅              v0.3                v0.4                v0.5               v1.0
+         v0.1.x                v0.2 ✅              v0.3 ✅              v0.4                v0.5               v1.0
            │                    │                   │                   │                   │                   │
     ───────●────────────────────●───────────────────●───────────────────●───────────────────●───────────────────●───────
            │                    │                   │                   │                   │                   │
-        Complete         Current State          Code Quality        Full Pipeline       AI Integration      Production
+        Complete            Complete          Current State        Full Pipeline       AI Integration      Production
                                                                                                                Ready
     ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-    │ Security     │    │ ✅ init cmd  │    │ ESLint       │    │ Testing      │    │ MCP server   │    │ Docs         │
-    │ scanning     │    │ ✅ Detection │    │ Type checking│    │ Coverage     │    │ File watcher │    │ Performance  │
-    │ (Trivy,      │    │ ✅ CI gen    │    │ mypy/TS      │    │ Full pipeline│    │ AI instruct  │    │ Stability    │
-    │ OpenGrep,    │    │ ✅ Ruff      │    │              │    │              │    │ format       │    │              │
-    │ Checkov)     │    │ ✅ Plugins   │    │              │    │              │    │              │    │              │
+    │ Security     │    │ ✅ init cmd  │    │ ✅ ESLint    │    │ Testing      │    │ MCP server   │    │ Docs         │
+    │ scanning     │    │ ✅ Detection │    │ ✅ Biome     │    │ Coverage     │    │ File watcher │    │ Performance  │
+    │ (Trivy,      │    │ ✅ CI gen    │    │ ✅ mypy      │    │ Full pipeline│    │ AI instruct  │    │ Stability    │
+    │ OpenGrep,    │    │ ✅ Ruff      │    │ ✅ pyright   │    │              │    │ format       │    │              │
+    │ Checkov)     │    │ ✅ Plugins   │    │ ✅ tsc       │    │              │    │              │    │              │
     └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
 ```
 
 ---
 
-## Current State (v0.2.0)
+## Current State (v0.3.0)
 
-LucidScan has a working security scanning foundation with smart initialization:
+LucidScan now includes comprehensive code quality tools alongside security scanning:
 
 | Component | Status |
 |-----------|--------|
@@ -42,15 +42,19 @@ LucidScan has a working security scanning foundation with smart initialization:
 | `lucidscan init` command | ✅ Complete |
 | Codebase detection | ✅ Complete |
 | CI config generation | ✅ GitHub, GitLab, Bitbucket |
-| Ruff linter plugin | ✅ Complete |
 | Project-local tool storage | ✅ `.lucidscan/` folder |
+| **Linter plugins** | ✅ Ruff, ESLint, Biome, Checkstyle |
+| **Type checker plugins** | ✅ mypy, pyright, TypeScript |
+| **Language support** | ✅ Python, JavaScript, TypeScript, Java |
 
 **What works today:**
 ```bash
 lucidscan init                       # Interactive project setup
 lucidscan scan --sca --sast --iac    # Security scanning
-lucidscan scan --lint                # Linting with Ruff
+lucidscan scan --lint                # Linting (Ruff, ESLint, Biome, Checkstyle)
 lucidscan scan --lint --fix          # Auto-fix linting issues
+lucidscan scan --type-check          # Type checking (mypy, pyright, tsc)
+lucidscan scan --all                 # Run everything
 lucidscan scan --format sarif        # SARIF output for GitHub
 lucidscan scan --ai                  # AI-powered explanations
 lucidscan status                     # Show plugin status
@@ -107,7 +111,7 @@ Generated:
 
 ---
 
-## v0.3 — Code Quality
+## v0.3 — Code Quality ✅ COMPLETE
 
 **Theme**: Expanded linting and type checking
 
@@ -115,41 +119,45 @@ Generated:
 
 | Feature | Status | Description |
 |---------|--------|-------------|
-| **Ruff linter** | ✅ Done in v0.2 | Python linting with auto-fix |
-| **ESLint plugin** | 🔲 | JavaScript/TypeScript linting |
-| **Biome plugin** | 🔲 | Fast JS/TS linting alternative |
-| **mypy plugin** | 🔲 | Python type checking |
-| **TypeScript plugin** | 🔲 | TypeScript type checking |
-| **Unified output** | ✅ Done in v0.2 | Lint errors in same format as security issues |
+| **Ruff linter** | ✅ | Python linting with auto-fix |
+| **ESLint plugin** | ✅ | JavaScript/TypeScript linting |
+| **Biome plugin** | ✅ | Fast JS/TS linting alternative |
+| **Checkstyle plugin** | ✅ | Java linting |
+| **mypy plugin** | ✅ | Python type checking |
+| **pyright plugin** | ✅ | Alternative Python type checker |
+| **TypeScript plugin** | ✅ | TypeScript type checking via tsc |
+| **`--type-check` flag** | ✅ | CLI flag for type checking |
+| **Java support** | ✅ | Language detection and Checkstyle linting |
+| **Unified output** | ✅ | All issues in same UnifiedIssue format |
 
 ### User Experience
 
 ```bash
-$ lucidscan scan
+$ lucidscan scan --type-check --lint
 
 Linting ━━━━━━━━━━━━━━━━━━━━ 100%
 Type Checking ━━━━━━━━━━━━━━ 100%
-Security ━━━━━━━━━━━━━━━━━━━ 100%
 
 ┌─────────────────────────────────────────────────────────┐
 │ Summary                                                 │
 ├─────────────────────────────────────────────────────────┤
 │ Linting:       3 errors, 12 warnings (8 fixable)        │
 │ Type Checking: 1 error                                  │
-│ Security:      0 critical, 2 high, 5 medium             │
 └─────────────────────────────────────────────────────────┘
 
-$ lucidscan scan --fix
+$ lucidscan scan --lint --fix
 
 Fixed 8 linting issues in 4 files.
 ```
 
 ### Success Criteria
 
-- [ ] Ruff and ESLint plugins working
-- [ ] mypy and TypeScript plugins working
-- [ ] `--fix` mode applies auto-fixes
-- [ ] Unified issue format across all tools
+- [x] Ruff and ESLint plugins working
+- [x] Biome and Checkstyle plugins working
+- [x] mypy, pyright, and TypeScript plugins working
+- [x] `--fix` mode applies auto-fixes
+- [x] Unified issue format across all tools
+- [x] Java language detection and linting
 
 ---
 
@@ -282,7 +290,7 @@ Beyond v1.0, potential directions include:
 
 | Direction | Description |
 |-----------|-------------|
-| **More languages** | Go, Rust, Java, C# support |
+| **More languages** | Go, Rust, C# support |
 | **VS Code extension** | Native IDE integration |
 | **Team features** | Shared configurations, policy enforcement |
 | **Custom rules** | User-defined linting and security rules |
@@ -298,7 +306,7 @@ These are not committed — they depend on user feedback and adoption.
 |------|---------|--------|
 | 2025-01 | v0.1.x | Security scanning foundation complete |
 | 2025-01 | v0.2.0 | Foundation complete: init command, codebase detection, CI generation, plugin restructure, Ruff linter |
-| — | v0.3 | Code Quality (planned) |
+| 2025-01 | v0.3.0 | Code Quality complete: type checkers (mypy, pyright, tsc), linters (ESLint, Biome, Checkstyle), Java support |
 | — | v0.4 | Full Pipeline (planned) |
 | — | v0.5 | AI Integration (planned) |
 | — | v1.0 | Production Ready (planned) |
