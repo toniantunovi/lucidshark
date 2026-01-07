@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lucidscan"
-version = "0.2.0"
+version = "0.3.0"
 description = "LucidScan - The trust layer for AI-assisted development"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -77,6 +77,14 @@ ai_explainer = "lucidscan.plugins.enrichers.ai_explainer:AIExplainerEnricher"
 
 [project.entry-points."lucidscan.linters"]
 ruff = "lucidscan.plugins.linters.ruff:RuffLinter"
+eslint = "lucidscan.plugins.linters.eslint:ESLintLinter"
+biome = "lucidscan.plugins.linters.biome:BiomeLinter"
+checkstyle = "lucidscan.plugins.linters.checkstyle:CheckstyleLinter"
+
+[project.entry-points."lucidscan.type_checkers"]
+mypy = "lucidscan.plugins.type_checkers.mypy:MypyChecker"
+pyright = "lucidscan.plugins.type_checkers.pyright:PyrightChecker"
+typescript = "lucidscan.plugins.type_checkers.typescript:TypeScriptChecker"
 
 # Default scanner plugin versions
 # These are the source of truth for the build process

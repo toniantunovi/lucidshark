@@ -108,9 +108,14 @@ def _build_scan_parser(subparsers: argparse._SubParsersAction) -> None:
         help="Run linting checks (Ruff for Python, ESLint for JS/TS).",
     )
     domain_group.add_argument(
+        "--type-check",
+        action="store_true",
+        help="Run type checking (mypy/pyright for Python, tsc for TypeScript).",
+    )
+    domain_group.add_argument(
         "--all",
         action="store_true",
-        help="Enable all scanner types (SCA, SAST, IaC, Container, Lint).",
+        help="Enable all scanner types (SCA, SAST, IaC, Container, Lint, Type Check).",
     )
 
     # Target options

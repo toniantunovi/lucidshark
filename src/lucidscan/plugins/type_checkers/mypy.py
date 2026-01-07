@@ -1,0 +1,288 @@
+"""mypy type checker plugin.
+
+mypy is a static type checker for Python.
+https://mypy-lang.org/
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import shutil
+import subprocess
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from lucidscan.core.logging import get_logger
+from lucidscan.core.models import (
+    ScanContext,
+    Severity,
+    ToolDomain,
+    UnifiedIssue,
+)
+from lucidscan.plugins.type_checkers.base import TypeCheckerPlugin
+
+LOGGER = get_logger(__name__)
+
+# mypy severity mapping
+# mypy outputs: error, warning, note
+SEVERITY_MAP = {
+    "error": Severity.HIGH,
+    "warning": Severity.MEDIUM,
+    "note": Severity.LOW,
+}
+
+
+class MypyChecker(TypeCheckerPlugin):
+    """mypy type checker plugin for Python code analysis."""
+
+    def __init__(self, project_root: Optional[Path] = None):
+        """Initialize MypyChecker.
+
+        Args:
+            project_root: Optional project root for finding mypy installation.
+        """
+        self._project_root = project_root
+
+    @property
+    def name(self) -> str:
+        """Plugin identifier."""
+        return "mypy"
+
+    @property
+    def languages(self) -> List[str]:
+        """Supported languages."""
+        return ["python"]
+
+    @property
+    def supports_strict_mode(self) -> bool:
+        """mypy supports strict mode."""
+        return True
+
+    def get_version(self) -> str:
+        """Get mypy version.
+
+        Returns:
+            Version string or 'unknown' if unable to determine.
+        """
+        try:
+            binary = self.ensure_binary()
+            result = subprocess.run(
+                [str(binary), "--version"],
+                capture_output=True,
+                text=True,
+            )
+            # Output is like "mypy 1.8.0 (compiled: yes)"
+            if result.returncode == 0:
+                parts = result.stdout.strip().split()
+                if len(parts) >= 2:
+                    return parts[1]
+        except Exception:
+            pass
+        return "unknown"
+
+    def ensure_binary(self) -> Path:
+        """Ensure mypy is available.
+
+        Checks for mypy in:
+        1. Project's .venv/bin/mypy
+        2. System PATH
+
+        Returns:
+            Path to mypy binary.
+
+        Raises:
+            FileNotFoundError: If mypy is not installed.
+        """
+        # Check project venv first
+        if self._project_root:
+            venv_mypy = self._project_root / ".venv" / "bin" / "mypy"
+            if venv_mypy.exists():
+                return venv_mypy
+
+        # Check system PATH
+        mypy_path = shutil.which("mypy")
+        if mypy_path:
+            return Path(mypy_path)
+
+        raise FileNotFoundError(
+            "mypy is not installed. Install it with: pip install mypy"
+        )
+
+    def check(self, context: ScanContext) -> List[UnifiedIssue]:
+        """Run mypy type checking.
+
+        Args:
+            context: Scan context with paths and configuration.
+
+        Returns:
+            List of type checking issues.
+        """
+        try:
+            binary = self.ensure_binary()
+        except FileNotFoundError as e:
+            LOGGER.warning(str(e))
+            return []
+
+        # Build command
+        cmd = [
+            str(binary),
+            "--output", "json",
+            "--no-error-summary",
+        ]
+
+        # Check for strict mode in config
+        if context.config and hasattr(context.config, "type_checking"):
+            type_config = context.config.type_checking
+            if hasattr(type_config, "strict") and type_config.strict:
+                cmd.append("--strict")
+
+        # Check for mypy config file
+        mypy_ini = context.project_root / "mypy.ini"
+        setup_cfg = context.project_root / "setup.cfg"
+        pyproject = context.project_root / "pyproject.toml"
+
+        if mypy_ini.exists():
+            cmd.extend(["--config-file", str(mypy_ini)])
+        elif setup_cfg.exists():
+            cmd.extend(["--config-file", str(setup_cfg)])
+        elif pyproject.exists():
+            cmd.extend(["--config-file", str(pyproject)])
+
+        # Add paths to check
+        paths = [str(p) for p in context.paths] if context.paths else ["."]
+        cmd.extend(paths)
+
+        # Add exclude patterns
+        exclude_patterns = context.get_exclude_patterns()
+        for pattern in exclude_patterns:
+            cmd.extend(["--exclude", pattern])
+
+        LOGGER.debug(f"Running: {' '.join(cmd)}")
+
+        try:
+            result = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                cwd=str(context.project_root),
+            )
+        except Exception as e:
+            LOGGER.error(f"Failed to run mypy: {e}")
+            return []
+
+        # Parse output
+        issues = self._parse_output(result.stdout, context.project_root)
+
+        LOGGER.info(f"mypy found {len(issues)} issues")
+        return issues
+
+    def _parse_output(self, output: str, project_root: Path) -> List[UnifiedIssue]:
+        """Parse mypy JSON output.
+
+        Args:
+            output: JSON output from mypy (one JSON object per line).
+            project_root: Project root directory.
+
+        Returns:
+            List of UnifiedIssue objects.
+        """
+        if not output.strip():
+            return []
+
+        issues = []
+        for line in output.strip().split("\n"):
+            if not line.strip():
+                continue
+
+            try:
+                error = json.loads(line)
+                issue = self._error_to_issue(error, project_root)
+                if issue:
+                    issues.append(issue)
+            except json.JSONDecodeError:
+                # Skip non-JSON lines (e.g., summary messages)
+                LOGGER.debug(f"Skipping non-JSON line: {line}")
+                continue
+
+        return issues
+
+    def _error_to_issue(
+        self,
+        error: Dict[str, Any],
+        project_root: Path,
+    ) -> Optional[UnifiedIssue]:
+        """Convert mypy error to UnifiedIssue.
+
+        Args:
+            error: mypy error dict from JSON output.
+            project_root: Project root directory.
+
+        Returns:
+            UnifiedIssue or None.
+        """
+        try:
+            severity_str = error.get("severity", "error")
+            message = error.get("message", "")
+            file = error.get("file", "")
+            line = error.get("line")
+            column = error.get("column")
+            code = error.get("code", "")
+
+            # Get severity
+            severity = SEVERITY_MAP.get(severity_str, Severity.MEDIUM)
+
+            # Build file path
+            file_path = Path(file)
+            if not file_path.is_absolute():
+                file_path = project_root / file_path
+
+            # Generate deterministic ID
+            issue_id = self._generate_issue_id(code, file, line, column, message)
+
+            # Build title
+            title = f"[{code}] {message}" if code else message
+
+            return UnifiedIssue(
+                id=issue_id,
+                scanner=ToolDomain.TYPE_CHECKING,
+                source_tool="mypy",
+                severity=severity,
+                title=title,
+                description=message,
+                file_path=file_path,
+                line_start=line,
+                line_end=line,
+                column_start=column,
+                scanner_metadata={
+                    "code": code,
+                    "severity": severity_str,
+                },
+            )
+        except Exception as e:
+            LOGGER.warning(f"Failed to parse mypy error: {e}")
+            return None
+
+    def _generate_issue_id(
+        self,
+        code: str,
+        file: str,
+        line: Optional[int],
+        column: Optional[int],
+        message: str,
+    ) -> str:
+        """Generate deterministic issue ID.
+
+        Args:
+            code: Error code.
+            file: File path.
+            line: Line number.
+            column: Column number.
+            message: Error message.
+
+        Returns:
+            Unique issue ID.
+        """
+        content = f"{code}:{file}:{line or 0}:{column or 0}:{message}"
+        hash_val = hashlib.sha256(content.encode()).hexdigest()[:12]
+        return f"mypy-{code}-{hash_val}" if code else f"mypy-{hash_val}"

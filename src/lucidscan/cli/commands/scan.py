@@ -131,6 +131,15 @@ class ScanCommand(Command):
             lint_issues = self._run_linting(context, fix_enabled)
             all_issues.extend(lint_issues)
 
+        # Run type checking if requested
+        type_check_enabled = getattr(args, "type_check", False) or getattr(
+            args, "all", False
+        )
+
+        if type_check_enabled:
+            type_check_issues = self._run_type_checking(context)
+            all_issues.extend(type_check_issues)
+
         # Run security scanning if any domains are enabled
         if enabled_domains:
             # Collect unique scanners needed based on config
@@ -214,6 +223,37 @@ class ScanCommand(Command):
 
             except Exception as e:
                 LOGGER.error(f"Linter {name} failed: {e}")
+
+        return issues
+
+    def _run_type_checking(self, context: ScanContext) -> List[UnifiedIssue]:
+        """Run type checking.
+
+        Args:
+            context: Scan context.
+
+        Returns:
+            List of type checking issues.
+        """
+        from lucidscan.plugins.type_checkers import discover_type_checker_plugins
+
+        issues: List[UnifiedIssue] = []
+
+        # Discover and run type checker plugins
+        type_checker_plugins = discover_type_checker_plugins()
+
+        if not type_checker_plugins:
+            LOGGER.warning("No type checker plugins found")
+            return issues
+
+        for name, plugin_class in type_checker_plugins.items():
+            try:
+                LOGGER.info(f"Running type checker: {name}")
+                plugin = plugin_class(project_root=context.project_root)
+                issues.extend(plugin.check(context))
+
+            except Exception as e:
+                LOGGER.error(f"Type checker {name} failed: {e}")
 
         return issues
 

@@ -190,6 +190,8 @@ def _detect_version(language: str, project_root: Path) -> Optional[str]:
         return _detect_go_version(project_root)
     elif language == "rust":
         return _detect_rust_version(project_root)
+    elif language == "java":
+        return _detect_java_version(project_root)
     return None
 
 
@@ -264,4 +266,63 @@ def _detect_rust_version(project_root: Path) -> Optional[str]:
                 return match.group(1)
         except Exception:
             pass
+    return None
+
+
+def _detect_java_version(project_root: Path) -> Optional[str]:
+    """Detect Java version from pom.xml or build.gradle."""
+    # Check pom.xml (Maven)
+    pom_xml = project_root / "pom.xml"
+    if pom_xml.exists():
+        try:
+            content = pom_xml.read_text()
+            # Look for maven.compiler.source or java.version property
+            match = re.search(
+                r"<(?:maven\.compiler\.source|java\.version)>(\d+)</",
+                content,
+            )
+            if match:
+                return match.group(1)
+            # Look for release property
+            match = re.search(r"<release>(\d+)</release>", content)
+            if match:
+                return match.group(1)
+        except Exception:
+            pass
+
+    # Check build.gradle (Gradle)
+    for gradle_file in ["build.gradle", "build.gradle.kts"]:
+        gradle_path = project_root / gradle_file
+        if gradle_path.exists():
+            try:
+                content = gradle_path.read_text()
+                # Look for sourceCompatibility or targetCompatibility
+                match = re.search(
+                    r"(?:source|target)Compatibility\s*=\s*['\"]?(?:JavaVersion\.VERSION_)?(\d+)",
+                    content,
+                )
+                if match:
+                    return match.group(1)
+                # Look for toolchain languageVersion
+                match = re.search(
+                    r"languageVersion\.set\s*\(\s*JavaLanguageVersion\.of\s*\(\s*(\d+)\s*\)",
+                    content,
+                )
+                if match:
+                    return match.group(1)
+            except Exception:
+                pass
+
+    # Check .java-version file
+    java_version_file = project_root / ".java-version"
+    if java_version_file.exists():
+        try:
+            version = java_version_file.read_text().strip()
+            # Extract major version (e.g., "17.0.2" -> "17")
+            match = re.match(r"(\d+)", version)
+            if match:
+                return match.group(1)
+        except Exception:
+            pass
+
     return None

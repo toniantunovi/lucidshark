@@ -224,7 +224,7 @@ class PackageInstaller:
 
         content = f'''[project]
 name = "{project_root.name}"
-version = "0.2.0"
+version = "0.3.0"
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
