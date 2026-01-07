@@ -121,6 +121,7 @@ class ScanCommand(Command):
         )
 
         all_issues: List[UnifiedIssue] = []
+        pipeline_result: Optional[ScanResult] = None
 
         # Run linting if requested
         lint_enabled = getattr(args, "lint", False) or getattr(args, "all", False)
@@ -158,12 +159,16 @@ class ScanCommand(Command):
                     lucidscan_version=self._version,
                 )
 
-                scan_result = executor.execute(needed_scanners, context)
-                all_issues.extend(scan_result.issues)
+                pipeline_result = executor.execute(needed_scanners, context)
+                all_issues.extend(pipeline_result.issues)
 
         # Build final result
         result = ScanResult(issues=all_issues)
         result.summary = result.compute_summary()
+
+        # Preserve metadata from pipeline execution
+        if pipeline_result and pipeline_result.metadata:
+            result.metadata = pipeline_result.metadata
 
         return result
 
