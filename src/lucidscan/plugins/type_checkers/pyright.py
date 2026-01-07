@@ -83,20 +83,27 @@ class PyrightChecker(TypeCheckerPlugin):
         """Ensure pyright is available.
 
         Checks for pyright in:
-        1. Project's node_modules/.bin/pyright
-        2. System PATH (npm installed)
-        3. Downloads standalone binary if not found
+        1. Project's .venv/bin/pyright (pip installed pyright)
+        2. Project's node_modules/.bin/pyright
+        3. System PATH (npm or pip installed)
+        4. Downloads standalone binary if not found
 
         Returns:
             Path to pyright binary.
         """
-        # Check project node_modules first
+        # Check project venv first (pip install pyright)
+        if self._project_root:
+            venv_pyright = self._project_root / ".venv" / "bin" / "pyright"
+            if venv_pyright.exists():
+                return venv_pyright
+
+        # Check project node_modules
         if self._project_root:
             node_pyright = self._project_root / "node_modules" / ".bin" / "pyright"
             if node_pyright.exists():
                 return node_pyright
 
-        # Check system PATH (npm installed)
+        # Check system PATH (npm or pip installed)
         pyright_path = shutil.which("pyright")
         if pyright_path:
             return Path(pyright_path)
@@ -238,7 +245,7 @@ class PyrightChecker(TypeCheckerPlugin):
 
             line_start = start.get("line", 0) + 1  # pyright uses 0-based lines
             line_end = end.get("line", 0) + 1
-            column_start = start.get("character", 0) + 1
+            column = start.get("character", 0) + 1
 
             # Get severity
             severity = SEVERITY_MAP.get(severity_str, Severity.MEDIUM)
@@ -249,7 +256,7 @@ class PyrightChecker(TypeCheckerPlugin):
                 file_path = project_root / file_path
 
             # Generate deterministic ID
-            issue_id = self._generate_issue_id(rule, file, line_start, column_start, message)
+            issue_id = self._generate_issue_id(rule, file, line_start, column, message)
 
             # Build title
             title = f"[{rule}] {message}" if rule else message
@@ -264,10 +271,10 @@ class PyrightChecker(TypeCheckerPlugin):
                 file_path=file_path,
                 line_start=line_start,
                 line_end=line_end,
-                column_start=column_start,
                 scanner_metadata={
                     "rule": rule,
                     "severity": severity_str,
+                    "column": column,
                 },
             )
         except Exception as e:

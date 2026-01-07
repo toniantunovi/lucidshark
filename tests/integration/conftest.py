@@ -11,6 +11,13 @@ import pytest
 from lucidscan.plugins.scanners.trivy import TrivyScanner
 from lucidscan.plugins.scanners.opengrep import OpenGrepScanner
 from lucidscan.plugins.scanners.checkov import CheckovScanner
+from lucidscan.plugins.linters.ruff import RuffLinter
+from lucidscan.plugins.linters.biome import BiomeLinter
+from lucidscan.plugins.linters.eslint import ESLintLinter
+from lucidscan.plugins.linters.checkstyle import CheckstyleLinter
+from lucidscan.plugins.type_checkers.mypy import MypyChecker
+from lucidscan.plugins.type_checkers.pyright import PyrightChecker
+from lucidscan.plugins.type_checkers.typescript import TypeScriptChecker
 from lucidscan.bootstrap.paths import LucidscanPaths
 
 
@@ -141,3 +148,206 @@ def checkov_scanner() -> CheckovScanner:
 def ensure_checkov_binary(checkov_scanner: CheckovScanner) -> Path:
     """Ensure Checkov is installed and return its binary path."""
     return checkov_scanner.ensure_binary()
+
+
+# =============================================================================
+# Linter availability checks
+# =============================================================================
+
+
+def _ensure_ruff_downloaded() -> bool:
+    """Ensure Ruff binary is downloaded. Returns True if available."""
+    try:
+        linter = RuffLinter()
+        linter.ensure_binary()
+        return True
+    except Exception:
+        return False
+
+
+def _ensure_biome_downloaded() -> bool:
+    """Ensure Biome binary is downloaded. Returns True if available."""
+    try:
+        linter = BiomeLinter()
+        linter.ensure_binary()
+        return True
+    except Exception:
+        return False
+
+
+def _is_node_available() -> bool:
+    """Check if Node.js is available."""
+    return shutil.which("node") is not None
+
+
+def _is_java_available() -> bool:
+    """Check if Java is available."""
+    return shutil.which("java") is not None
+
+
+# =============================================================================
+# Type checker availability checks
+# =============================================================================
+
+
+def _ensure_mypy_available() -> bool:
+    """Try to find mypy via ensure_binary. Returns True if available."""
+    try:
+        # Get project root for venv detection
+        project_root = Path(__file__).parent.parent.parent
+        checker = MypyChecker(project_root=project_root)
+        checker.ensure_binary()
+        return True
+    except Exception:
+        return shutil.which("mypy") is not None
+
+
+def _ensure_pyright_available() -> bool:
+    """Try to find pyright via ensure_binary. Returns True if available."""
+    try:
+        project_root = Path(__file__).parent.parent.parent
+        checker = PyrightChecker(project_root=project_root)
+        checker.ensure_binary()
+        return True
+    except Exception:
+        return shutil.which("pyright") is not None
+
+
+def _ensure_tsc_available() -> bool:
+    """Try to find TypeScript compiler via ensure_binary. Returns True if available."""
+    try:
+        project_root = Path(__file__).parent.parent.parent
+        checker = TypeScriptChecker(project_root=project_root)
+        checker.ensure_binary()
+        return True
+    except Exception:
+        return shutil.which("tsc") is not None
+
+
+def _ensure_eslint_available() -> bool:
+    """Try to find ESLint via ensure_binary. Returns True if available."""
+    try:
+        project_root = Path(__file__).parent.parent.parent
+        linter = ESLintLinter(project_root=project_root)
+        linter.ensure_binary()
+        return True
+    except Exception:
+        return shutil.which("eslint") is not None
+
+
+# Download/check tools at module load time so skipif markers work correctly
+_ruff_available = _ensure_ruff_downloaded() or shutil.which("ruff") is not None
+_biome_available = _ensure_biome_downloaded() or shutil.which("biome") is not None
+_eslint_available = _ensure_eslint_available()
+_node_available = _is_node_available()
+_java_available = _is_java_available()
+_mypy_available = _ensure_mypy_available()
+_pyright_available = _ensure_pyright_available()
+_tsc_available = _ensure_tsc_available()
+
+
+# Pytest markers for linters
+ruff_available = pytest.mark.skipif(
+    not _ruff_available,
+    reason="Ruff binary not available and could not be downloaded"
+)
+
+biome_available = pytest.mark.skipif(
+    not _biome_available,
+    reason="Biome binary not available and could not be downloaded"
+)
+
+eslint_available = pytest.mark.skipif(
+    not _eslint_available,
+    reason="ESLint not available"
+)
+
+node_available = pytest.mark.skipif(
+    not _node_available,
+    reason="Node.js not available"
+)
+
+java_available = pytest.mark.skipif(
+    not _java_available,
+    reason="Java not available"
+)
+
+# Pytest markers for type checkers
+mypy_available = pytest.mark.skipif(
+    not _mypy_available,
+    reason="mypy not available"
+)
+
+pyright_available = pytest.mark.skipif(
+    not _pyright_available,
+    reason="pyright not available"
+)
+
+tsc_available = pytest.mark.skipif(
+    not _tsc_available,
+    reason="TypeScript compiler (tsc) not available"
+)
+
+
+# =============================================================================
+# Linter fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def ruff_linter() -> RuffLinter:
+    """Return a RuffLinter instance."""
+    return RuffLinter()
+
+
+@pytest.fixture
+def biome_linter() -> BiomeLinter:
+    """Return a BiomeLinter instance."""
+    return BiomeLinter()
+
+
+@pytest.fixture
+def eslint_linter(project_root: Path) -> ESLintLinter:
+    """Return an ESLintLinter instance with project root for node_modules detection."""
+    return ESLintLinter(project_root=project_root)
+
+
+@pytest.fixture
+def checkstyle_linter() -> CheckstyleLinter:
+    """Return a CheckstyleLinter instance."""
+    return CheckstyleLinter()
+
+
+@pytest.fixture
+def ensure_ruff_binary(ruff_linter: RuffLinter) -> Path:
+    """Ensure Ruff binary is downloaded and return its path."""
+    return ruff_linter.ensure_binary()
+
+
+@pytest.fixture
+def ensure_biome_binary(biome_linter: BiomeLinter) -> Path:
+    """Ensure Biome binary is downloaded and return its path."""
+    return biome_linter.ensure_binary()
+
+
+# =============================================================================
+# Type checker fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def mypy_checker(project_root: Path) -> MypyChecker:
+    """Return a MypyChecker instance with project root for venv detection."""
+    return MypyChecker(project_root=project_root)
+
+
+@pytest.fixture
+def pyright_checker(project_root: Path) -> PyrightChecker:
+    """Return a PyrightChecker instance with project root for venv detection."""
+    return PyrightChecker(project_root=project_root)
+
+
+@pytest.fixture
+def typescript_checker(project_root: Path) -> TypeScriptChecker:
+    """Return a TypeScriptChecker instance with project root for node_modules detection."""
+    return TypeScriptChecker(project_root=project_root)

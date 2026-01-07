@@ -234,10 +234,10 @@ class TypeScriptChecker(TypeCheckerPlugin):
                 file_path=file_path,
                 line_start=line,
                 line_end=line,
-                column_start=column,
                 scanner_metadata={
                     "code": code,
                     "severity": severity_str,
+                    "column": column,
                 },
             )
         except Exception as e:

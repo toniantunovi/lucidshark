@@ -155,6 +155,7 @@ class CLIRunner:
             getattr(args, "iac", False),
             getattr(args, "sast", False),
             getattr(args, "lint", False),
+            getattr(args, "type_check", False),
             getattr(args, "all", False),
         ])
 
@@ -173,7 +174,7 @@ class CLIRunner:
                 return EXIT_SCANNER_ERROR
 
         # No scanners selected - show scan help
-        print("No scan domains selected. Use --sca, --sast, --iac, --lint, or --all.")
+        print("No scan domains selected. Use --sca, --sast, --iac, --lint, --type-check, or --all.")
         print("\nRun 'lucidscan scan --help' for more options.")
         return EXIT_SUCCESS
 
