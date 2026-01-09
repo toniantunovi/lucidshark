@@ -160,6 +160,8 @@ class CLIRunner:
             getattr(args, "sast", False),
             getattr(args, "lint", False),
             getattr(args, "type_check", False),
+            getattr(args, "test", False),
+            getattr(args, "coverage", False),
             getattr(args, "all", False),
         ])
 

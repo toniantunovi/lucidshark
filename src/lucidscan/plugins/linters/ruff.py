@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import platform
 import subprocess
 import tarfile
@@ -369,8 +368,15 @@ class RuffLinter(LinterPlugin):
             LOGGER.warning("Failed to parse Ruff output as JSON")
             return []
 
+        if not isinstance(violations, list):
+            LOGGER.warning(f"Expected list from Ruff, got {type(violations).__name__}")
+            return []
+
         issues = []
         for violation in violations:
+            if not isinstance(violation, dict):
+                LOGGER.warning(f"Skipping non-dict violation: {type(violation).__name__}")
+                continue
             issue = self._violation_to_issue(violation, project_root)
             if issue:
                 issues.append(issue)
@@ -395,7 +401,7 @@ class RuffLinter(LinterPlugin):
             code = violation.get("code", "")
             message = violation.get("message", "")
             filename = violation.get("filename", "")
-            location = violation.get("location", {})
+            location = violation.get("location") or {}
 
             # Get severity based on rule category
             severity = self._get_severity(code)
@@ -424,7 +430,7 @@ class RuffLinter(LinterPlugin):
                 line_start=location.get("row"),
                 line_end=location.get("row"),
                 code_snippet=code_snippet,
-                recommendation=violation.get("fix", {}).get("message"),
+                recommendation=(violation.get("fix") or {}).get("message"),
                 scanner_metadata={
                     "rule": code,
                     "fixable": violation.get("fix") is not None,
