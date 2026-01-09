@@ -7,7 +7,7 @@ Core fields are validated, while plugin-specific options are passed through.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 
 # Default plugins per domain (used when not specified in config)
@@ -20,6 +20,39 @@ DEFAULT_PLUGINS: Dict[str, str] = {
 
 # Valid severity values for fail_on
 VALID_SEVERITIES = {"critical", "high", "medium", "low", "info"}
+
+# Valid domain keys for fail_on dict format
+VALID_FAIL_ON_DOMAINS = {"linting", "type_checking", "security", "testing", "coverage"}
+
+# Special fail_on values (not severities)
+SPECIAL_FAIL_ON_VALUES = {"error", "any", "none"}
+
+
+@dataclass
+class FailOnConfig:
+    """Failure threshold configuration.
+
+    Supports per-domain thresholds for different scan types.
+    Values can be severity levels (critical, high, medium, low, info)
+    or special values (error, any, none).
+    """
+
+    linting: Optional[str] = None  # error, none
+    type_checking: Optional[str] = None  # error, none
+    security: Optional[str] = None  # critical, high, medium, low, info, none
+    testing: Optional[str] = None  # any, none
+    coverage: Optional[str] = None  # any, none
+
+    def get_threshold(self, domain: str) -> Optional[str]:
+        """Get threshold for a specific domain.
+
+        Args:
+            domain: Domain name (linting, type_checking, security, testing, coverage).
+
+        Returns:
+            Threshold value or None if not set.
+        """
+        return getattr(self, domain, None)
 
 
 @dataclass
@@ -157,7 +190,8 @@ class LucidScanConfig:
     project: ProjectConfig = field(default_factory=ProjectConfig)
 
     # Core config (validated)
-    fail_on: Optional[str] = None  # critical, high, medium, low
+    # fail_on can be a string (legacy) or FailOnConfig (per-domain thresholds)
+    fail_on: Optional[Union[str, FailOnConfig]] = None
     ignore: List[str] = field(default_factory=list)
     output: OutputConfig = field(default_factory=OutputConfig)
 
@@ -208,6 +242,27 @@ class LucidScanConfig:
         if domain_config.plugin:
             return domain_config.plugin
         return DEFAULT_PLUGINS.get(domain, "")
+
+    def get_fail_on_threshold(self, domain: str = "security") -> Optional[str]:
+        """Get fail_on threshold for a specific domain.
+
+        Handles both string (legacy) and FailOnConfig (per-domain) formats.
+
+        Args:
+            domain: Domain name (security, linting, type_checking, testing, coverage).
+                   Defaults to "security" for backwards compatibility.
+
+        Returns:
+            Threshold value or None if not set.
+        """
+        if self.fail_on is None:
+            return None
+        if isinstance(self.fail_on, str):
+            # Legacy string format applies to security domain only
+            return self.fail_on if domain == "security" else None
+        if isinstance(self.fail_on, FailOnConfig):
+            return self.fail_on.get_threshold(domain)
+        return None
 
     def get_scanner_options(self, domain: str) -> Dict[str, Any]:
         """Get plugin-specific options for a domain.

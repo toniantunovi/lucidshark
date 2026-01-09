@@ -118,7 +118,8 @@ class ScanCommand(Command):
             reporter.report(result, sys.stdout)
 
             # Check severity threshold - CLI overrides config
-            threshold = args.fail_on if args.fail_on else config.fail_on
+            # Use get_fail_on_threshold to handle both string and dict formats
+            threshold = args.fail_on if args.fail_on else config.get_fail_on_threshold("security")
             if self._check_severity_threshold(result, threshold):
                 return EXIT_ISSUES_FOUND
 

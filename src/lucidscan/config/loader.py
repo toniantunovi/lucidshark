@@ -21,6 +21,7 @@ from lucidscan.config.models import (
     CoveragePipelineConfig,
     DEFAULT_PLUGINS,
     DomainPipelineConfig,
+    FailOnConfig,
     LucidScanConfig,
     OutputConfig,
     PipelineConfig,
@@ -400,9 +401,26 @@ def dict_to_config(data: Dict[str, Any]) -> LucidScanConfig:
         languages=project_data.get("languages", []),
     )
 
+    # Parse fail_on (string or dict format)
+    fail_on_data = data.get("fail_on")
+    fail_on = None
+    if fail_on_data is not None:
+        if isinstance(fail_on_data, str):
+            # Legacy string format - keep as string
+            fail_on = fail_on_data
+        elif isinstance(fail_on_data, dict):
+            # Dict format - convert to FailOnConfig
+            fail_on = FailOnConfig(
+                linting=fail_on_data.get("linting"),
+                type_checking=fail_on_data.get("type_checking"),
+                security=fail_on_data.get("security"),
+                testing=fail_on_data.get("testing"),
+                coverage=fail_on_data.get("coverage"),
+            )
+
     return LucidScanConfig(
         project=project,
-        fail_on=data.get("fail_on"),
+        fail_on=fail_on,
         ignore=data.get("ignore", []),
         output=output,
         scanners=scanners,

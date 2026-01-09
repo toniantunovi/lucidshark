@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from difflib import get_close_matches
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Union
 
 from lucidscan.core.logging import get_logger
 
@@ -16,6 +16,8 @@ LOGGER = get_logger(__name__)
 
 # Valid top-level keys (core config)
 VALID_TOP_LEVEL_KEYS: Set[str] = {
+    "version",
+    "project",
     "fail_on",
     "ignore",
     "output",
@@ -34,6 +36,10 @@ VALID_OUTPUT_KEYS: Set[str] = {
 VALID_PIPELINE_KEYS: Set[str] = {
     "enrichers",
     "max_workers",
+    "linting",
+    "type_checking",
+    "security",
+    "testing",
 }
 
 # Valid keys under scanners.<domain> (framework-level, not plugin-specific)
@@ -58,6 +64,24 @@ VALID_SEVERITIES: Set[str] = {
     "medium",
     "low",
     "info",
+}
+
+# Valid fail_on domains (for dict format)
+VALID_FAIL_ON_DOMAINS: Set[str] = {
+    "linting",
+    "type_checking",
+    "security",
+    "testing",
+    "coverage",
+}
+
+# Valid fail_on values per domain type
+VALID_FAIL_ON_VALUES: Dict[str, Set[str]] = {
+    "linting": {"error", "none"},
+    "type_checking": {"error", "none"},
+    "security": {"critical", "high", "medium", "low", "info", "none"},
+    "testing": {"any", "none"},
+    "coverage": {"any", "none"},
 }
 
 # Valid keys under ai section
@@ -131,25 +155,57 @@ def validate_config(
             warnings.append(warning)
             _log_warning(warning)
 
-    # Validate fail_on
+    # Validate fail_on (string or dict format)
     fail_on = data.get("fail_on")
     if fail_on is not None:
-        if not isinstance(fail_on, str):
+        if isinstance(fail_on, str):
+            # Legacy string format - must be a valid severity
+            if fail_on.lower() not in VALID_SEVERITIES:
+                suggestion = _suggest_key(fail_on.lower(), VALID_SEVERITIES)
+                warning = ConfigValidationWarning(
+                    message=f"Invalid severity '{fail_on}' for 'fail_on'",
+                    source=source,
+                    key="fail_on",
+                    suggestion=suggestion,
+                )
+                warnings.append(warning)
+                _log_warning(warning)
+        elif isinstance(fail_on, dict):
+            # Dict format - validate each domain key and value
+            for domain, value in fail_on.items():
+                if domain not in VALID_FAIL_ON_DOMAINS:
+                    suggestion = _suggest_key(domain, VALID_FAIL_ON_DOMAINS)
+                    warning = ConfigValidationWarning(
+                        message=f"Unknown domain '{domain}' in 'fail_on'",
+                        source=source,
+                        key=f"fail_on.{domain}",
+                        suggestion=suggestion,
+                    )
+                    warnings.append(warning)
+                    _log_warning(warning)
+                elif not isinstance(value, str):
+                    warnings.append(ConfigValidationWarning(
+                        message=f"'fail_on.{domain}' must be a string, got {type(value).__name__}",
+                        source=source,
+                        key=f"fail_on.{domain}",
+                    ))
+                else:
+                    valid_values = VALID_FAIL_ON_VALUES.get(domain, set())
+                    if value.lower() not in valid_values:
+                        warning = ConfigValidationWarning(
+                            message=f"Invalid value '{value}' for 'fail_on.{domain}'. "
+                                    f"Valid values: {', '.join(sorted(valid_values))}",
+                            source=source,
+                            key=f"fail_on.{domain}",
+                        )
+                        warnings.append(warning)
+                        _log_warning(warning)
+        else:
             warnings.append(ConfigValidationWarning(
-                message=f"'fail_on' must be a string, got {type(fail_on).__name__}",
+                message=f"'fail_on' must be a string or mapping, got {type(fail_on).__name__}",
                 source=source,
                 key="fail_on",
             ))
-        elif fail_on.lower() not in VALID_SEVERITIES:
-            suggestion = _suggest_key(fail_on.lower(), VALID_SEVERITIES)
-            warning = ConfigValidationWarning(
-                message=f"Invalid severity '{fail_on}' for 'fail_on'",
-                source=source,
-                key="fail_on",
-                suggestion=suggestion,
-            )
-            warnings.append(warning)
-            _log_warning(warning)
 
     # Validate ignore
     ignore = data.get("ignore")
