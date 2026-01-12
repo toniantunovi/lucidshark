@@ -19,6 +19,7 @@ from lucidscan.cli.exit_codes import (
 )
 from lucidscan.cli.commands.status import StatusCommand
 from lucidscan.cli.commands.scan import ScanCommand
+from lucidscan.cli.commands.help import HelpCommand
 from lucidscan.config import load_config
 from lucidscan.config.loader import ConfigError
 from lucidscan.core.logging import configure_logging, get_logger
@@ -49,6 +50,7 @@ class CLIRunner:
         self._version = get_version()
         self.status_cmd = StatusCommand(version=self._version)
         self.scan_cmd = ScanCommand(version=self._version)
+        self.help_cmd = HelpCommand(version=self._version)
         # InitCommand will be imported lazily when needed to avoid
         # import errors until the module is created
         self._init_cmd = None
@@ -109,6 +111,8 @@ class CLIRunner:
             return self._handle_serve(args)
         elif command == "setup":
             return self._handle_setup(args)
+        elif command == "help":
+            return self._handle_help(args)
         else:
             # No command specified - show help
             self.parser.print_help()
@@ -242,3 +246,14 @@ class CLIRunner:
         except ImportError as e:
             LOGGER.error(f"Setup command not available: {e}")
             return EXIT_INVALID_USAGE
+
+    def _handle_help(self, args) -> int:
+        """Handle the help command.
+
+        Args:
+            args: Parsed command-line arguments.
+
+        Returns:
+            Exit code.
+        """
+        return self.help_cmd.execute(args)

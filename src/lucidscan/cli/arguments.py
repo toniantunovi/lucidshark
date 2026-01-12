@@ -318,6 +318,18 @@ def _build_setup_parser(subparsers: argparse._SubParsersAction) -> None:
     )
 
 
+def _build_help_parser(subparsers: argparse._SubParsersAction) -> None:
+    """Build the 'help' subcommand parser."""
+    subparsers.add_parser(
+        "help",
+        help="Show LLM-friendly documentation.",
+        description=(
+            "Display comprehensive LucidScan documentation including "
+            "CLI commands, MCP tools, and configuration reference."
+        ),
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Build and return the argument parser for lucidscan CLI.
 
@@ -356,5 +368,6 @@ def build_parser() -> argparse.ArgumentParser:
     _build_status_parser(subparsers)
     _build_serve_parser(subparsers)
     _build_setup_parser(subparsers)
+    _build_help_parser(subparsers)
 
     return parser

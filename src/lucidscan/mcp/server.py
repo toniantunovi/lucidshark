@@ -135,6 +135,18 @@ class LucidScanMCPServer:
                         "properties": {},
                     },
                 ),
+                Tool(
+                    name="get_help",
+                    description=(
+                        "Get LucidScan documentation for AI agents. "
+                        "Returns comprehensive markdown reference for initialization, "
+                        "configuration, CLI commands, and MCP tools."
+                    ),
+                    inputSchema={
+                        "type": "object",
+                        "properties": {},
+                    },
+                ),
             ]
 
         @self.server.call_tool()
@@ -163,6 +175,8 @@ class LucidScanMCPServer:
                     )
                 elif name == "get_status":
                     result = await self.executor.get_status()
+                elif name == "get_help":
+                    result = await self.executor.get_help()
                 else:
                     result = {"error": f"Unknown tool: {name}"}
 

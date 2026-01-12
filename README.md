@@ -250,6 +250,7 @@ pytest tests/
 
 ## Documentation
 
+- [LLM Reference Documentation](docs/help.md) - For AI agents and detailed reference
 - [Full Specification](docs/main.md)
 - [Roadmap](docs/roadmap.md)
 

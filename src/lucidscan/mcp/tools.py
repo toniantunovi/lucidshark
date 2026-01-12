@@ -211,6 +211,20 @@ class MCPToolExecutor:
             "cached_issues": len(self._issue_cache),
         }
 
+    async def get_help(self) -> Dict[str, Any]:
+        """Get LucidScan documentation.
+
+        Returns:
+            Documentation content in markdown format.
+        """
+        from lucidscan.cli.commands.help import get_help_content
+
+        content = get_help_content()
+        return {
+            "documentation": content,
+            "format": "markdown",
+        }
+
     def _parse_domains(self, domains: List[str]) -> List[DomainType]:
         """Parse domain strings to domain enums.
 

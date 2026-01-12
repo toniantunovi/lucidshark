@@ -254,6 +254,19 @@ class TestMCPToolExecutorAsync:
         assert result["cached_issues"] == 0
 
     @pytest.mark.asyncio
+    async def test_get_help(self, executor: MCPToolExecutor) -> None:
+        """Test getting help documentation."""
+        result = await executor.get_help()
+
+        assert "documentation" in result
+        assert "format" in result
+        assert result["format"] == "markdown"
+        assert "LucidScan Reference Documentation" in result["documentation"]
+        assert "Quick Start" in result["documentation"]
+        assert "CLI Commands" in result["documentation"]
+        assert "MCP Tools Reference" in result["documentation"]
+
+    @pytest.mark.asyncio
     async def test_scan_with_empty_results(
         self, executor: MCPToolExecutor
     ) -> None:
