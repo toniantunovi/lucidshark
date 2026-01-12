@@ -214,6 +214,9 @@ class MCPToolExecutor:
     def _parse_domains(self, domains: List[str]) -> List[DomainType]:
         """Parse domain strings to domain enums.
 
+        When "all" is specified, returns domains based on what's configured
+        in lucidscan.yml, not a hardcoded list.
+
         Args:
             domains: List of domain names.
 
@@ -221,7 +224,25 @@ class MCPToolExecutor:
             List of domain enums (ToolDomain or ScanDomain).
         """
         if "all" in domains:
-            result: List[DomainType] = list(ToolDomain)
+            result: List[DomainType] = []
+
+            # Include tool domains based on pipeline config
+            if self.config.pipeline.linting and self.config.pipeline.linting.enabled:
+                result.append(ToolDomain.LINTING)
+            if self.config.pipeline.type_checking and self.config.pipeline.type_checking.enabled:
+                result.append(ToolDomain.TYPE_CHECKING)
+            if self.config.pipeline.testing and self.config.pipeline.testing.enabled:
+                result.append(ToolDomain.TESTING)
+            if self.config.pipeline.coverage and self.config.pipeline.coverage.enabled:
+                result.append(ToolDomain.COVERAGE)
+
+            # Include security domains based on config (both legacy and pipeline)
+            for domain_str in self.config.get_enabled_domains():
+                try:
+                    result.append(ScanDomain(domain_str))
+                except ValueError:
+                    LOGGER.warning(f"Unknown security domain in config: {domain_str}")
+
             return result
 
         result = []

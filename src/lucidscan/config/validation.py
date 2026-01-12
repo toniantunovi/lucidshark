@@ -40,6 +40,7 @@ VALID_PIPELINE_KEYS: Set[str] = {
     "type_checking",
     "security",
     "testing",
+    "coverage",
 }
 
 # Valid keys under scanners.<domain> (framework-level, not plugin-specific)

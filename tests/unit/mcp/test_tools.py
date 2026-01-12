@@ -8,9 +8,34 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from lucidscan.config import LucidScanConfig
+from lucidscan.config.models import (
+    DomainPipelineConfig,
+    CoveragePipelineConfig,
+    PipelineConfig,
+    ToolConfig,
+)
 from lucidscan.core.domain_runner import detect_language, get_domains_for_language
 from lucidscan.core.models import ScanContext, ScanDomain, Severity, ToolDomain, UnifiedIssue
 from lucidscan.mcp.tools import MCPToolExecutor
+
+
+def create_full_pipeline_config() -> PipelineConfig:
+    """Create a pipeline config with all domains enabled."""
+    return PipelineConfig(
+        linting=DomainPipelineConfig(enabled=True, tools=[ToolConfig(name="ruff")]),
+        type_checking=DomainPipelineConfig(enabled=True, tools=[ToolConfig(name="mypy")]),
+        testing=DomainPipelineConfig(enabled=True, tools=[ToolConfig(name="pytest")]),
+        coverage=CoveragePipelineConfig(enabled=True, threshold=80),
+        security=DomainPipelineConfig(
+            enabled=True,
+            tools=[
+                ToolConfig(name="trivy", domains=["sca"]),
+                ToolConfig(name="opengrep", domains=["sast"]),
+                ToolConfig(name="checkov", domains=["iac"]),
+                ToolConfig(name="trivy", domains=["container"]),
+            ],
+        ),
+    )
 
 
 class TestMCPToolExecutor:
@@ -27,11 +52,23 @@ class TestMCPToolExecutor:
         return LucidScanConfig()
 
     @pytest.fixture
+    def full_config(self) -> LucidScanConfig:
+        """Create a test configuration with all domains enabled."""
+        return LucidScanConfig(pipeline=create_full_pipeline_config())
+
+    @pytest.fixture
     def executor(
         self, project_root: Path, config: LucidScanConfig
     ) -> MCPToolExecutor:
         """Create an executor instance."""
         return MCPToolExecutor(project_root, config)
+
+    @pytest.fixture
+    def full_executor(
+        self, project_root: Path, full_config: LucidScanConfig
+    ) -> MCPToolExecutor:
+        """Create an executor instance with full config."""
+        return MCPToolExecutor(project_root, full_config)
 
     def test_domain_map_contains_all_domains(
         self, executor: MCPToolExecutor
@@ -48,11 +85,31 @@ class TestMCPToolExecutor:
         for domain in expected_domains:
             assert domain in executor.DOMAIN_MAP
 
-    def test_parse_domains_with_all(self, executor: MCPToolExecutor) -> None:
-        """Test parsing 'all' domain."""
+    def test_parse_domains_with_all_respects_config(
+        self, full_executor: MCPToolExecutor
+    ) -> None:
+        """Test parsing 'all' domain respects configuration."""
+        domains = full_executor._parse_domains(["all"])
+        # Should include ToolDomain values based on config
+        assert ToolDomain.LINTING in domains
+        assert ToolDomain.TYPE_CHECKING in domains
+        assert ToolDomain.TESTING in domains
+        assert ToolDomain.COVERAGE in domains
+        # Should include ScanDomain values based on config
+        assert ScanDomain.SAST in domains
+        assert ScanDomain.SCA in domains
+        assert ScanDomain.IAC in domains
+        assert ScanDomain.CONTAINER in domains
+        # ToolDomain.SECURITY should NOT be included (replaced by specific ScanDomains)
+        assert ToolDomain.SECURITY not in domains
+
+    def test_parse_domains_with_all_empty_config(
+        self, executor: MCPToolExecutor
+    ) -> None:
+        """Test parsing 'all' with empty config returns empty list."""
         domains = executor._parse_domains(["all"])
-        # Should include both ScanDomain and ToolDomain values
-        assert ToolDomain.LINTING in domains or ScanDomain.SAST in domains
+        # With no config, no domains should be enabled
+        assert domains == []
 
     def test_parse_domains_with_specific(self, executor: MCPToolExecutor) -> None:
         """Test parsing specific domains."""
@@ -574,7 +631,8 @@ class TestLanguageDetection:
         """Test domain selection for Python files."""
         domains = get_domains_for_language("python")
         assert "linting" in domains
-        assert "security" in domains
+        assert "sast" in domains
+        assert "sca" in domains
         assert "type_checking" in domains
         assert "testing" in domains
         assert "coverage" in domains
@@ -603,16 +661,17 @@ class TestLanguageDetection:
         """Test domain selection for YAML."""
         domains = get_domains_for_language("yaml")
         assert "iac" in domains
-        assert "security" in domains
+        assert "sast" in domains
 
     def test_get_domains_for_json(self) -> None:
         """Test domain selection for JSON."""
         domains = get_domains_for_language("json")
         assert "iac" in domains
-        assert "security" in domains
+        assert "sast" in domains
 
     def test_get_domains_for_unknown(self) -> None:
         """Test domain selection for unknown language."""
         domains = get_domains_for_language("unknown")
         assert "linting" in domains
-        assert "security" in domains
+        assert "sast" in domains
+        assert "sca" in domains

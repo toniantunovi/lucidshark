@@ -156,8 +156,9 @@ def get_domains_for_language(language: str) -> List[str]:
     Returns:
         List of domain names.
     """
-    # Default domains for most languages
-    domains = ["linting", "security"]
+    # Default domains for most languages - use specific security domains
+    # "sast" for static analysis, "sca" for dependency scanning
+    domains = ["linting", "sast", "sca"]
 
     if language == "python":
         domains.extend(["type_checking", "testing", "coverage"])
@@ -166,7 +167,7 @@ def get_domains_for_language(language: str) -> List[str]:
     elif language == "terraform":
         domains = ["iac"]
     elif language in ("yaml", "json"):
-        domains = ["iac", "security"]
+        domains = ["iac", "sast"]
 
     return domains
 

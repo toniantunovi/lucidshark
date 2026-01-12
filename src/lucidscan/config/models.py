@@ -146,6 +146,41 @@ class PipelineConfig:
             return []
         return [tool.name for tool in domain_config.tools]
 
+    def get_enabled_security_domains(self) -> List[str]:
+        """Get list of security domains enabled via pipeline.security.tools.
+
+        Extracts domains from each tool's domains list in pipeline.security.tools.
+
+        Returns:
+            List of unique domain names (sca, sast, iac, container).
+        """
+        if self.security is None or not self.security.enabled:
+            return []
+        domains: List[str] = []
+        for tool in self.security.tools:
+            for domain in tool.domains:
+                if domain not in domains:
+                    domains.append(domain)
+        return domains
+
+    def get_security_plugin_for_domain(self, domain: str) -> Optional[str]:
+        """Get the plugin name configured for a security domain.
+
+        Looks up which tool in pipeline.security.tools handles the given domain.
+
+        Args:
+            domain: Security domain name (sca, sast, iac, container).
+
+        Returns:
+            Plugin name if configured, None otherwise.
+        """
+        if self.security is None or not self.security.enabled:
+            return None
+        for tool in self.security.tools:
+            if domain in tool.domains:
+                return tool.name
+        return None
+
 
 @dataclass
 class ScannerDomainConfig:
@@ -222,15 +257,32 @@ class LucidScanConfig:
         return self.scanners.get(domain, ScannerDomainConfig())
 
     def get_enabled_domains(self) -> List[str]:
-        """Get list of enabled domain names.
+        """Get list of enabled security domain names.
+
+        Checks both:
+        1. Legacy scanners.{domain} config
+        2. New pipeline.security.tools[*].domains config
 
         Returns:
             List of domain names that are enabled in config.
         """
-        return [domain for domain, cfg in self.scanners.items() if cfg.enabled]
+        # Check legacy scanners config
+        domains = [domain for domain, cfg in self.scanners.items() if cfg.enabled]
+
+        # Also check pipeline.security.tools for domains
+        pipeline_domains = self.pipeline.get_enabled_security_domains()
+        for domain in pipeline_domains:
+            if domain not in domains:
+                domains.append(domain)
+
+        return domains
 
     def get_plugin_for_domain(self, domain: str) -> str:
         """Get which plugin serves a domain.
+
+        Checks both:
+        1. Legacy scanners.{domain}.plugin config
+        2. New pipeline.security.tools[*].domains config
 
         Args:
             domain: Domain name (sca, sast, iac, container).
@@ -238,9 +290,17 @@ class LucidScanConfig:
         Returns:
             Plugin name, falling back to default if not specified.
         """
+        # Check legacy scanners config first
         domain_config = self.get_scanner_config(domain)
         if domain_config.plugin:
             return domain_config.plugin
+
+        # Check pipeline.security.tools
+        pipeline_plugin = self.pipeline.get_security_plugin_for_domain(domain)
+        if pipeline_plugin:
+            return pipeline_plugin
+
+        # Fall back to defaults only if no config exists
         return DEFAULT_PLUGINS.get(domain, "")
 
     def get_fail_on_threshold(self, domain: str = "security") -> Optional[str]:

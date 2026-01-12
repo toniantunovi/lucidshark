@@ -95,7 +95,8 @@ class ConfigBridge:
     ) -> List[ScanDomain]:
         """Determine which scan domains are enabled.
 
-        If CLI flags (--sca, --sast, etc.) are provided, use those.
+        If specific CLI flags (--sca, --sast, etc.) are provided, use those.
+        If --all is provided, use domains from config file.
         Otherwise, use domains enabled in config file.
 
         Args:
@@ -110,33 +111,25 @@ class ConfigBridge:
         sast = getattr(args, "sast", False)
         iac = getattr(args, "iac", False)
         container = getattr(args, "container", False)
-        all_domains = getattr(args, "all", False)
 
-        # Check if any domain flags were explicitly set on CLI
-        cli_domains_set = any([sca, sast, iac, container, all_domains])
+        # Check if specific domain flags were set (not --all)
+        specific_domains_set = any([sca, sast, iac, container])
 
-        if cli_domains_set:
-            # CLI flags take precedence - use what was explicitly requested
+        if specific_domains_set:
+            # Specific CLI flags take precedence
             domains: List[ScanDomain] = []
-            if all_domains:
-                domains = [
-                    ScanDomain.SCA,
-                    ScanDomain.SAST,
-                    ScanDomain.IAC,
-                    ScanDomain.CONTAINER,
-                ]
-            else:
-                if sca:
-                    domains.append(ScanDomain.SCA)
-                if sast:
-                    domains.append(ScanDomain.SAST)
-                if iac:
-                    domains.append(ScanDomain.IAC)
-                if container:
-                    domains.append(ScanDomain.CONTAINER)
+            if sca:
+                domains.append(ScanDomain.SCA)
+            if sast:
+                domains.append(ScanDomain.SAST)
+            if iac:
+                domains.append(ScanDomain.IAC)
+            if container:
+                domains.append(ScanDomain.CONTAINER)
             return domains
 
-        # Use config file settings
+        # --all or no flags: use config file settings
+        # This respects what's actually configured in lucidscan.yml
         enabled_domains: List[ScanDomain] = []
         for domain_name in config.get_enabled_domains():
             try:
