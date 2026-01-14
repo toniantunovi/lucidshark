@@ -195,7 +195,7 @@ lucidscan autoconfigure [--ci github|gitlab|bitbucket] [--non-interactive]
 
 # Run quality pipeline
 lucidscan scan [--lint] [--type-check] [--sca] [--sast] [--iac] [--test] [--coverage] [--all]
-lucidscan scan [--fix] [--format table|json|sarif|summary]
+lucidscan scan [--fix] [--stream] [--format table|json|sarif|summary]
 lucidscan scan [--fail-on critical|high|medium|low]
 
 # Server mode

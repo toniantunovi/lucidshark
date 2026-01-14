@@ -20,9 +20,66 @@ from lucidscan.core.models import (
     ToolDomain,
     UnifiedIssue,
 )
+from lucidscan.core.subprocess_runner import run_with_streaming
 from lucidscan.plugins.type_checkers.base import TypeCheckerPlugin
 
 LOGGER = get_logger(__name__)
+
+
+def _glob_to_regex(pattern: str) -> str:
+    """Convert a gitignore-style glob pattern to a regex for mypy.
+
+    mypy's --exclude flag expects Python regex patterns, not glob patterns.
+    This function converts common glob patterns to equivalent regex.
+
+    Args:
+        pattern: Gitignore-style glob pattern (e.g., '**/.venv/**', '*.pyc').
+
+    Returns:
+        Regex pattern suitable for mypy --exclude.
+    """
+    import re
+
+    # Handle common directory patterns like **/.venv/** or .venv/
+    # Extract the core directory/file name and create a simple regex
+    if pattern.startswith("**/") and pattern.endswith("/**"):
+        # Pattern like **/.venv/** - match directory anywhere in path
+        core = pattern[3:-3]  # Remove **/ and /**
+        # Escape regex special chars and create pattern
+        escaped = re.escape(core)
+        return f"(^|/){escaped}(/|$)"
+
+    if pattern.startswith("**/"):
+        # Pattern like **/foo - match at end of any path
+        core = pattern[3:]
+        escaped = re.escape(core)
+        return f"(^|/){escaped}$"
+
+    if pattern.endswith("/**"):
+        # Pattern like foo/** - match directory at start
+        core = pattern[:-3]
+        escaped = re.escape(core)
+        return f"^{escaped}(/|$)"
+
+    if pattern.endswith("/"):
+        # Directory pattern like .venv/
+        core = pattern[:-1]
+        escaped = re.escape(core)
+        return f"(^|/){escaped}(/|$)"
+
+    # Handle wildcard patterns
+    # Escape all regex special chars first
+    escaped = re.escape(pattern)
+    # Convert glob wildcards to regex
+    # ** matches any path components
+    escaped = escaped.replace(r"\*\*", ".*")
+    # * matches anything except /
+    escaped = escaped.replace(r"\*", "[^/]*")
+    # ? matches single char except /
+    escaped = escaped.replace(r"\?", "[^/]")
+
+    return escaped
+
 
 # mypy severity mapping
 # mypy outputs: error, warning, note
@@ -154,20 +211,21 @@ class MypyChecker(TypeCheckerPlugin):
         paths = [str(p) for p in context.paths] if context.paths else ["."]
         cmd.extend(paths)
 
-        # Add exclude patterns
+        # Add exclude patterns (convert glob patterns to regex for mypy)
         exclude_patterns = context.get_exclude_patterns()
         for pattern in exclude_patterns:
-            cmd.extend(["--exclude", pattern])
+            regex_pattern = _glob_to_regex(pattern)
+            cmd.extend(["--exclude", regex_pattern])
 
         LOGGER.debug(f"Running: {' '.join(cmd)}")
 
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                cwd=str(context.project_root),
-                timeout=180,  # 3 minute timeout
+            result = run_with_streaming(
+                cmd=cmd,
+                cwd=context.project_root,
+                tool_name="mypy",
+                stream_handler=context.stream_handler,
+                timeout=180,
             )
         except subprocess.TimeoutExpired:
             LOGGER.warning("mypy timed out after 180 seconds")

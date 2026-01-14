@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Union
 if TYPE_CHECKING:
     from lucidscan.config.ignore import IgnorePatterns
     from lucidscan.config.models import LucidScanConfig
+    from lucidscan.core.streaming import StreamHandler
 
 
 class ScanDomain(str, Enum):
@@ -87,6 +88,7 @@ class ScanContext:
     enabled_domains: Sequence[DomainType]
     config: "LucidScanConfig" = None  # type: ignore[assignment]
     ignore_patterns: Optional["IgnorePatterns"] = None
+    stream_handler: Optional["StreamHandler"] = None
 
     def get_scanner_options(self, domain: str) -> Dict[str, Any]:
         """Get plugin-specific options for a domain.

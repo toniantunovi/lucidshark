@@ -985,6 +985,7 @@ Run the quality pipeline.
 Options:
   --domain, -d DOMAIN  Run specific domain (linting, security, testing, etc.)
   --fix                Apply auto-fixes where possible
+  --stream             Stream tool output in real-time as scans run
   --ci                 CI mode (non-interactive, annotations)
   --format FORMAT      Output format (table, json, sarif, ai)
   --fail-on LEVEL      Override fail threshold
@@ -994,6 +995,7 @@ Examples:
   lucidscan scan                    # Run full pipeline
   lucidscan scan --domain security  # Security only
   lucidscan scan --fix              # Auto-fix what's possible
+  lucidscan scan --stream           # See live output as tools run
   lucidscan scan --format json      # JSON output
   lucidscan scan src/               # Scan specific directory
 ```

@@ -15,6 +15,7 @@ from lucidscan.core.models import ScanContext, ScanDomain, Severity, UnifiedIssu
 from lucidscan.bootstrap.paths import LucidscanPaths
 from lucidscan.bootstrap.platform import get_platform_info
 from lucidscan.core.logging import get_logger
+from lucidscan.core.subprocess_runner import run_with_streaming
 
 LOGGER = get_logger(__name__)
 
@@ -213,14 +214,21 @@ class OpenGrepScanner(ScannerPlugin):
 
         LOGGER.debug(f"Running: {' '.join(cmd)}")
 
+        # Set environment variables for the scan
+        env = self._get_scan_env()
+        old_env = {}
+        for key, value in env.items():
+            if key not in os.environ or os.environ[key] != value:
+                old_env[key] = os.environ.get(key)
+                os.environ[key] = value
+
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                check=False,
-                env=self._get_scan_env(),
-                timeout=180,  # 3 minute timeout for scan
+            result = run_with_streaming(
+                cmd=cmd,
+                cwd=context.project_root,
+                tool_name="opengrep",
+                stream_handler=context.stream_handler,
+                timeout=180,
             )
 
             # OpenGrep returns non-zero exit code when findings exist
@@ -240,6 +248,13 @@ class OpenGrepScanner(ScannerPlugin):
         except Exception as e:
             LOGGER.error(f"OpenGrep scan failed: {e}")
             return []
+        finally:
+            # Restore original environment
+            for key, value in old_env.items():
+                if value is None:
+                    os.environ.pop(key, None)
+                else:
+                    os.environ[key] = value
 
     def _get_scan_env(self) -> Dict[str, str]:
         """Get environment variables for the scan process."""

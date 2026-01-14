@@ -19,6 +19,7 @@ from lucidscan.config.models import LucidScanConfig
 from lucidscan.core.domain_runner import DomainRunner, check_severity_threshold
 from lucidscan.core.logging import get_logger
 from lucidscan.core.models import ScanContext, ScanResult, UnifiedIssue
+from lucidscan.core.streaming import CLIStreamHandler, StreamHandler
 from lucidscan.pipeline import PipelineConfig, PipelineExecutor
 from lucidscan.plugins.reporters import get_reporter_plugin
 
@@ -117,6 +118,16 @@ class ScanCommand(Command):
         # Load ignore patterns from .lucidscanignore and config
         ignore_patterns = load_ignore_patterns(project_root, config.ignore)
 
+        # Create stream handler if streaming is enabled
+        stream_handler: Optional[StreamHandler] = None
+        stream_enabled = getattr(args, "stream", False) or getattr(args, "verbose", False)
+        if stream_enabled:
+            stream_handler = CLIStreamHandler(
+                output=sys.stderr,
+                show_output=True,
+                use_rich=False,  # Use plain output for better compatibility
+            )
+
         # Build scan context
         context = ScanContext(
             project_root=project_root,
@@ -124,6 +135,7 @@ class ScanCommand(Command):
             enabled_domains=enabled_domains,
             config=config,
             ignore_patterns=ignore_patterns,
+            stream_handler=stream_handler,
         )
 
         # Create domain runner for executing tool-based scans

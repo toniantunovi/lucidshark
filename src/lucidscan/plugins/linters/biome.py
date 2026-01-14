@@ -22,6 +22,7 @@ from lucidscan.core.models import (
     ToolDomain,
     UnifiedIssue,
 )
+from lucidscan.core.subprocess_runner import run_with_streaming
 from lucidscan.plugins.linters.base import FixResult, LinterPlugin
 
 LOGGER = get_logger(__name__)
@@ -154,12 +155,12 @@ class BiomeLinter(LinterPlugin):
         LOGGER.debug(f"Running: {' '.join(cmd)}")
 
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                cwd=str(context.project_root),
-                timeout=120,  # 2 minute timeout
+            result = run_with_streaming(
+                cmd=cmd,
+                cwd=context.project_root,
+                tool_name="biome",
+                stream_handler=context.stream_handler,
+                timeout=120,
             )
         except subprocess.TimeoutExpired:
             LOGGER.warning("Biome lint timed out after 120 seconds")
@@ -209,12 +210,12 @@ class BiomeLinter(LinterPlugin):
         LOGGER.debug(f"Running: {' '.join(cmd)}")
 
         try:
-            subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                cwd=str(context.project_root),
-                timeout=120,  # 2 minute timeout
+            run_with_streaming(
+                cmd=cmd,
+                cwd=context.project_root,
+                tool_name="biome-fix",
+                stream_handler=context.stream_handler,
+                timeout=120,
             )
         except subprocess.TimeoutExpired:
             LOGGER.warning("Biome fix timed out after 120 seconds")

@@ -21,6 +21,7 @@ from lucidscan.core.models import (
     ToolDomain,
     UnifiedIssue,
 )
+from lucidscan.core.subprocess_runner import run_with_streaming
 from lucidscan.plugins.coverage.base import (
     CoveragePlugin,
     CoverageResult,
@@ -186,11 +187,12 @@ class CoveragePyPlugin(CoveragePlugin):
         LOGGER.debug(f"Running: {' '.join(cmd)}")
 
         try:
-            subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                cwd=str(context.project_root),
+            run_with_streaming(
+                cmd=cmd,
+                cwd=context.project_root,
+                tool_name="coverage-run",
+                stream_handler=context.stream_handler,
+                timeout=600,
             )
             # Coverage run returns the pytest exit code
             # We consider it successful even if some tests fail
@@ -228,11 +230,12 @@ class CoveragePyPlugin(CoveragePlugin):
             LOGGER.debug(f"Running: {' '.join(cmd)}")
 
             try:
-                result = subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    cwd=str(context.project_root),
+                result = run_with_streaming(
+                    cmd=cmd,
+                    cwd=context.project_root,
+                    tool_name="coverage-json",
+                    stream_handler=context.stream_handler,
+                    timeout=60,
                 )
 
                 if result.returncode != 0:

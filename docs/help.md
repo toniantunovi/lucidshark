@@ -132,6 +132,7 @@ Run the quality/security pipeline.
 |--------|-------------|
 | `--sequential` | Disable parallel execution |
 | `--fix` | Apply auto-fixes (linting only) |
+| `--stream` | Stream tool output in real-time as scans run |
 | `--image IMAGE` | Container image to scan (with `--container`) |
 
 **Examples:**
@@ -142,6 +143,7 @@ lucidscan scan --lint --fix
 lucidscan scan --sca --fail-on high
 lucidscan scan --all --format sarif > results.sarif
 lucidscan scan --container --image myapp:latest
+lucidscan scan --all --stream   # See live output as tools run
 ```
 
 ### `lucidscan status`
@@ -233,7 +235,7 @@ Run quality checks on the codebase or specific files.
 | `files` | array of strings | (none) | Specific files to check (relative paths) |
 | `fix` | boolean | `false` | Apply auto-fixes for linting issues |
 
-**Valid domains:** `linting`, `type_checking`, `security`, `sca`, `sast`, `iac`, `testing`, `coverage`, `all`
+**Valid domains:** `linting`, `type_checking`, `security`, `sca`, `sast`, `iac`, `container`, `testing`, `coverage`, `all`
 
 **Response format:**
 ```json

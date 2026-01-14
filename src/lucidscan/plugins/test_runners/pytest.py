@@ -22,6 +22,7 @@ from lucidscan.core.models import (
     ToolDomain,
     UnifiedIssue,
 )
+from lucidscan.core.subprocess_runner import run_with_streaming
 from lucidscan.plugins.test_runners.base import TestRunnerPlugin, TestResult
 
 LOGGER = get_logger(__name__)
@@ -185,12 +186,12 @@ class PytestRunner(TestRunnerPlugin):
             LOGGER.debug(f"Running: {' '.join(cmd)}")
 
             try:
-                subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    cwd=str(context.project_root),
-                    timeout=600,  # 10 minute timeout for test runs
+                run_with_streaming(
+                    cmd=cmd,
+                    cwd=context.project_root,
+                    tool_name="pytest",
+                    stream_handler=context.stream_handler,
+                    timeout=600,
                 )
             except subprocess.TimeoutExpired:
                 LOGGER.warning("pytest timed out after 600 seconds")
@@ -237,12 +238,12 @@ class PytestRunner(TestRunnerPlugin):
             LOGGER.debug(f"Running: {' '.join(cmd)}")
 
             try:
-                subprocess.run(
-                    cmd,
-                    capture_output=True,
-                    text=True,
-                    cwd=str(context.project_root),
-                    timeout=600,  # 10 minute timeout for test runs
+                run_with_streaming(
+                    cmd=cmd,
+                    cwd=context.project_root,
+                    tool_name="pytest",
+                    stream_handler=context.stream_handler,
+                    timeout=600,
                 )
             except subprocess.TimeoutExpired:
                 LOGGER.warning("pytest timed out after 600 seconds")

@@ -22,6 +22,7 @@ from lucidscan.core.models import (
     ToolDomain,
     UnifiedIssue,
 )
+from lucidscan.core.subprocess_runner import run_with_streaming
 from lucidscan.plugins.linters.base import LinterPlugin
 
 LOGGER = get_logger(__name__)
@@ -187,12 +188,12 @@ class CheckstyleLinter(LinterPlugin):
         LOGGER.debug(f"Running: {' '.join(cmd[:10])}...")  # Truncate for readability
 
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                cwd=str(context.project_root),
-                timeout=120,  # 2 minute timeout
+            result = run_with_streaming(
+                cmd=cmd,
+                cwd=context.project_root,
+                tool_name="checkstyle",
+                stream_handler=context.stream_handler,
+                timeout=120,
             )
         except subprocess.TimeoutExpired:
             LOGGER.warning("Checkstyle timed out after 120 seconds")

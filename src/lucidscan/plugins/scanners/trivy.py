@@ -16,6 +16,7 @@ from lucidscan.core.models import ScanContext, ScanDomain, Severity, UnifiedIssu
 from lucidscan.bootstrap.paths import LucidscanPaths
 from lucidscan.bootstrap.platform import get_platform_info
 from lucidscan.core.logging import get_logger
+from lucidscan.core.subprocess_runner import run_with_streaming
 
 LOGGER = get_logger(__name__)
 
@@ -169,7 +170,9 @@ class TrivyScanner(ScannerPlugin):
             container_config = context.get_scanner_options("container")
             image_targets = container_config.get("images", [])
             for image in image_targets:
-                issues.extend(self._run_image_scan(binary, image, cache_dir))
+                issues.extend(
+                    self._run_image_scan(binary, image, cache_dir, context.stream_handler)
+                )
 
         return issues
 
@@ -225,12 +228,12 @@ class TrivyScanner(ScannerPlugin):
         LOGGER.debug(f"Running: {' '.join(cmd)}")
 
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=180,  # 3 minute timeout for scan
+            result = run_with_streaming(
+                cmd=cmd,
+                cwd=context.project_root,
+                tool_name="trivy-fs",
+                stream_handler=context.stream_handler,
+                timeout=180,
             )
 
             if result.returncode != 0 and result.stderr:
@@ -250,7 +253,11 @@ class TrivyScanner(ScannerPlugin):
             return []
 
     def _run_image_scan(
-        self, binary: Path, image: str, cache_dir: Path
+        self,
+        binary: Path,
+        image: str,
+        cache_dir: Path,
+        stream_handler: Optional[Any] = None,
     ) -> List[UnifiedIssue]:
         """Run trivy image scan for container scanning.
 
@@ -258,10 +265,12 @@ class TrivyScanner(ScannerPlugin):
             binary: Path to the Trivy binary.
             image: Container image reference (e.g., 'nginx:latest').
             cache_dir: Path to the Trivy cache directory.
+            stream_handler: Optional handler for streaming output.
 
         Returns:
             List of unified issues from the container scan.
         """
+
         cmd = [
             str(binary),
             "image",
@@ -275,12 +284,12 @@ class TrivyScanner(ScannerPlugin):
         LOGGER.debug(f"Running: {' '.join(cmd)}")
 
         try:
-            result = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=300,  # 5 minute timeout for image scan
+            result = run_with_streaming(
+                cmd=cmd,
+                cwd=Path.cwd(),
+                tool_name=f"trivy-image:{image}",
+                stream_handler=stream_handler,
+                timeout=300,
             )
 
             if result.returncode != 0 and result.stderr:

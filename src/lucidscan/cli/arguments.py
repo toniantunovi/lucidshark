@@ -244,6 +244,11 @@ def _build_scan_parser(subparsers: argparse._SubParsersAction) -> None:
         action="store_true",
         help="Apply auto-fixes where possible (linting only).",
     )
+    exec_group.add_argument(
+        "--stream",
+        action="store_true",
+        help="Stream tool output in real-time as scans run.",
+    )
 
 
 def _build_status_parser(subparsers: argparse._SubParsersAction) -> None:
