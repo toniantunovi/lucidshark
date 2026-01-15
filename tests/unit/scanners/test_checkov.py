@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from unittest.mock import patch
 
@@ -51,9 +52,15 @@ class TestCheckovScannerBinaryManagement:
         with patch.object(scanner, "_paths") as mock_paths:
             venv_dir = tmp_path / "bin" / "checkov" / DEFAULT_VERSION / "venv"
             venv_dir.mkdir(parents=True)
-            binary_dir = venv_dir / "bin"
+            # Use platform-correct binary location
+            if sys.platform == "win32":
+                binary_dir = venv_dir / "Scripts"
+                binary_name = "checkov.exe"
+            else:
+                binary_dir = venv_dir / "bin"
+                binary_name = "checkov"
             binary_dir.mkdir(parents=True)
-            binary_path = binary_dir / "checkov"
+            binary_path = binary_dir / binary_name
             binary_path.write_text("#!/bin/bash\necho checkov")
 
             mock_paths.plugin_bin_dir.return_value = tmp_path / "bin" / "checkov" / DEFAULT_VERSION
@@ -70,9 +77,15 @@ class TestCheckovScannerBinaryManagement:
             with patch.object(scanner, "_install_checkov") as mock_install:
                 venv_dir = tmp_path / "bin" / "checkov" / DEFAULT_VERSION / "venv"
                 venv_dir.mkdir(parents=True)
-                binary_dir = venv_dir / "bin"
+                # Use platform-correct binary location
+                if sys.platform == "win32":
+                    binary_dir = venv_dir / "Scripts"
+                    binary_name = "checkov.exe"
+                else:
+                    binary_dir = venv_dir / "bin"
+                    binary_name = "checkov"
                 binary_dir.mkdir(parents=True)
-                binary_path = binary_dir / "checkov"
+                binary_path = binary_dir / binary_name
                 binary_path.write_text("#!/bin/bash\necho checkov")
 
                 mock_paths.plugin_bin_dir.return_value = tmp_path / "bin" / "checkov" / DEFAULT_VERSION
