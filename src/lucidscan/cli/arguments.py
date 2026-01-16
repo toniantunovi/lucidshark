@@ -155,17 +155,17 @@ def _build_scan_parser(subparsers: argparse._SubParsersAction) -> None:
         help="Static application security testing (code pattern analysis).",
     )
     domain_group.add_argument(
-        "--lint",
+        "--linting",
         action="store_true",
         help="Run linting checks (Ruff for Python, ESLint for JS/TS).",
     )
     domain_group.add_argument(
-        "--type-check",
+        "--type-checking",
         action="store_true",
         help="Run type checking (mypy/pyright for Python, tsc for TypeScript).",
     )
     domain_group.add_argument(
-        "--test",
+        "--testing",
         action="store_true",
         help="Run test suite (pytest for Python, Jest for JS/TS).",
     )
@@ -177,7 +177,7 @@ def _build_scan_parser(subparsers: argparse._SubParsersAction) -> None:
     domain_group.add_argument(
         "--all",
         action="store_true",
-        help="Enable all scanner types (SCA, SAST, IaC, Container, Lint, Type Check, Test, Coverage).",
+        help="Enable all domains (sca, sast, iac, container, linting, type_checking, testing, coverage).",
     )
 
     # Target options
@@ -377,7 +377,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  lucidscan autoconfigure            # Auto-configure project\n"
             "  lucidscan scan --sca               # Scan dependencies\n"
             "  lucidscan scan --all               # Run all scans\n"
-            "  lucidscan scan --lint --fix        # Lint and auto-fix\n"
+            "  lucidscan scan --linting --fix     # Lint and auto-fix\n"
             "  lucidscan status                   # Show tool status\n"
             "  lucidscan serve --mcp              # Run MCP server\n"
         ),

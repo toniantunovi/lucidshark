@@ -44,15 +44,15 @@ lucidscan autoconfigure
 lucidscan scan --all
 
 # Run specific checks
-lucidscan scan --lint              # Linting (Ruff, ESLint, Biome)
-lucidscan scan --type-check        # Type checking (mypy, pyright, tsc)
+lucidscan scan --linting           # Linting (Ruff, ESLint, Biome)
+lucidscan scan --type-checking     # Type checking (mypy, pyright, tsc)
 lucidscan scan --sast              # Security code analysis (OpenGrep)
 lucidscan scan --sca               # Dependency vulnerabilities (Trivy)
-lucidscan scan --test              # Run tests (pytest, Jest)
+lucidscan scan --testing           # Run tests (pytest, Jest)
 lucidscan scan --coverage          # Coverage analysis
 
 # Auto-fix linting issues
-lucidscan scan --lint --fix
+lucidscan scan --linting --fix
 ```
 
 ### AI Tool Setup
@@ -157,7 +157,7 @@ lucidscan init --all                     # Configure all AI tools
 lucidscan autoconfigure [--ci github|gitlab|bitbucket] [--non-interactive]
 
 # Run quality pipeline
-lucidscan scan [--lint] [--type-check] [--sca] [--sast] [--iac] [--test] [--coverage] [--all]
+lucidscan scan [--linting] [--type-checking] [--sca] [--sast] [--iac] [--testing] [--coverage] [--all]
 lucidscan scan [--fix] [--stream] [--format table|json|sarif|summary]
 lucidscan scan [--fail-on critical|high|medium|low]
 

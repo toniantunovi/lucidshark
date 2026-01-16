@@ -73,13 +73,13 @@ class TestMCPToolExecutor:
     def test_domain_map_contains_all_domains(
         self, executor: MCPToolExecutor
     ) -> None:
-        """Test that domain map covers all expected domains."""
+        """Test that domain map covers all expected canonical domains (no synonyms)."""
         expected_domains = [
-            "linting", "lint",
-            "type_checking", "typecheck",
-            "security", "sast",
+            "linting",
+            "type_checking",
+            "sast",
             "sca", "iac", "container",
-            "testing", "test",
+            "testing",
             "coverage",
         ]
         for domain in expected_domains:
@@ -116,7 +116,7 @@ class TestMCPToolExecutor:
 
     def test_parse_domains_with_specific(self, executor: MCPToolExecutor) -> None:
         """Test parsing specific domains."""
-        domains = executor._parse_domains(["linting", "security"])
+        domains = executor._parse_domains(["linting", "sast"])
         assert ToolDomain.LINTING in domains
         assert ScanDomain.SAST in domains
 

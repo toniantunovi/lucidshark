@@ -58,9 +58,9 @@ lucidscan init --claude-code         # Configure Claude Code
 lucidscan init --cursor              # Configure Cursor
 lucidscan autoconfigure              # Generate lucidscan.yml
 lucidscan scan --all                 # Run complete pipeline
-lucidscan scan --lint --fix          # Lint with auto-fix
-lucidscan scan --type-check          # Type checking
-lucidscan scan --test --coverage     # Tests with coverage
+lucidscan scan --linting --fix       # Lint with auto-fix
+lucidscan scan --type-checking       # Type checking
+lucidscan scan --testing --coverage  # Tests with coverage
 lucidscan serve --mcp                # MCP server for AI tools
 lucidscan status                     # Show tool status
 ```
@@ -95,13 +95,13 @@ Change the default behavior:
 
 ```bash
 # Default: scan only changed files (git diff + untracked)
-lucidscan scan --lint --type-check
+lucidscan scan --linting --type-checking
 
 # Explicit full project scan
-lucidscan scan --lint --type-check --all-files
+lucidscan scan --linting --type-checking --all-files
 
 # Still works: explicit file list
-lucidscan scan --lint --files src/foo.py src/bar.py
+lucidscan scan --linting --files src/foo.py src/bar.py
 ```
 
 ### MCP Server

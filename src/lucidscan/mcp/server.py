@@ -49,8 +49,13 @@ class LucidScanMCPServer:
                         "By default, scans only changed files (uncommitted changes). "
                         "Use all_files=true for full project scan. "
                         "Returns structured issues with fix instructions. "
-                        "IMPORTANT: After receiving scan results, always provide a brief summary "
-                        "including: total issues found, breakdown by domain/severity, and key issues to address first."
+                        "IMPORTANT OUTPUT FORMAT: After receiving results, you MUST present them as: "
+                        "(1) Announce what you're checking before the scan runs. "
+                        "(2) List ALL issues grouped by domain (linting, type_checking, security, etc). "
+                        "(3) Show pass/fail status for EVERY domain that was checked. "
+                        "(4) End with a summary table showing: total issues, count by severity, "
+                        "status per domain, and a recommended next action. "
+                        "Even when no issues are found, confirm which domains passed."
                     ),
                     inputSchema={
                         "type": "object",
@@ -60,7 +65,7 @@ class LucidScanMCPServer:
                                 "items": {"type": "string"},
                                 "description": (
                                     "Domains to check. Options: linting, type_checking, "
-                                    "security, sca, iac, testing, coverage, all"
+                                    "sast, sca, iac, container, testing, coverage, all"
                                 ),
                                 "default": ["all"],
                             },

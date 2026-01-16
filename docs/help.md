@@ -39,19 +39,19 @@ lucidscan autoconfigure -y
 
 ```bash
 # Default: scan only changed files (uncommitted changes)
-lucidscan scan --lint --type-check
+lucidscan scan --linting --type-checking
 
 # Full project scan (all domains, all files)
 lucidscan scan --all --all-files
 
 # Run specific checks (on changed files by default)
-lucidscan scan --lint           # Linting only
-lucidscan scan --type-check     # Type checking only
+lucidscan scan --linting        # Linting only
+lucidscan scan --type-checking  # Type checking only
 lucidscan scan --sca            # Dependency vulnerabilities (always project-wide)
 lucidscan scan --sast           # Code security analysis
 
 # Auto-fix linting issues (on changed files)
-lucidscan scan --lint --fix
+lucidscan scan --linting --fix
 ```
 
 ---
@@ -105,15 +105,15 @@ Run the quality/security pipeline. By default, scans only changed files (uncommi
 
 | Flag | Domain | Description |
 |------|--------|-------------|
-| `--lint` | Linting | Code style and linting (Ruff, ESLint, Biome, Checkstyle) |
-| `--type-check` | Type Checking | Static type analysis (mypy, pyright, TypeScript) |
-| `--sca` | SCA | Dependency vulnerability scanning (Trivy) |
-| `--sast` | SAST | Code security patterns (OpenGrep) |
-| `--iac` | IaC | Infrastructure-as-Code scanning (Checkov) |
-| `--container` | Container | Container image scanning (Trivy) |
-| `--test` | Testing | Run test suite (pytest, Jest) |
-| `--coverage` | Coverage | Coverage analysis (coverage.py, Istanbul) |
-| `--all` | All | Enable all domains |
+| `--linting` | linting | Code style and linting (Ruff, ESLint, Biome, Checkstyle) |
+| `--type-checking` | type_checking | Static type analysis (mypy, pyright, TypeScript) |
+| `--sca` | sca | Dependency vulnerability scanning (Trivy) |
+| `--sast` | sast | Code security patterns (OpenGrep) |
+| `--iac` | iac | Infrastructure-as-Code scanning (Checkov) |
+| `--container` | container | Container image scanning (Trivy) |
+| `--testing` | testing | Run test suite (pytest, Jest) |
+| `--coverage` | coverage | Coverage analysis (coverage.py, Istanbul) |
+| `--all` | all | Enable all domains |
 
 #### Target Options
 
@@ -148,16 +148,16 @@ Run the quality/security pipeline. By default, scans only changed files (uncommi
 **Examples:**
 ```bash
 # Default: scan only changed files (uncommitted changes)
-lucidscan scan --lint --type-check
+lucidscan scan --linting --type-checking
 
 # Full project scan
 lucidscan scan --all --all-files
 
 # Scan specific files
-lucidscan scan --lint --files src/main.py src/utils.py
+lucidscan scan --linting --files src/main.py src/utils.py
 
 # Lint with auto-fix (on changed files)
-lucidscan scan --lint --fix
+lucidscan scan --linting --fix
 
 # Full security scan
 lucidscan scan --sca --sast --all-files --fail-on high
@@ -262,7 +262,7 @@ Run quality checks on the codebase or specific files. Supports partial scanning 
 | `all_files` | boolean | `false` | Scan entire project instead of just changed files. By default, only uncommitted changes are scanned. |
 | `fix` | boolean | `false` | Apply auto-fixes for linting issues |
 
-**Valid domains:** `linting`, `type_checking`, `security`, `sca`, `sast`, `iac`, `container`, `testing`, `coverage`, `all`
+**Valid domains:** `linting`, `type_checking`, `sast`, `sca`, `iac`, `container`, `testing`, `coverage`, `all`
 
 **Default Behavior:** Partial scanning (changed files only) is the default. Use `all_files=true` for full project scans.
 
@@ -724,6 +724,84 @@ Or manually add to `~/.cursor/mcp.json`:
 ---
 
 ## Best Practices for AI Agents
+
+### Developer Experience Principles
+
+LucidScan aims to provide a **fast, practical, and informative** experience that instills confidence. When using LucidScan via MCP, follow these principles:
+
+1. **Keep the user informed** - Always communicate what you're doing at each step
+2. **Be complete** - Show results for all domains that were checked
+3. **Be actionable** - Every issue should have a clear path to resolution
+4. **Be consistent** - Use the same output format every time for predictability
+
+### Communicating Progress
+
+Before and during scans, tell the user what's happening:
+
+- **Before scanning**: "Running linting and type checks on changed files..."
+- **During multi-domain scans**: "Checking linting... type checking... security..."
+- **After scanning**: Present results in the structured format below
+
+### Output Format Requirements
+
+After every scan, present results in this structure:
+
+#### 1. Issues List (grouped by domain)
+
+List all issues organized by domain. For each domain, show:
+- Domain name and issue count
+- Individual issues with: file:line, severity, description, fix action
+
+Example:
+```
+## Linting (3 issues)
+- src/utils.py:45 [MEDIUM] Unused import 'os' → Remove import
+- src/main.py:12 [LOW] Line too long → Auto-fixable
+- src/main.py:89 [LOW] Missing docstring → Add docstring
+
+## Type Checking (1 issue)
+- src/api.py:67 [HIGH] Type 'str | None' incompatible with 'str'
+
+## Security
+✓ No issues found
+
+## SCA
+✓ No issues found
+```
+
+#### 2. Summary (always at the end)
+
+Conclude with a summary across all domains:
+
+```
+---
+**Summary**: 4 total issues (0 critical, 1 high, 1 medium, 2 low)
+
+| Domain | Status |
+|--------|--------|
+| Linting | 3 issues (2 auto-fixable) |
+| Type Checking | 1 issue |
+| Security | ✓ Pass |
+| SCA | ✓ Pass |
+
+**Recommended action**: Run `scan(fix=true)` to auto-fix 2 linting issues, then address the type error.
+```
+
+#### 3. When All Checks Pass
+
+Even with no issues, confirm what was checked:
+
+```
+**Scan Complete**: All checks passed ✓
+
+| Domain | Status |
+|--------|--------|
+| Linting | ✓ Pass |
+| Type Checking | ✓ Pass |
+| Security | ✓ Pass |
+
+Ready to proceed.
+```
 
 ### Recommended Workflow
 

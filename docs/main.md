@@ -1002,7 +1002,7 @@ Options:
   --fail-on LEVEL      Override fail threshold
 
 Examples:
-  lucidscan scan --lint             # Lint changed files (default)
+  lucidscan scan --linting          # Lint changed files (default)
   lucidscan scan --all --all-files  # Full project scan
   lucidscan scan --files src/a.py   # Scan specific files
   lucidscan scan --fix              # Auto-fix changed files

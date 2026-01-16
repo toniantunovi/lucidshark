@@ -39,7 +39,7 @@ class ConfigBridge:
         sast = getattr(args, "sast", False)
         iac = getattr(args, "iac", False)
         container = getattr(args, "container", False)
-        lint = getattr(args, "lint", False)
+        linting = getattr(args, "linting", False)
         fix = getattr(args, "fix", False)
         images = getattr(args, "images", None)
 
@@ -57,7 +57,7 @@ class ConfigBridge:
                 scanners["iac"] = {"enabled": True}
             if container:
                 scanners["container"] = {"enabled": True}
-            if lint:
+            if linting:
                 linters["ruff"] = {"enabled": True}
 
         # Container images go into container scanner options
@@ -127,13 +127,13 @@ class ConfigBridge:
                 domains.append(ScanDomain.CONTAINER)
             return domains
 
-        # Check if user specified non-security domain flags (test, coverage, etc.)
+        # Check if user specified non-security domain flags (testing, coverage, etc.)
         # If so, they don't want security scanning unless explicitly requested
-        lint = getattr(args, "lint", False)
-        type_check = getattr(args, "type_check", False)
-        test = getattr(args, "test", False)
+        linting = getattr(args, "linting", False)
+        type_checking = getattr(args, "type_checking", False)
+        testing = getattr(args, "testing", False)
         coverage = getattr(args, "coverage", False)
-        non_security_domains_set = any([lint, type_check, test, coverage])
+        non_security_domains_set = any([linting, type_checking, testing, coverage])
 
         if non_security_domains_set and not all_domains:
             # User explicitly requested non-security domains only

@@ -1,6 +1,6 @@
 """Integration tests for the scan CLI command.
 
-These tests verify the --lint and --type-check flags work correctly.
+These tests verify the --linting and --type-checking flags work correctly.
 """
 
 from __future__ import annotations
@@ -17,11 +17,11 @@ from tests.integration.conftest import ruff_available
 
 
 class TestScanCommandLinting:
-    """Integration tests for scan command with --lint flag."""
+    """Integration tests for scan command with --linting flag."""
 
     @ruff_available
-    def test_scan_lint_flag_runs_linters(self) -> None:
-        """Test that --lint flag triggers linting."""
+    def test_scan_linting_flag_runs_linters(self) -> None:
+        """Test that --linting flag triggers linting."""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)
 
@@ -35,7 +35,7 @@ class TestScanCommandLinting:
             try:
                 cli.main([
                     "scan",
-                    "--lint",
+                    "--linting",
                     "--format", "json",
                     str(tmpdir_path),
                 ])
@@ -49,8 +49,8 @@ class TestScanCommandLinting:
             assert "issues" in data
 
     @ruff_available
-    def test_scan_lint_json_format(self) -> None:
-        """Test that --lint with --format json produces valid JSON."""
+    def test_scan_linting_json_format(self) -> None:
+        """Test that --linting with --format json produces valid JSON."""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)
 
@@ -64,7 +64,7 @@ class TestScanCommandLinting:
             try:
                 cli.main([
                     "scan",
-                    "--lint",
+                    "--linting",
                     "--format", "json",
                     str(tmpdir_path),
                 ])
@@ -80,12 +80,12 @@ class TestScanCommandLinting:
 
 
 class TestScanCommandTypeChecking:
-    """Integration tests for scan command with --type-check flag."""
+    """Integration tests for scan command with --type-checking flag."""
 
-    def test_scan_type_check_flag_runs_checkers(self) -> None:
-        """Test that --type-check flag triggers type checking.
+    def test_scan_type_checking_flag_runs_checkers(self) -> None:
+        """Test that --type-checking flag triggers type checking.
 
-        Note: This test verifies the CLI accepts --type-check and produces
+        Note: This test verifies the CLI accepts --type-checking and produces
         valid JSON output. It may not find issues if type checkers aren't
         installed in the scanned project's venv.
         """
@@ -102,7 +102,7 @@ class TestScanCommandTypeChecking:
             try:
                 cli.main([
                     "scan",
-                    "--type-check",
+                    "--type-checking",
                     "--format", "json",
                     str(tmpdir_path),
                 ])
@@ -169,7 +169,7 @@ class TestScanCommandFormats:
             try:
                 cli.main([
                     "scan",
-                    "--lint",
+                    "--linting",
                     "--format", "sarif",
                     str(tmpdir_path),
                 ])
@@ -198,7 +198,7 @@ class TestScanCommandFormats:
             try:
                 cli.main([
                     "scan",
-                    "--lint",
+                    "--linting",
                     "--format", "summary",
                     str(tmpdir_path),
                 ])

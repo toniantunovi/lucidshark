@@ -35,18 +35,15 @@ class MCPToolExecutor:
 
     # Map string domain names to the appropriate enum
     # ScanDomain for scanner plugins, ToolDomain for other tools
+    # Use canonical names only - no synonyms
     DOMAIN_MAP: Dict[str, DomainType] = {
         "linting": ToolDomain.LINTING,
-        "lint": ToolDomain.LINTING,
         "type_checking": ToolDomain.TYPE_CHECKING,
-        "typecheck": ToolDomain.TYPE_CHECKING,
-        "security": ScanDomain.SAST,
         "sast": ScanDomain.SAST,
         "sca": ScanDomain.SCA,
         "iac": ScanDomain.IAC,
         "container": ScanDomain.CONTAINER,
         "testing": ToolDomain.TESTING,
-        "test": ToolDomain.TESTING,
         "coverage": ToolDomain.COVERAGE,
     }
 

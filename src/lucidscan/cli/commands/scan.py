@@ -97,7 +97,7 @@ class ScanCommand(Command):
         """Execute the scan based on CLI arguments and config.
 
         Uses PipelineExecutor to run the scan pipeline:
-        1. Linting (if --lint or --all)
+        1. Linting (if --linting or --all)
         2. Scanner execution (parallel by default)
         3. Enricher execution (sequential, in configured order)
         4. Result aggregation
@@ -154,24 +154,24 @@ class ScanCommand(Command):
         pipeline_result: Optional[ScanResult] = None
 
         # Run linting if requested
-        lint_enabled = getattr(args, "lint", False) or getattr(args, "all", False)
+        linting_enabled = getattr(args, "linting", False) or getattr(args, "all", False)
         fix_enabled = getattr(args, "fix", False)
 
-        if lint_enabled:
+        if linting_enabled:
             all_issues.extend(runner.run_linting(context, fix_enabled))
 
         # Run type checking if requested
-        type_check_enabled = getattr(args, "type_check", False) or getattr(
+        type_checking_enabled = getattr(args, "type_checking", False) or getattr(
             args, "all", False
         )
 
-        if type_check_enabled:
+        if type_checking_enabled:
             all_issues.extend(runner.run_type_checking(context))
 
         # Run tests if requested
-        test_enabled = getattr(args, "test", False) or getattr(args, "all", False)
+        testing_enabled = getattr(args, "testing", False) or getattr(args, "all", False)
 
-        if test_enabled:
+        if testing_enabled:
             all_issues.extend(runner.run_tests(context))
 
         # Run coverage if requested
