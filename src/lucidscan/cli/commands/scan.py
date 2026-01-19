@@ -182,7 +182,11 @@ class ScanCommand(Command):
         coverage_summary: Optional[CoverageSummary] = None
         if coverage_enabled:
             coverage_threshold = getattr(args, "coverage_threshold", None) or 80.0
-            all_issues.extend(runner.run_coverage(context, coverage_threshold))
+            # Don't re-run tests if they were already run in the testing domain
+            run_tests_for_coverage = not testing_enabled
+            all_issues.extend(
+                runner.run_coverage(context, coverage_threshold, run_tests_for_coverage)
+            )
 
             # Build coverage summary from context.coverage_result
             if context.coverage_result is not None:

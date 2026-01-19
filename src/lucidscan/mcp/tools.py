@@ -6,6 +6,7 @@ Executes LucidScan scan operations and formats results for AI agents.
 from __future__ import annotations
 
 import asyncio
+import functools
 import sys
 from pathlib import Path
 from typing import Any, Callable, Coroutine, Dict, List, Optional
@@ -178,10 +179,19 @@ class MCPToolExecutor:
             tasks_with_names.append(("iac", self._run_security(context, ScanDomain.IAC)))
         if ScanDomain.CONTAINER in enabled_domains:
             tasks_with_names.append(("container", self._run_security(context, ScanDomain.CONTAINER)))
-        if ToolDomain.TESTING in enabled_domains:
+
+        # Check if both testing and coverage are enabled
+        testing_enabled = ToolDomain.TESTING in enabled_domains
+        coverage_enabled = ToolDomain.COVERAGE in enabled_domains
+
+        if testing_enabled and not coverage_enabled:
+            # Only testing enabled - run tests standalone
             tasks_with_names.append(("testing", self._run_testing(context)))
-        if ToolDomain.COVERAGE in enabled_domains:
-            tasks_with_names.append(("coverage", self._run_coverage(context)))
+        elif coverage_enabled:
+            # Coverage enabled - it will run tests with instrumentation
+            # Skip standalone testing to avoid running tests twice
+            # Coverage result includes test stats
+            tasks_with_names.append(("coverage", self._run_coverage(context, run_tests=True)))
 
         total_domains = len(tasks_with_names)
 
@@ -994,19 +1004,28 @@ ignore:
             None, self._runner.run_tests, context
         )
 
-    async def _run_coverage(self, context: ScanContext) -> List[UnifiedIssue]:
+    async def _run_coverage(
+        self,
+        context: ScanContext,
+        run_tests: bool = True,
+    ) -> List[UnifiedIssue]:
         """Run coverage analysis asynchronously.
 
         Args:
             context: Scan context.
+            run_tests: Whether to run tests for coverage measurement.
 
         Returns:
             List of coverage issues.
         """
         loop = asyncio.get_event_loop()
-        issues = await loop.run_in_executor(
-            None, self._runner.run_coverage, context
+        # Use functools.partial to pass run_tests parameter
+        run_coverage_fn = functools.partial(
+            self._runner.run_coverage,
+            context,
+            run_tests=run_tests,
         )
+        issues = await loop.run_in_executor(None, run_coverage_fn)
         # Coverage result is stored in context.coverage_result by DomainRunner
         return issues
 
