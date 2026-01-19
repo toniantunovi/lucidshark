@@ -32,6 +32,12 @@ SEVERITY_MAP = {
     1: Severity.MEDIUM,  # warning
 }
 
+# Supported file extensions for ESLint
+ESLINT_EXTENSIONS = {
+    ".js", ".jsx", ".mjs", ".cjs",
+    ".ts", ".tsx", ".mts", ".cts",
+}
+
 
 class ESLintLinter(LinterPlugin):
     """ESLint linter plugin for JavaScript/TypeScript code analysis."""
@@ -135,14 +141,20 @@ class ESLintLinter(LinterPlugin):
         ]
 
         # Add paths to check - default to src if exists, otherwise current dir
+        # Filter to only include JS/TS files to avoid ESLint errors on unsupported files
         if context.paths:
-            paths = [str(p) for p in context.paths]
+            paths = self._filter_paths(context.paths, context.project_root)
         else:
             src_dir = context.project_root / "src"
             if src_dir.exists():
                 paths = [str(src_dir)]
             else:
                 paths = ["."]
+
+        # If no valid paths after filtering, skip linting
+        if not paths:
+            LOGGER.debug("No JavaScript/TypeScript files to lint")
+            return []
 
         cmd.extend(paths)
 
@@ -200,13 +212,18 @@ class ESLintLinter(LinterPlugin):
         ]
 
         if context.paths:
-            paths = [str(p) for p in context.paths]
+            paths = self._filter_paths(context.paths, context.project_root)
         else:
             src_dir = context.project_root / "src"
             if src_dir.exists():
                 paths = [str(src_dir)]
             else:
                 paths = ["."]
+
+        # If no valid paths after filtering, skip fix
+        if not paths:
+            LOGGER.debug("No JavaScript/TypeScript files to fix")
+            return FixResult()
 
         cmd.extend(paths)
 
@@ -246,6 +263,35 @@ class ESLintLinter(LinterPlugin):
             issues_fixed=len(pre_issues) - len(post_issues),
             issues_remaining=len(post_issues),
         )
+
+    def _filter_paths(
+        self,
+        paths: List[Path],
+        project_root: Path,
+    ) -> List[str]:
+        """Filter paths to only include JS/TS files.
+
+        Directories are passed through as-is (ESLint will handle them).
+        Files are filtered to only include supported extensions.
+
+        Args:
+            paths: List of paths to filter.
+            project_root: Project root directory.
+
+        Returns:
+            List of filtered path strings.
+        """
+        filtered = []
+        for path in paths:
+            if path.is_dir():
+                # Directories are passed through - ESLint handles file discovery
+                filtered.append(str(path))
+            elif path.suffix.lower() in ESLINT_EXTENSIONS:
+                # Only include files with supported extensions
+                filtered.append(str(path))
+            else:
+                LOGGER.debug(f"Skipping non-JS/TS file: {path}")
+        return filtered
 
     def _parse_output(self, output: str, project_root: Path) -> List[UnifiedIssue]:
         """Parse ESLint JSON output.

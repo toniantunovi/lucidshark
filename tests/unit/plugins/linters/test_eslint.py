@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from lucidscan.core.models import ScanContext, Severity, ToolDomain
-from lucidscan.plugins.linters.eslint import ESLintLinter, SEVERITY_MAP
+from lucidscan.plugins.linters.eslint import ESLintLinter, SEVERITY_MAP, ESLINT_EXTENSIONS
 
 
 def make_completed_process(returncode: int, stdout: str, stderr: str = "") -> subprocess.CompletedProcess:
@@ -602,3 +602,201 @@ class TestMessageToIssue:
         assert issue is not None
         assert issue.line_start == 1
         assert issue.line_end == 5
+
+
+class TestESLintExtensions:
+    """Tests for ESLINT_EXTENSIONS constant."""
+
+    def test_js_extensions_included(self) -> None:
+        """Test that JavaScript extensions are included."""
+        assert ".js" in ESLINT_EXTENSIONS
+        assert ".jsx" in ESLINT_EXTENSIONS
+        assert ".mjs" in ESLINT_EXTENSIONS
+        assert ".cjs" in ESLINT_EXTENSIONS
+
+    def test_ts_extensions_included(self) -> None:
+        """Test that TypeScript extensions are included."""
+        assert ".ts" in ESLINT_EXTENSIONS
+        assert ".tsx" in ESLINT_EXTENSIONS
+        assert ".mts" in ESLINT_EXTENSIONS
+        assert ".cts" in ESLINT_EXTENSIONS
+
+    def test_non_js_extensions_not_included(self) -> None:
+        """Test that non-JS/TS extensions are not included."""
+        assert ".md" not in ESLINT_EXTENSIONS
+        assert ".py" not in ESLINT_EXTENSIONS
+        assert ".json" not in ESLINT_EXTENSIONS
+        assert ".yaml" not in ESLINT_EXTENSIONS
+
+
+class TestESLintPathFiltering:
+    """Tests for ESLint path filtering to supported file types."""
+
+    def test_filter_paths_js_files(self) -> None:
+        """Test that JS files are included."""
+        linter = ESLintLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            js_file = tmpdir_path / "test.js"
+            js_file.touch()
+
+            result = linter._filter_paths([js_file], tmpdir_path)
+
+            assert len(result) == 1
+            assert str(js_file) in result
+
+    def test_filter_paths_ts_files(self) -> None:
+        """Test that TypeScript files are included."""
+        linter = ESLintLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            ts_file = tmpdir_path / "test.ts"
+            tsx_file = tmpdir_path / "test.tsx"
+            ts_file.touch()
+            tsx_file.touch()
+
+            result = linter._filter_paths([ts_file, tsx_file], tmpdir_path)
+
+            assert len(result) == 2
+
+    def test_filter_paths_excludes_md_files(self) -> None:
+        """Test that markdown files are excluded."""
+        linter = ESLintLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            md_file = tmpdir_path / "README.md"
+            md_file.touch()
+
+            result = linter._filter_paths([md_file], tmpdir_path)
+
+            assert len(result) == 0
+
+    def test_filter_paths_excludes_non_js_files(self) -> None:
+        """Test that non-JS/TS files are excluded."""
+        linter = ESLintLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            py_file = tmpdir_path / "test.py"
+            json_file = tmpdir_path / "config.json"
+            yaml_file = tmpdir_path / "config.yaml"
+            py_file.touch()
+            json_file.touch()
+            yaml_file.touch()
+
+            result = linter._filter_paths([py_file, json_file, yaml_file], tmpdir_path)
+
+            assert len(result) == 0
+
+    def test_filter_paths_includes_directories(self) -> None:
+        """Test that directories are passed through."""
+        linter = ESLintLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            src_dir = tmpdir_path / "src"
+            src_dir.mkdir()
+
+            result = linter._filter_paths([src_dir], tmpdir_path)
+
+            assert len(result) == 1
+            assert str(src_dir) in result
+
+    def test_filter_paths_mixed_files(self) -> None:
+        """Test filtering with mixed file types."""
+        linter = ESLintLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+
+            # Create various file types
+            js_file = tmpdir_path / "app.js"
+            ts_file = tmpdir_path / "app.ts"
+            md_file = tmpdir_path / "README.md"
+            py_file = tmpdir_path / "script.py"
+            src_dir = tmpdir_path / "src"
+
+            js_file.touch()
+            ts_file.touch()
+            md_file.touch()
+            py_file.touch()
+            src_dir.mkdir()
+
+            result = linter._filter_paths(
+                [js_file, ts_file, md_file, py_file, src_dir],
+                tmpdir_path,
+            )
+
+            # Should include: js_file, ts_file, src_dir
+            # Should exclude: md_file, py_file
+            assert len(result) == 3
+            assert str(js_file) in result
+            assert str(ts_file) in result
+            assert str(src_dir) in result
+            assert str(md_file) not in result
+            assert str(py_file) not in result
+
+    def test_filter_paths_all_extensions(self) -> None:
+        """Test all supported extensions are included."""
+        linter = ESLintLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+
+            extensions = [".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"]
+            files = []
+            for ext in extensions:
+                f = tmpdir_path / f"test{ext}"
+                f.touch()
+                files.append(f)
+
+            result = linter._filter_paths(files, tmpdir_path)
+
+            assert len(result) == len(extensions)
+
+    def test_lint_returns_empty_when_no_js_files(self) -> None:
+        """Test lint returns empty when no JS/TS files to scan."""
+        linter = ESLintLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+
+            # Create only non-JS files
+            md_file = tmpdir_path / "README.md"
+            md_file.touch()
+
+            context = ScanContext(
+                project_root=tmpdir_path,
+                paths=[md_file],
+                enabled_domains=[],
+            )
+
+            with patch.object(linter, "ensure_binary", return_value=Path("/usr/bin/eslint")):
+                # Should return empty without calling ESLint
+                issues = linter.lint(context)
+                assert issues == []
+
+    def test_fix_returns_empty_when_no_js_files(self) -> None:
+        """Test fix returns empty result when no JS/TS files to fix."""
+        linter = ESLintLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+
+            # Create only non-JS files
+            md_file = tmpdir_path / "README.md"
+            md_file.touch()
+
+            context = ScanContext(
+                project_root=tmpdir_path,
+                paths=[md_file],
+                enabled_domains=[],
+            )
+
+            with patch.object(linter, "ensure_binary", return_value=Path("/usr/bin/eslint")):
+                result = linter.fix(context)
+                assert result.issues_fixed == 0
+                assert result.files_modified == 0
