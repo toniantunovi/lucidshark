@@ -72,7 +72,7 @@ def run_with_streaming(
     stderr_lines: List[str] = []
 
     try:
-        with subprocess.Popen(
+        with subprocess.Popen(  # nosemgrep: python36-compatibility-Popen1, python36-compatibility-Popen2
             cmd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

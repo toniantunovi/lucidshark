@@ -180,6 +180,8 @@ class CoveragePyPlugin(CoveragePlugin):
             return False, None
 
         # Build command to run coverage with pytest
+        # Always run full test suite - coverage needs complete test runs to be meaningful
+        # (unlike linting which can work on individual changed files)
         cmd = [
             str(binary),
             "run",
@@ -188,10 +190,6 @@ class CoveragePyPlugin(CoveragePlugin):
             "--tb=no",
             "-q",
         ]
-
-        # Add paths
-        paths = [str(p) for p in context.paths] if context.paths else []
-        cmd.extend(paths)
 
         LOGGER.debug(f"Running: {' '.join(cmd)}")
 

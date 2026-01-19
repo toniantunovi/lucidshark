@@ -214,23 +214,29 @@ class LucidScanMCPServer:
 
                 Uses the standard MCP progress notification mechanism which
                 clients (Claude/Cursor) display prominently during tool execution.
+                Falls back to MCP logging if progress tokens are not supported.
                 """
-                if progress_token is None:
-                    # Client didn't request progress updates, skip
-                    return
+                tool_name = event.get("tool", "lucidscan")
+                content = event.get("content", "")
+                message = f"[{tool_name}] {content}"
 
                 try:
                     session = self.server.request_context.session
-                    tool_name = event.get("tool", "lucidscan")
-                    content = event.get("content", "")
-                    message = f"[{tool_name}] {content}"
 
-                    await session.send_progress_notification(
-                        progress_token=progress_token,
-                        progress=event.get("progress", 0),
-                        total=event.get("total"),
-                        message=message,
-                    )
+                    if progress_token is not None:
+                        # Use progress notifications if client requested them
+                        await session.send_progress_notification(
+                            progress_token=progress_token,
+                            progress=event.get("progress", 0),
+                            total=event.get("total"),
+                            message=message,
+                        )
+                    else:
+                        # Fall back to MCP log messages for visibility
+                        await session.send_log_message(
+                            level="info",
+                            data=message,
+                        )
                 except Exception as e:
                     LOGGER.debug(f"Failed to send progress notification: {e}")
 
