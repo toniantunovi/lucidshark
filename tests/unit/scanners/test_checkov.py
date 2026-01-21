@@ -55,7 +55,7 @@ class TestCheckovScannerBinaryManagement:
             # Use platform-correct binary location
             if sys.platform == "win32":
                 binary_dir = venv_dir / "Scripts"
-                binary_name = "checkov.exe"
+                binary_name = "checkov.cmd"
             else:
                 binary_dir = venv_dir / "bin"
                 binary_name = "checkov"
@@ -80,7 +80,7 @@ class TestCheckovScannerBinaryManagement:
                 # Use platform-correct binary location
                 if sys.platform == "win32":
                     binary_dir = venv_dir / "Scripts"
-                    binary_name = "checkov.exe"
+                    binary_name = "checkov.cmd"
                 else:
                     binary_dir = venv_dir / "bin"
                     binary_name = "checkov"
@@ -118,13 +118,13 @@ class TestCheckovScannerBinaryPath:
             assert path == venv_dir / "bin" / "checkov"
 
     def test_binary_path_windows(self, tmp_path: Path) -> None:
-        """Test binary path on Windows."""
+        """Test binary path on Windows uses .cmd wrapper."""
         scanner = CheckovScanner()
 
         with patch("sys.platform", "win32"):
             venv_dir = tmp_path / "venv"
             path = scanner._get_binary_path(venv_dir)
-            assert path == venv_dir / "Scripts" / "checkov.exe"
+            assert path == venv_dir / "Scripts" / "checkov.cmd"
 
 
 class TestCheckovScannerIssueIdGeneration:

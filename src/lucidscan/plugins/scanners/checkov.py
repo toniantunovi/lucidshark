@@ -110,45 +110,39 @@ class CheckovScanner(ScannerPlugin):
         return self._version
 
     def ensure_binary(self) -> Path:
-        """Ensure Checkov is installed and return the venv Python path.
+        """Ensure Checkov is installed and return the entry point path.
 
         Checkov is a Python package, so we install it into a dedicated
         virtual environment to avoid conflicts with system packages.
 
-        We return the venv's Python interpreter path because on Windows,
-        pip may create shell scripts instead of .exe files for entry points.
-        Using `python -m checkov` is more reliable across platforms.
+        On Windows, pip creates a .cmd wrapper that works reliably.
+        On Unix, pip creates a Python script with a shebang.
 
         Returns:
-            Path to the Python interpreter in the virtual environment.
+            Path to the checkov entry point script.
         """
         venv_dir = self._paths.plugin_bin_dir(self.name, self._version) / "venv"
-        python_path = self._get_python_path(venv_dir)
+        binary_path = self._get_binary_path(venv_dir)
 
-        if python_path.exists():
-            LOGGER.debug(f"Checkov venv Python found at {python_path}")
-            return python_path
+        if binary_path.exists():
+            LOGGER.debug(f"Checkov binary found at {binary_path}")
+            return binary_path
 
         LOGGER.info(f"Installing Checkov v{self._version}...")
         self._install_checkov(venv_dir)
 
-        if not python_path.exists():
-            raise RuntimeError(f"Failed to install Checkov venv at {venv_dir}")
+        if not binary_path.exists():
+            raise RuntimeError(f"Failed to install Checkov to {binary_path}")
 
-        return python_path
+        return binary_path
 
     def _get_binary_path(self, venv_dir: Path) -> Path:
-        """Get the path to the checkov binary in the virtual environment."""
-        # On Windows, binaries are in Scripts/, on Unix in bin/
+        """Get the path to the checkov entry point in the virtual environment."""
+        # On Windows, use the .cmd wrapper which works reliably
+        # On Unix, use the Python script with shebang
         if sys.platform == "win32":
-            return venv_dir / "Scripts" / "checkov.exe"
+            return venv_dir / "Scripts" / "checkov.cmd"
         return venv_dir / "bin" / "checkov"
-
-    def _get_python_path(self, venv_dir: Path) -> Path:
-        """Get the path to Python in the virtual environment."""
-        if sys.platform == "win32":
-            return venv_dir / "Scripts" / "python.exe"
-        return venv_dir / "bin" / "python"
 
     def _get_pip_path(self, venv_dir: Path) -> Path:
         """Get the path to pip in the virtual environment."""
@@ -223,16 +217,16 @@ class CheckovScanner(ScannerPlugin):
         if ScanDomain.IAC not in context.enabled_domains:
             return []
 
-        python_path = self.ensure_binary()
-        return self._run_iac_scan(python_path, context)
+        binary = self.ensure_binary()
+        return self._run_iac_scan(binary, context)
 
     def _run_iac_scan(
-        self, python_path: Path, context: ScanContext
+        self, binary: Path, context: ScanContext
     ) -> List[UnifiedIssue]:
         """Run Checkov IaC scan.
 
         Args:
-            python_path: Path to the venv Python interpreter.
+            binary: Path to the Checkov entry point script.
             context: Scan context with project root and configuration.
 
         Returns:
@@ -241,11 +235,9 @@ class CheckovScanner(ScannerPlugin):
         # Get IaC-specific config options
         iac_config = context.get_scanner_options("iac")
 
-        # Build command using python -m checkov for cross-platform reliability
-        # This avoids issues with Windows entry point scripts
+        # Build command
         cmd = [
-            str(python_path),
-            "-m", "checkov",
+            str(binary),
             "--directory", str(context.project_root),
             "--output", "json",
             "--quiet",
