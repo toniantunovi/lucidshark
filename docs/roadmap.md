@@ -20,7 +20,7 @@ LucidScan unifies code quality tools (linting, type checking, security, testing,
   │ Core        │ │ Git-aware   │  │ 5 Languages │  │ GitHub      │  │ Docs        │
   │ Security    │ │ Default to  │  │ 2 tools per │  │ Actions     │  │ Performance │
   │ MCP Server  │ │ changed     │  │ domain      │  │ GitLab CI   │  │ Stability   │
-  │ AI Tools    │ │ files only  │  │ Go, C#      │  │ Pre-commit  │  │             │
+  │ AI Tools    │ │ files only  │  │ Go, C#      │  │             │  │             │
   └─────────────┘ └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘
 ```
 
@@ -295,7 +295,6 @@ Security scanning remains the same across all languages:
 |---------|-------------|
 | **GitHub Actions** | Generate `.github/workflows/lucidscan.yml` |
 | **GitLab CI** | Generate `.gitlab-ci.yml` with LucidScan job |
-| **Pre-commit hooks** | Integration with pre-commit framework |
 | **SARIF upload** | Automatic upload to GitHub Security tab |
 | **CI output mode** | Optimized output for CI environments |
 | **Exit codes** | Clear pass/fail for pipeline gating |
@@ -306,7 +305,6 @@ Security scanning remains the same across all languages:
 # Generate CI configuration
 lucidscan init --github-actions      # Create GitHub workflow
 lucidscan init --gitlab-ci           # Create GitLab CI config
-lucidscan init --pre-commit          # Add to .pre-commit-config.yaml
 
 # CI-optimized scanning
 lucidscan scan --all --ci            # CI mode with proper exit codes
@@ -384,7 +382,7 @@ These are not committed — they depend on user feedback and adoption.
 | v0.6 | Planned | Complete Python (Flake8, unittest) and JS/TS (Vitest, c8) tool coverage |
 | v0.7 | Planned | Complete Java (SpotBugs, JUnit, TestNG, JaCoCo, Cobertura) and add Go support |
 | v0.8 | Planned | Add C# support (StyleCop, Roslyn, xUnit, NUnit, Coverlet, dotCover) |
-| v0.9 | Planned | CI integration (GitHub Actions, GitLab CI, pre-commit) |
+| v0.9 | Planned | CI integration (GitHub Actions, GitLab CI) |
 | v1.0 | Planned | Production ready (docs, performance, stability) |
 
 ---

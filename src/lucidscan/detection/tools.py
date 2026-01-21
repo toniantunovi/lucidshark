@@ -123,10 +123,6 @@ TOOL_CONFIGS: Dict[str, Dict[str, Any]] = {
         "files": ["playwright.config.js", "playwright.config.ts", "playwright.config.mjs"],
     },
 
-    # Other
-    "pre-commit": {
-        "files": [".pre-commit-config.yaml"],
-    },
 }
 
 

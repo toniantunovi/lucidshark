@@ -42,8 +42,6 @@ lucidscan init --all
 → AI analyzes your codebase
 → Asks you targeted questions
 → Generates lucidscan.yml configuration
-→ Sets up pre-commit hooks (optional)
-
 AI writes code → LucidScan checks → AI fixes → repeat
 ```
 
@@ -77,7 +75,6 @@ The AI-assisted setup:
 - Detects languages, frameworks, and existing tools in your codebase
 - Asks targeted questions about coverage thresholds and strictness
 - Generates a complete `lucidscan.yml` configuration
-- Optionally creates pre-commit hooks
 
 Alternative CLI approach:
 ```bash

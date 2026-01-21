@@ -580,30 +580,6 @@ class MCPToolExecutor:
                             "suggest gradual mode. Otherwise, default to strict."
                         ),
                     },
-                    {
-                        "id": "pre_commit_hook",
-                        "ask_when": "Git repository detected (.git directory exists)",
-                        "question": "Run LucidScan before every commit? (creates pre-commit hook)",
-                        "default": True,
-                        "if_yes": {
-                            "action": "Create .git/hooks/pre-commit script",
-                            "script_content": """#!/bin/sh
-# LucidScan pre-commit hook
-# Runs quality checks before allowing commit
-
-echo "Running LucidScan checks..."
-lucidscan scan --all
-
-if [ $? -ne 0 ]; then
-    echo ""
-    echo "LucidScan found issues. Fix them before committing."
-    echo "To skip this check, use: git commit --no-verify"
-    exit 1
-fi
-""",
-                            "make_executable": "chmod +x .git/hooks/pre-commit",
-                        },
-                    },
                 ],
                 "always_use_defaults": {
                     "security": "Always enable security scanning (trivy + opengrep). Fail on 'high' severity.",
