@@ -10,17 +10,17 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.request import urlopen
 
-from lucidscan.plugins.scanners.base import ScannerPlugin
-from lucidscan.core.models import ScanContext, ScanDomain, Severity, UnifiedIssue
-from lucidscan.bootstrap.paths import LucidscanPaths
-from lucidscan.bootstrap.platform import get_platform_info
-from lucidscan.bootstrap.versions import get_tool_version
-from lucidscan.core.logging import get_logger
-from lucidscan.core.subprocess_runner import run_with_streaming
+from lucidshark.plugins.scanners.base import ScannerPlugin
+from lucidshark.core.models import ScanContext, ScanDomain, Severity, UnifiedIssue
+from lucidshark.bootstrap.paths import LucidsharkPaths
+from lucidshark.bootstrap.platform import get_platform_info
+from lucidshark.bootstrap.versions import get_tool_version
+from lucidshark.core.logging import get_logger
+from lucidshark.core.subprocess_runner import run_with_streaming
 
 LOGGER = get_logger(__name__)
 
-# Default version from pyproject.toml [tool.lucidscan.tools]
+# Default version from pyproject.toml [tool.lucidshark.tools]
 DEFAULT_VERSION = get_tool_version("opengrep")
 
 # OpenGrep severity mapping to unified severity
@@ -45,7 +45,7 @@ class OpenGrepScanner(ScannerPlugin):
 
     Binary management:
     - Downloads from https://github.com/opengrep/opengrep/releases/
-    - Caches at {project}/.lucidscan/bin/opengrep/{version}/opengrep
+    - Caches at {project}/.lucidshark/bin/opengrep/{version}/opengrep
     """
 
     def __init__(
@@ -55,9 +55,9 @@ class OpenGrepScanner(ScannerPlugin):
     ) -> None:
         self._version = version
         if project_root:
-            self._paths = LucidscanPaths.for_project(project_root)
+            self._paths = LucidsharkPaths.for_project(project_root)
         else:
-            self._paths = LucidscanPaths.default()
+            self._paths = LucidsharkPaths.default()
 
     @property
     def name(self) -> str:
@@ -205,7 +205,7 @@ class OpenGrepScanner(ScannerPlugin):
             # Use default rules - OpenGrep auto-detects without explicit config
             cmd.extend(["--config", "auto"])
 
-        # Apply ignore patterns from .lucidscanignore and config
+        # Apply ignore patterns from .lucidsharkignore and config
         exclude_patterns = context.get_exclude_patterns()
         for pattern in exclude_patterns:
             cmd.extend(["--exclude", pattern])

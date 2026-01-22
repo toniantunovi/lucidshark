@@ -1,8 +1,8 @@
 """Configuration file loading and merging.
 
 Handles loading configuration from YAML files with:
-- Project-level config (.lucidscan.yml)
-- Global config (~/.lucidscan/config/config.yml)
+- Project-level config (.lucidshark.yml)
+- Global config (~/.lucidshark/config/config.yml)
 - Environment variable expansion (${VAR})
 - Config merging with proper precedence
 """
@@ -16,25 +16,25 @@ from typing import Any, Dict, List, Optional
 
 import yaml
 
-from lucidscan.config.models import (
+from lucidshark.config.models import (
     CoveragePipelineConfig,
     DomainPipelineConfig,
     FailOnConfig,
-    LucidScanConfig,
+    LucidSharkConfig,
     OutputConfig,
     PipelineConfig,
     ProjectConfig,
     ScannerDomainConfig,
     ToolConfig,
 )
-from lucidscan.config.validation import validate_config
-from lucidscan.core.logging import get_logger
-from lucidscan.bootstrap.paths import get_lucidscan_home
+from lucidshark.config.validation import validate_config
+from lucidshark.core.logging import get_logger
+from lucidshark.bootstrap.paths import get_lucidshark_home
 
 LOGGER = get_logger(__name__)
 
 # Config file names
-PROJECT_CONFIG_NAMES = [".lucidscan.yml", ".lucidscan.yaml", "lucidscan.yml", "lucidscan.yaml"]
+PROJECT_CONFIG_NAMES = [".lucidshark.yml", ".lucidshark.yaml", "lucidshark.yml", "lucidshark.yaml"]
 GLOBAL_CONFIG_NAME = "config.yml"
 
 # Environment variable pattern: ${VAR} or ${VAR:-default}
@@ -51,22 +51,22 @@ def load_config(
     project_root: Path,
     cli_config_path: Optional[Path] = None,
     cli_overrides: Optional[Dict[str, Any]] = None,
-) -> LucidScanConfig:
+) -> LucidSharkConfig:
     """Load configuration with proper precedence.
 
     Precedence (highest to lowest):
     1. CLI flags (cli_overrides)
-    2. Custom config file (cli_config_path) OR project config (.lucidscan.yml)
-    3. Global config (~/.lucidscan/config/config.yml)
+    2. Custom config file (cli_config_path) OR project config (.lucidshark.yml)
+    3. Global config (~/.lucidshark/config/config.yml)
     4. Built-in defaults
 
     Args:
-        project_root: Project root directory for finding .lucidscan.yml.
+        project_root: Project root directory for finding .lucidshark.yml.
         cli_config_path: Optional path to custom config file (--config flag).
         cli_overrides: Dict of CLI flag overrides.
 
     Returns:
-        Merged LucidScanConfig instance.
+        Merged LucidSharkConfig instance.
 
     Raises:
         ConfigError: If specified config file doesn't exist or has parse errors.
@@ -127,7 +127,7 @@ def load_config(
 def find_project_config(project_root: Path) -> Optional[Path]:
     """Find config file in project root.
 
-    Searches for .lucidscan.yml, .lucidscan.yaml, lucidscan.yml, lucidscan.yaml
+    Searches for .lucidshark.yml, .lucidshark.yaml, lucidshark.yml, lucidshark.yaml
     in the project root directory.
 
     Args:
@@ -144,12 +144,12 @@ def find_project_config(project_root: Path) -> Optional[Path]:
 
 
 def find_global_config() -> Optional[Path]:
-    """Find global config at ~/.lucidscan/config/config.yml.
+    """Find global config at ~/.lucidshark/config/config.yml.
 
     Returns:
         Path to global config if it exists, None otherwise.
     """
-    home = get_lucidscan_home()
+    home = get_lucidshark_home()
     config_path = home / "config" / GLOBAL_CONFIG_NAME
     if config_path.exists():
         return config_path
@@ -336,14 +336,14 @@ def _parse_coverage_pipeline_config(
     )
 
 
-def dict_to_config(data: Dict[str, Any]) -> LucidScanConfig:
-    """Convert validated dict to typed LucidScanConfig.
+def dict_to_config(data: Dict[str, Any]) -> LucidSharkConfig:
+    """Convert validated dict to typed LucidSharkConfig.
 
     Args:
         data: Configuration dictionary.
 
     Returns:
-        Typed LucidScanConfig instance.
+        Typed LucidSharkConfig instance.
     """
     # Parse output config
     output_data = data.get("output", {})
@@ -411,7 +411,7 @@ def dict_to_config(data: Dict[str, Any]) -> LucidScanConfig:
                 coverage=fail_on_data.get("coverage"),
             )
 
-    return LucidScanConfig(
+    return LucidSharkConfig(
         project=project,
         fail_on=fail_on,
         ignore=data.get("ignore", []),
@@ -422,10 +422,10 @@ def dict_to_config(data: Dict[str, Any]) -> LucidScanConfig:
     )
 
 
-def get_default_config() -> LucidScanConfig:
+def get_default_config() -> LucidSharkConfig:
     """Get default configuration with no scanners enabled.
 
     Returns:
-        Default LucidScanConfig instance.
+        Default LucidSharkConfig instance.
     """
-    return LucidScanConfig()
+    return LucidSharkConfig()

@@ -13,8 +13,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lucidscan.core.models import ScanContext, Severity, ToolDomain
-from lucidscan.plugins.type_checkers.typescript import TypeScriptChecker, TSC_ERROR_PATTERN
+from lucidshark.core.models import ScanContext, Severity, ToolDomain
+from lucidshark.plugins.type_checkers.typescript import TypeScriptChecker, TSC_ERROR_PATTERN
 
 
 class TestTypeScriptChecker:

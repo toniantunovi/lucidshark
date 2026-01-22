@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from lucidscan.bootstrap.validation import (
+from lucidshark.bootstrap.validation import (
     validate_binary,
     PluginValidationResult,
     ToolStatus,

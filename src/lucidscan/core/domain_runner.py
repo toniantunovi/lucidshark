@@ -9,9 +9,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
-from lucidscan.config import LucidScanConfig
-from lucidscan.core.logging import get_logger
-from lucidscan.core.models import ScanContext, ScanDomain, UnifiedIssue
+from lucidshark.config import LucidSharkConfig
+from lucidshark.core.logging import get_logger
+from lucidshark.core.models import ScanContext, ScanDomain, UnifiedIssue
 
 LOGGER = get_logger(__name__)
 
@@ -87,7 +87,7 @@ def filter_plugins_by_language(
 
 def filter_plugins_by_config(
     plugins: Dict[str, Type[Any]],
-    config: LucidScanConfig,
+    config: LucidSharkConfig,
     domain: str,
 ) -> Dict[str, Type[Any]]:
     """Filter plugins based on configuration.
@@ -97,7 +97,7 @@ def filter_plugins_by_config(
 
     Args:
         plugins: Dict of plugin_name -> plugin_class.
-        config: LucidScan configuration.
+        config: LucidShark configuration.
         domain: Domain name (linting, type_checking, testing, coverage).
 
     Returns:
@@ -114,14 +114,14 @@ def filter_plugins_by_config(
 
 def filter_scanners_by_config(
     scanners: Dict[str, Type[Any]],
-    config: LucidScanConfig,
+    config: LucidSharkConfig,
     domain: str,
 ) -> Dict[str, Type[Any]]:
     """Filter scanner plugins based on configuration for a specific domain.
 
     Args:
         scanners: Dict of scanner_name -> scanner_class.
-        config: LucidScan configuration.
+        config: LucidShark configuration.
         domain: Scanner domain (sast, sca, iac, container).
 
     Returns:
@@ -184,14 +184,14 @@ class DomainRunner:
     def __init__(
         self,
         project_root: Path,
-        config: LucidScanConfig,
+        config: LucidSharkConfig,
         log_level: str = "info",
     ):
         """Initialize DomainRunner.
 
         Args:
             project_root: Project root directory.
-            config: LucidScan configuration.
+            config: LucidShark configuration.
             log_level: Logging level for plugin execution ("info" or "debug").
         """
         self.project_root = project_root
@@ -219,7 +219,7 @@ class DomainRunner:
         Returns:
             List of linting issues.
         """
-        from lucidscan.plugins.linters import discover_linter_plugins
+        from lucidshark.plugins.linters import discover_linter_plugins
 
         issues: List[UnifiedIssue] = []
         linters = discover_linter_plugins()
@@ -261,7 +261,7 @@ class DomainRunner:
         Returns:
             List of type checking issues.
         """
-        from lucidscan.plugins.type_checkers import discover_type_checker_plugins
+        from lucidshark.plugins.type_checkers import discover_type_checker_plugins
 
         issues: List[UnifiedIssue] = []
         checkers = discover_type_checker_plugins()
@@ -295,7 +295,7 @@ class DomainRunner:
         Returns:
             List of test failure issues.
         """
-        from lucidscan.plugins.test_runners import discover_test_runner_plugins
+        from lucidshark.plugins.test_runners import discover_test_runner_plugins
 
         issues: List[UnifiedIssue] = []
         runners = discover_test_runner_plugins()
@@ -344,7 +344,7 @@ class DomainRunner:
         Returns:
             List of coverage issues.
         """
-        from lucidscan.plugins.coverage import discover_coverage_plugins
+        from lucidshark.plugins.coverage import discover_coverage_plugins
 
         issues: List[UnifiedIssue] = []
         plugins = discover_coverage_plugins()
@@ -407,7 +407,7 @@ class DomainRunner:
         Returns:
             List of security issues.
         """
-        from lucidscan.plugins.scanners import discover_scanner_plugins
+        from lucidshark.plugins.scanners import discover_scanner_plugins
 
         issues: List[UnifiedIssue] = []
         scanners = discover_scanner_plugins()

@@ -1,6 +1,6 @@
-"""Configuration data models for lucidscan.
+"""Configuration data models for lucidshark.
 
-Defines typed configuration classes that represent .lucidscan.yml structure.
+Defines typed configuration classes that represent .lucidshark.yml structure.
 Core fields are validated, while plugin-specific options are passed through.
 """
 
@@ -183,13 +183,13 @@ class ProjectConfig:
 
 
 @dataclass
-class LucidScanConfig:
-    """Complete lucidscan configuration.
+class LucidSharkConfig:
+    """Complete lucidshark configuration.
 
     Core fields are validated by the framework. Plugin-specific options
     under `scanners.*` are passed through without validation.
 
-    Example .lucidscan.yml:
+    Example .lucidshark.yml:
         fail_on: high
         ignore:
           - "tests/**"

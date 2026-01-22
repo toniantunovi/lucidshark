@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from lucidscan.plugins import (
+from lucidshark.plugins import (
     discover_plugins,
     get_plugin,
     list_available_plugins,
     SCANNER_ENTRY_POINT_GROUP,
 )
-from lucidscan.plugins.scanners.base import ScannerPlugin
-from lucidscan.plugins.scanners.trivy import TrivyScanner
+from lucidshark.plugins.scanners.base import ScannerPlugin
+from lucidshark.plugins.scanners.trivy import TrivyScanner
 
 
 class TestDiscoverPlugins:
@@ -28,7 +28,7 @@ class TestDiscoverPlugins:
 
     def test_returns_empty_dict_for_unknown_group(self) -> None:
         """Test that unknown group returns empty dict."""
-        plugins: dict = discover_plugins("lucidscan.nonexistent")
+        plugins: dict = discover_plugins("lucidshark.nonexistent")
         assert plugins == {}
 
 
@@ -57,5 +57,5 @@ class TestListAvailablePlugins:
 
     def test_returns_empty_list_for_unknown_group(self) -> None:
         """Test that unknown group returns empty list."""
-        plugins = list_available_plugins("lucidscan.nonexistent")
+        plugins = list_available_plugins("lucidshark.nonexistent")
         assert plugins == []

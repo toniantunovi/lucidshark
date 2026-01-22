@@ -7,9 +7,9 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 
-from lucidscan.cli.commands.serve import ServeCommand
-from lucidscan.cli.exit_codes import EXIT_SUCCESS, EXIT_SCANNER_ERROR
-from lucidscan.config import LucidScanConfig
+from lucidshark.cli.commands.serve import ServeCommand
+from lucidshark.cli.exit_codes import EXIT_SUCCESS, EXIT_SCANNER_ERROR
+from lucidshark.config import LucidSharkConfig
 
 
 class TestServeCommand:
@@ -24,7 +24,7 @@ class TestServeCommand:
         """Test execute with invalid directory."""
         nonexistent = tmp_path / "nonexistent"
         args = Namespace(path=str(nonexistent), mcp=False, watch=False)
-        config = MagicMock(spec=LucidScanConfig)
+        config = MagicMock(spec=LucidSharkConfig)
 
         cmd = ServeCommand(version="1.0.0")
         result = cmd.execute(args, config)
@@ -34,7 +34,7 @@ class TestServeCommand:
     def test_execute_default_mcp_mode(self, tmp_path: Path) -> None:
         """Test execute defaults to MCP mode."""
         args = Namespace(path=str(tmp_path), mcp=False, watch=False)
-        config = MagicMock(spec=LucidScanConfig)
+        config = MagicMock(spec=LucidSharkConfig)
 
         with patch.object(
             ServeCommand, "_run_mcp_server", return_value=EXIT_SUCCESS
@@ -48,7 +48,7 @@ class TestServeCommand:
     def test_execute_explicit_mcp_mode(self, tmp_path: Path) -> None:
         """Test execute with explicit MCP mode."""
         args = Namespace(path=str(tmp_path), mcp=True, watch=False)
-        config = MagicMock(spec=LucidScanConfig)
+        config = MagicMock(spec=LucidSharkConfig)
 
         with patch.object(
             ServeCommand, "_run_mcp_server", return_value=EXIT_SUCCESS
@@ -62,7 +62,7 @@ class TestServeCommand:
     def test_execute_watch_mode(self, tmp_path: Path) -> None:
         """Test execute with watch mode."""
         args = Namespace(path=str(tmp_path), mcp=False, watch=True)
-        config = MagicMock(spec=LucidScanConfig)
+        config = MagicMock(spec=LucidSharkConfig)
 
         with patch.object(
             ServeCommand, "_run_file_watcher", return_value=EXIT_SUCCESS
@@ -76,12 +76,12 @@ class TestServeCommand:
     def test_run_mcp_server_success(self, tmp_path: Path) -> None:
         """Test MCP server runs successfully."""
         args = Namespace(path=str(tmp_path), mcp=True, watch=False)
-        config = MagicMock(spec=LucidScanConfig)
+        config = MagicMock(spec=LucidSharkConfig)
 
         mock_server = MagicMock()
 
         with patch(
-            "lucidscan.mcp.server.LucidScanMCPServer",
+            "lucidshark.mcp.server.LucidSharkMCPServer",
             return_value=mock_server,
         ):
             with patch("asyncio.run"):
@@ -93,7 +93,7 @@ class TestServeCommand:
     def test_run_mcp_server_import_error(self, tmp_path: Path) -> None:
         """Test MCP server handles import error."""
         args = Namespace(path=str(tmp_path), mcp=True, watch=False)
-        config = MagicMock(spec=LucidScanConfig)
+        config = MagicMock(spec=LucidSharkConfig)
 
         cmd = ServeCommand(version="1.0.0")
 
@@ -107,12 +107,12 @@ class TestServeCommand:
     def test_run_mcp_server_runtime_error(self, tmp_path: Path) -> None:
         """Test MCP server handles runtime error."""
         args = Namespace(path=str(tmp_path), mcp=True, watch=False)
-        config = MagicMock(spec=LucidScanConfig)
+        config = MagicMock(spec=LucidSharkConfig)
 
         mock_server = MagicMock()
 
         with patch(
-            "lucidscan.mcp.server.LucidScanMCPServer",
+            "lucidshark.mcp.server.LucidSharkMCPServer",
             return_value=mock_server,
         ):
             with patch("asyncio.run", side_effect=RuntimeError("Server failed")):
@@ -124,12 +124,12 @@ class TestServeCommand:
     def test_run_file_watcher_success(self, tmp_path: Path) -> None:
         """Test file watcher runs successfully."""
         args = Namespace(path=str(tmp_path), mcp=False, watch=True, debounce=500)
-        config = MagicMock(spec=LucidScanConfig)
+        config = MagicMock(spec=LucidSharkConfig)
 
         mock_watcher = MagicMock()
 
         with patch(
-            "lucidscan.mcp.watcher.LucidScanFileWatcher",
+            "lucidshark.mcp.watcher.LucidSharkFileWatcher",
             return_value=mock_watcher,
         ):
             with patch("asyncio.run"):
@@ -142,7 +142,7 @@ class TestServeCommand:
     def test_run_file_watcher_import_error(self, tmp_path: Path) -> None:
         """Test file watcher handles import error."""
         args = Namespace(path=str(tmp_path), mcp=False, watch=True)
-        config = MagicMock(spec=LucidScanConfig)
+        config = MagicMock(spec=LucidSharkConfig)
 
         cmd = ServeCommand(version="1.0.0")
 
@@ -155,12 +155,12 @@ class TestServeCommand:
     def test_run_file_watcher_keyboard_interrupt(self, tmp_path: Path) -> None:
         """Test file watcher handles keyboard interrupt gracefully."""
         args = Namespace(path=str(tmp_path), mcp=False, watch=True, debounce=1000)
-        config = MagicMock(spec=LucidScanConfig)
+        config = MagicMock(spec=LucidSharkConfig)
 
         mock_watcher = MagicMock()
 
         with patch(
-            "lucidscan.mcp.watcher.LucidScanFileWatcher",
+            "lucidshark.mcp.watcher.LucidSharkFileWatcher",
             return_value=mock_watcher,
         ):
             with patch("asyncio.run", side_effect=KeyboardInterrupt):
@@ -172,12 +172,12 @@ class TestServeCommand:
     def test_run_file_watcher_runtime_error(self, tmp_path: Path) -> None:
         """Test file watcher handles runtime error."""
         args = Namespace(path=str(tmp_path), mcp=False, watch=True, debounce=1000)
-        config = MagicMock(spec=LucidScanConfig)
+        config = MagicMock(spec=LucidSharkConfig)
 
         mock_watcher = MagicMock()
 
         with patch(
-            "lucidscan.mcp.watcher.LucidScanFileWatcher",
+            "lucidshark.mcp.watcher.LucidSharkFileWatcher",
             return_value=mock_watcher,
         ):
             with patch("asyncio.run", side_effect=RuntimeError("Watcher failed")):
@@ -190,12 +190,12 @@ class TestServeCommand:
         """Test file watcher uses default debounce when not specified."""
         args = Namespace(path=str(tmp_path), mcp=False, watch=True)
         # Remove debounce attribute to test getattr default
-        config = MagicMock(spec=LucidScanConfig)
+        config = MagicMock(spec=LucidSharkConfig)
 
         mock_watcher = MagicMock()
 
         with patch(
-            "lucidscan.mcp.watcher.LucidScanFileWatcher",
+            "lucidshark.mcp.watcher.LucidSharkFileWatcher",
             return_value=mock_watcher,
         ) as mock_watcher_class:
             with patch("asyncio.run"):

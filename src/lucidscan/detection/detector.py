@@ -6,9 +6,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
-from lucidscan.detection.languages import detect_languages, LanguageInfo
-from lucidscan.detection.frameworks import detect_frameworks
-from lucidscan.detection.tools import detect_tools, ToolConfig
+from lucidshark.detection.languages import detect_languages, LanguageInfo
+from lucidshark.detection.frameworks import detect_frameworks
+from lucidshark.detection.tools import detect_tools, ToolConfig
 
 
 @dataclass

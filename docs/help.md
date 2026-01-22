@@ -1,66 +1,66 @@
-# LucidScan Reference Documentation
+# LucidShark Reference Documentation
 
-LucidScan is a unified code quality tool that combines linting, type checking, security scanning, testing, and coverage analysis into a single pipeline.
+LucidShark is a unified code quality tool that combines linting, type checking, security scanning, testing, and coverage analysis into a single pipeline.
 
 ## Quick Start
 
 ### Installation
 
 ```bash
-pip install lucidscan
+pip install lucidshark
 ```
 
 ### Recommended Setup (AI-Assisted)
 
 ```bash
 # 1. Set up your AI tools
-lucidscan init --all
+lucidshark init --all
 
 # 2. Restart Claude Code or Cursor, then ask:
-#    "Autoconfigure LucidScan for this project"
+#    "Autoconfigure LucidShark for this project"
 ```
 
-Your AI assistant will analyze your codebase, ask a few questions, and generate `lucidscan.yml`.
+Your AI assistant will analyze your codebase, ask a few questions, and generate `lucidshark.yml`.
 
 ### Alternative: CLI Configuration
 
 ```bash
-# Auto-detect languages and generate lucidscan.yml
-lucidscan autoconfigure
+# Auto-detect languages and generate lucidshark.yml
+lucidshark autoconfigure
 
 # With CI configuration
-lucidscan autoconfigure --ci github
+lucidshark autoconfigure --ci github
 
 # Non-interactive mode
-lucidscan autoconfigure -y
+lucidshark autoconfigure -y
 ```
 
 ### Run Scans
 
 ```bash
 # Default: scan only changed files (uncommitted changes)
-lucidscan scan --linting --type-checking
+lucidshark scan --linting --type-checking
 
 # Full project scan (all domains, all files)
-lucidscan scan --all --all-files
+lucidshark scan --all --all-files
 
 # Run specific checks (on changed files by default)
-lucidscan scan --linting        # Linting only
-lucidscan scan --type-checking  # Type checking only
-lucidscan scan --sca            # Dependency vulnerabilities (always project-wide)
-lucidscan scan --sast           # Code security analysis
+lucidshark scan --linting        # Linting only
+lucidshark scan --type-checking  # Type checking only
+lucidshark scan --sca            # Dependency vulnerabilities (always project-wide)
+lucidshark scan --sast           # Code security analysis
 
 # Auto-fix linting issues (on changed files)
-lucidscan scan --linting --fix
+lucidshark scan --linting --fix
 ```
 
 ---
 
 ## CLI Commands
 
-### `lucidscan init`
+### `lucidshark init`
 
-Configure AI tools (Claude Code, Cursor) to use LucidScan via MCP.
+Configure AI tools (Claude Code, Cursor) to use LucidShark via MCP.
 
 | Option | Description |
 |--------|-------------|
@@ -69,19 +69,19 @@ Configure AI tools (Claude Code, Cursor) to use LucidScan via MCP.
 | `--all` | Configure all supported AI tools |
 | `--dry-run` | Show changes without applying |
 | `--force` | Overwrite existing configuration |
-| `--remove` | Remove LucidScan from tool configuration |
+| `--remove` | Remove LucidShark from tool configuration |
 
 **Examples:**
 ```bash
-lucidscan init --claude-code
-lucidscan init --cursor
-lucidscan init --all
-lucidscan init --claude-code --remove
+lucidshark init --claude-code
+lucidshark init --cursor
+lucidshark init --all
+lucidshark init --claude-code --remove
 ```
 
-### `lucidscan autoconfigure`
+### `lucidshark autoconfigure`
 
-Auto-configure LucidScan for a project. Detects languages, frameworks, and generates `lucidscan.yml`.
+Auto-configure LucidShark for a project. Detects languages, frameworks, and generates `lucidshark.yml`.
 
 | Option | Description |
 |--------|-------------|
@@ -92,12 +92,12 @@ Auto-configure LucidScan for a project. Detects languages, frameworks, and gener
 
 **Examples:**
 ```bash
-lucidscan autoconfigure
-lucidscan autoconfigure --ci github --non-interactive
-lucidscan autoconfigure /path/to/project -f
+lucidshark autoconfigure
+lucidshark autoconfigure --ci github --non-interactive
+lucidshark autoconfigure /path/to/project -f
 ```
 
-### `lucidscan scan`
+### `lucidshark scan`
 
 Run the quality/security pipeline. By default, scans only changed files (uncommitted changes).
 
@@ -148,31 +148,31 @@ Run the quality/security pipeline. By default, scans only changed files (uncommi
 **Examples:**
 ```bash
 # Default: scan only changed files (uncommitted changes)
-lucidscan scan --linting --type-checking
+lucidshark scan --linting --type-checking
 
 # Full project scan
-lucidscan scan --all --all-files
+lucidshark scan --all --all-files
 
 # Scan specific files
-lucidscan scan --linting --files src/main.py src/utils.py
+lucidshark scan --linting --files src/main.py src/utils.py
 
 # Lint with auto-fix (on changed files)
-lucidscan scan --linting --fix
+lucidshark scan --linting --fix
 
 # Full security scan
-lucidscan scan --sca --sast --all-files --fail-on high
+lucidshark scan --sca --sast --all-files --fail-on high
 
 # Full scan before commit
-lucidscan scan --all --all-files --format sarif > results.sarif
+lucidshark scan --all --all-files --format sarif > results.sarif
 
 # Container scanning
-lucidscan scan --container --image myapp:latest
+lucidshark scan --container --image myapp:latest
 
 # Stream output during scan
-lucidscan scan --all --stream
+lucidshark scan --all --stream
 ```
 
-### `lucidscan status`
+### `lucidshark status`
 
 Show configuration and tool status.
 
@@ -183,13 +183,13 @@ Show configuration and tool status.
 
 **Examples:**
 ```bash
-lucidscan status
-lucidscan status --tools
+lucidshark status
+lucidshark status --tools
 ```
 
-### `lucidscan serve`
+### `lucidshark serve`
 
-Run LucidScan as a server for AI tool integration.
+Run LucidShark as a server for AI tool integration.
 
 | Option | Description |
 |--------|-------------|
@@ -200,23 +200,23 @@ Run LucidScan as a server for AI tool integration.
 
 **Examples:**
 ```bash
-lucidscan serve --mcp
-lucidscan serve --watch
-lucidscan serve --watch --debounce 500
+lucidshark serve --mcp
+lucidshark serve --watch
+lucidshark serve --watch --debounce 500
 ```
 
 
-### `lucidscan help`
+### `lucidshark help`
 
 Display this documentation.
 
 ```bash
-lucidscan help
+lucidshark help
 ```
 
-### `lucidscan validate`
+### `lucidshark validate`
 
-Validate a `lucidscan.yml` configuration file and report errors/warnings.
+Validate a `lucidshark.yml` configuration file and report errors/warnings.
 
 | Option | Description |
 |--------|-------------|
@@ -229,8 +229,8 @@ Validate a `lucidscan.yml` configuration file and report errors/warnings.
 
 **Examples:**
 ```bash
-lucidscan validate
-lucidscan validate --config custom-config.yml
+lucidshark validate
+lucidshark validate --config custom-config.yml
 ```
 
 ### Exit Codes
@@ -247,7 +247,7 @@ lucidscan validate --config custom-config.yml
 
 ## MCP Tools Reference
 
-LucidScan exposes these tools via MCP (Model Context Protocol) for AI agent integration:
+LucidShark exposes these tools via MCP (Model Context Protocol) for AI agent integration:
 
 ### `scan`
 
@@ -372,7 +372,7 @@ apply_fix(issue_id="linting-456")
 
 ### `get_status`
 
-Get current LucidScan status and configuration.
+Get current LucidShark status and configuration.
 
 **Parameters:** None
 
@@ -399,21 +399,21 @@ Get this documentation.
 **Response format:**
 ```json
 {
-  "documentation": "# LucidScan Reference Documentation...",
+  "documentation": "# LucidShark Reference Documentation...",
   "format": "markdown"
 }
 ```
 
 ### `autoconfigure`
 
-Get instructions for auto-configuring LucidScan for the project. Returns guidance on what files to analyze and how to generate `lucidscan.yml`. The AI should then read the codebase, read the help docs via `get_help()`, and create the configuration file.
+Get instructions for auto-configuring LucidShark for the project. Returns guidance on what files to analyze and how to generate `lucidshark.yml`. The AI should then read the codebase, read the help docs via `get_help()`, and create the configuration file.
 
 **Parameters:** None
 
 **Response format:**
 ```json
 {
-  "instructions": "To configure LucidScan for this project, follow these steps...",
+  "instructions": "To configure LucidShark for this project, follow these steps...",
   "analysis_steps": [
     {
       "step": 1,
@@ -447,8 +447,8 @@ Get instructions for auto-configuring LucidScan for the project. Returns guidanc
     "minimal_python": "version: 1\nproject:\n  name: my-project..."
   },
   "post_config_steps": [
-    "Run 'lucidscan init --claude-code' to set up AI tool integration",
-    "Run 'lucidscan scan --all' to test the configuration"
+    "Run 'lucidshark init --claude-code' to set up AI tool integration",
+    "Run 'lucidshark scan --all' to test the configuration"
   ]
 }
 ```
@@ -461,7 +461,7 @@ autoconfigure()
 After calling this tool, the AI should:
 1. Check for files mentioned in `analysis_steps` to detect the project type
 2. Call `get_help()` to read the full configuration documentation
-3. Generate an appropriate `lucidscan.yml` based on detected project characteristics
+3. Generate an appropriate `lucidshark.yml` based on detected project characteristics
 4. Write the configuration file to the project root
 5. Call `validate_config()` to verify the configuration is valid
 6. Fix any validation errors before informing the user
@@ -469,19 +469,19 @@ After calling this tool, the AI should:
 
 ### `validate_config`
 
-Validate a `lucidscan.yml` configuration file. Returns validation results with errors and warnings. Use after generating or modifying configuration to ensure it's valid.
+Validate a `lucidshark.yml` configuration file. Returns validation results with errors and warnings. Use after generating or modifying configuration to ensure it's valid.
 
 **Parameters:**
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `config_path` | string | No | Path to config file (relative to project root). Default: find `lucidscan.yml` |
+| `config_path` | string | No | Path to config file (relative to project root). Default: find `lucidshark.yml` |
 
 **Response format:**
 ```json
 {
   "valid": true,
-  "config_path": "lucidscan.yml",
+  "config_path": "lucidshark.yml",
   "errors": [],
   "warnings": [
     {
@@ -496,7 +496,7 @@ Validate a `lucidscan.yml` configuration file. Returns validation results with e
 **Examples:**
 ```
 validate_config()
-validate_config(config_path="lucidscan.yml")
+validate_config(config_path="lucidshark.yml")
 validate_config(config_path="configs/custom.yml")
 ```
 
@@ -506,13 +506,13 @@ validate_config(config_path="configs/custom.yml")
 - Type errors (e.g., string where boolean expected)
 - Invalid values (e.g., unknown severity level)
 
-**Best practice:** Always call `validate_config()` after generating or modifying `lucidscan.yml` to catch configuration errors early.
+**Best practice:** Always call `validate_config()` after generating or modifying `lucidshark.yml` to catch configuration errors early.
 
 ---
 
-## Configuration Reference (`lucidscan.yml`)
+## Configuration Reference (`lucidshark.yml`)
 
-LucidScan auto-detects your project, but you can customize behavior with `lucidscan.yml` in your project root.
+LucidShark auto-detects your project, but you can customize behavior with `lucidshark.yml` in your project root.
 
 ### Complete Configuration Example
 
@@ -657,11 +657,11 @@ ignore:
 
 ### Config File Locations
 
-LucidScan searches for configuration in this order:
+LucidShark searches for configuration in this order:
 
 1. CLI `--config PATH` flag
-2. Project root: `.lucidscan.yml`, `.lucidscan.yaml`, `lucidscan.yml`, `lucidscan.yaml`
-3. Global: `~/.lucidscan/config/config.yml`
+2. Project root: `.lucidshark.yml`, `.lucidshark.yaml`, `lucidshark.yml`, `lucidshark.yaml`
+3. Global: `~/.lucidshark/config/config.yml`
 4. Built-in defaults
 
 ### Environment Variable Expansion
@@ -680,7 +680,7 @@ project:
 ### Claude Code
 
 ```bash
-lucidscan init --claude-code
+lucidshark init --claude-code
 ```
 
 This creates:
@@ -691,8 +691,8 @@ Or manually create `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "lucidscan": {
-      "command": ".venv/bin/lucidscan",
+    "lucidshark": {
+      "command": ".venv/bin/lucidshark",
       "args": ["serve", "--mcp"]
     }
   }
@@ -702,19 +702,19 @@ Or manually create `.mcp.json`:
 ### Cursor
 
 ```bash
-lucidscan init --cursor
+lucidshark init --cursor
 ```
 
 This creates:
 - `~/.cursor/mcp.json` - MCP server configuration
-- `.cursor/rules/lucidscan.mdc` - Cursor rules
+- `.cursor/rules/lucidshark.mdc` - Cursor rules
 
 Or manually add to `~/.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "lucidscan": {
-      "command": "lucidscan",
+    "lucidshark": {
+      "command": "lucidshark",
       "args": ["serve", "--mcp"]
     }
   }
@@ -727,7 +727,7 @@ Or manually add to `~/.cursor/mcp.json`:
 
 ### Developer Experience Principles
 
-LucidScan aims to provide a **fast, practical, and informative** experience that instills confidence. When using LucidScan via MCP, follow these principles:
+LucidShark aims to provide a **fast, practical, and informative** experience that instills confidence. When using LucidShark via MCP, follow these principles:
 
 1. **Keep the user informed** - Always communicate what you're doing at each step
 2. **Be complete** - Show results for all domains that were checked
@@ -827,7 +827,7 @@ Ready to proceed.
 
 ### Default Partial Scanning
 
-LucidScan scans only changed files (uncommitted changes) by default. This is the recommended workflow:
+LucidShark scans only changed files (uncommitted changes) by default. This is the recommended workflow:
 
 | Scenario | Approach | Example |
 |----------|----------|---------|

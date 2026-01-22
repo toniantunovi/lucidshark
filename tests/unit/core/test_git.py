@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
-from lucidscan.core.git import (
+from lucidshark.core.git import (
     filter_files_by_extension,
     get_changed_files,
     get_git_root,

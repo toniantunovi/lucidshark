@@ -1,11 +1,11 @@
-"""Argument parser construction for lucidscan CLI.
+"""Argument parser construction for lucidshark CLI.
 
 This module builds the argument parser with subcommands:
-- lucidscan init          - Configure AI tools (Claude Code, Cursor)
-- lucidscan autoconfigure - Auto-configure project (generate lucidscan.yml)
-- lucidscan scan          - Run security/quality scans
-- lucidscan status        - Show configuration and tool status
-- lucidscan serve         - Run as MCP server or file watcher
+- lucidshark init          - Configure AI tools (Claude Code, Cursor)
+- lucidshark autoconfigure - Auto-configure project (generate lucidshark.yml)
+- lucidshark scan          - Run security/quality scans
+- lucidshark status        - Show configuration and tool status
+- lucidshark serve         - Run as MCP server or file watcher
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ def _add_global_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--version",
         action="store_true",
-        help="Show lucidscan version and exit.",
+        help="Show lucidshark version and exit.",
     )
     parser.add_argument(
         "--debug",
@@ -41,14 +41,14 @@ def _add_global_options(parser: argparse.ArgumentParser) -> None:
 def _build_init_parser(subparsers: argparse._SubParsersAction) -> None:
     """Build the 'init' subcommand parser.
 
-    This command configures AI tools (Claude Code, Cursor) to use LucidScan.
+    This command configures AI tools (Claude Code, Cursor) to use LucidShark.
     """
     init_parser = subparsers.add_parser(
         "init",
-        help="Configure AI tools to use LucidScan.",
+        help="Configure AI tools to use LucidShark.",
         description=(
             "Configure Claude Code, Cursor, or other MCP-compatible AI tools "
-            "to use LucidScan for code quality checks."
+            "to use LucidShark for code quality checks."
         ),
     )
 
@@ -81,26 +81,26 @@ def _build_init_parser(subparsers: argparse._SubParsersAction) -> None:
     options_group.add_argument(
         "--force",
         action="store_true",
-        help="Overwrite existing LucidScan configuration.",
+        help="Overwrite existing LucidShark configuration.",
     )
     options_group.add_argument(
         "--remove",
         action="store_true",
-        help="Remove LucidScan from the specified tool's configuration.",
+        help="Remove LucidShark from the specified tool's configuration.",
     )
 
 
 def _build_autoconfigure_parser(subparsers: argparse._SubParsersAction) -> None:
     """Build the 'autoconfigure' subcommand parser.
 
-    This command detects project characteristics and generates lucidscan.yml.
+    This command detects project characteristics and generates lucidshark.yml.
     """
     autoconfigure_parser = subparsers.add_parser(
         "autoconfigure",
-        help="Auto-configure LucidScan for the current project.",
+        help="Auto-configure LucidShark for the current project.",
         description=(
             "Analyze your codebase, detect languages and frameworks, "
-            "and generate lucidscan.yml configuration."
+            "and generate lucidshark.yml configuration."
         ),
     )
     autoconfigure_parser.add_argument(
@@ -236,7 +236,7 @@ def _build_scan_parser(subparsers: argparse._SubParsersAction) -> None:
         "--config",
         metavar="PATH",
         type=Path,
-        help="Path to config file (default: .lucidscan.yml in project root).",
+        help="Path to config file (default: .lucidshark.yml in project root).",
     )
 
     # Execution options
@@ -264,7 +264,7 @@ def _build_status_parser(subparsers: argparse._SubParsersAction) -> None:
         "status",
         help="Show configuration and tool status.",
         description=(
-            "Display lucidscan version, platform info, installed tools, "
+            "Display lucidshark version, platform info, installed tools, "
             "and scanner plugin status."
         ),
     )
@@ -285,9 +285,9 @@ def _build_serve_parser(subparsers: argparse._SubParsersAction) -> None:
     """Build the 'serve' subcommand parser."""
     serve_parser = subparsers.add_parser(
         "serve",
-        help="Run LucidScan as a server for AI integration.",
+        help="Run LucidShark as a server for AI integration.",
         description=(
-            "Run LucidScan as an MCP server for Claude Code, Cursor, "
+            "Run LucidShark as an MCP server for Claude Code, Cursor, "
             "or as a file watcher for real-time checking."
         ),
     )
@@ -334,7 +334,7 @@ def _build_help_parser(subparsers: argparse._SubParsersAction) -> None:
         "help",
         help="Show LLM-friendly documentation.",
         description=(
-            "Display comprehensive LucidScan documentation including "
+            "Display comprehensive LucidShark documentation including "
             "CLI commands, MCP tools, and configuration reference."
         ),
     )
@@ -343,13 +343,13 @@ def _build_help_parser(subparsers: argparse._SubParsersAction) -> None:
 def _build_validate_parser(subparsers: argparse._SubParsersAction) -> None:
     """Build the 'validate' subcommand parser.
 
-    This command validates lucidscan.yml configuration files.
+    This command validates lucidshark.yml configuration files.
     """
     validate_parser = subparsers.add_parser(
         "validate",
-        help="Validate lucidscan.yml configuration file.",
+        help="Validate lucidshark.yml configuration file.",
         description=(
-            "Check a LucidScan configuration file for errors and warnings. "
+            "Check a LucidShark configuration file for errors and warnings. "
             "Reports issues with suggestions for fixes."
         ),
     )
@@ -357,29 +357,29 @@ def _build_validate_parser(subparsers: argparse._SubParsersAction) -> None:
         "--config",
         metavar="PATH",
         type=Path,
-        help="Path to config file (default: find lucidscan.yml in current directory).",
+        help="Path to config file (default: find lucidshark.yml in current directory).",
     )
 
 
 def build_parser() -> argparse.ArgumentParser:
-    """Build and return the argument parser for lucidscan CLI.
+    """Build and return the argument parser for lucidshark CLI.
 
     Returns:
         Configured ArgumentParser instance with subcommands.
     """
     parser = argparse.ArgumentParser(
-        prog="lucidscan",
-        description="LucidScan - The trust layer for AI-assisted development.",
+        prog="lucidshark",
+        description="LucidShark - The trust layer for AI-assisted development.",
         epilog=(
             "Examples:\n"
-            "  lucidscan init --claude-code       # Configure Claude Code\n"
-            "  lucidscan init --cursor            # Configure Cursor\n"
-            "  lucidscan autoconfigure            # Auto-configure project\n"
-            "  lucidscan scan --sca               # Scan dependencies\n"
-            "  lucidscan scan --all               # Run all scans\n"
-            "  lucidscan scan --linting --fix     # Lint and auto-fix\n"
-            "  lucidscan status                   # Show tool status\n"
-            "  lucidscan serve --mcp              # Run MCP server\n"
+            "  lucidshark init --claude-code       # Configure Claude Code\n"
+            "  lucidshark init --cursor            # Configure Cursor\n"
+            "  lucidshark autoconfigure            # Auto-configure project\n"
+            "  lucidshark scan --sca               # Scan dependencies\n"
+            "  lucidshark scan --all               # Run all scans\n"
+            "  lucidshark scan --linting --fix     # Lint and auto-fix\n"
+            "  lucidshark status                   # Show tool status\n"
+            "  lucidshark serve --mcp              # Run MCP server\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

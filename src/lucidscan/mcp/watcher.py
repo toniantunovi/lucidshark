@@ -1,4 +1,4 @@
-"""File watcher for incremental LucidScan checks.
+"""File watcher for incremental LucidShark checks.
 
 Watches for file changes and runs incremental quality checks.
 """
@@ -12,14 +12,14 @@ from typing import Any, Callable, Dict, List, Optional, Set
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-from lucidscan.config import LucidScanConfig
-from lucidscan.core.logging import get_logger
-from lucidscan.mcp.tools import MCPToolExecutor
+from lucidshark.config import LucidSharkConfig
+from lucidshark.core.logging import get_logger
+from lucidshark.mcp.tools import MCPToolExecutor
 
 LOGGER = get_logger(__name__)
 
 
-class LucidScanFileWatcher:
+class LucidSharkFileWatcher:
     """Watches for file changes and runs incremental checks."""
 
     # Default patterns to ignore
@@ -29,7 +29,7 @@ class LucidScanFileWatcher:
         "node_modules",
         ".venv",
         "venv",
-        ".lucidscan",
+        ".lucidshark",
         ".mypy_cache",
         ".pytest_cache",
         ".ruff_cache",
@@ -45,15 +45,15 @@ class LucidScanFileWatcher:
     def __init__(
         self,
         project_root: Path,
-        config: LucidScanConfig,
+        config: LucidSharkConfig,
         debounce_ms: int = 1000,
         ignore_patterns: Optional[List[str]] = None,
     ):
-        """Initialize LucidScanFileWatcher.
+        """Initialize LucidSharkFileWatcher.
 
         Args:
             project_root: Project root directory to watch.
-            config: LucidScan configuration.
+            config: LucidShark configuration.
             debounce_ms: Debounce delay in milliseconds.
             ignore_patterns: Additional patterns to ignore.
         """

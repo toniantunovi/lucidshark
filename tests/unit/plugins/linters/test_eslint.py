@@ -14,8 +14,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lucidscan.core.models import ScanContext, Severity, ToolDomain
-from lucidscan.plugins.linters.eslint import ESLintLinter, SEVERITY_MAP, ESLINT_EXTENSIONS
+from lucidshark.core.models import ScanContext, Severity, ToolDomain
+from lucidshark.plugins.linters.eslint import ESLintLinter, SEVERITY_MAP, ESLINT_EXTENSIONS
 
 
 def make_completed_process(returncode: int, stdout: str, stderr: str = "") -> subprocess.CompletedProcess:
@@ -152,7 +152,7 @@ class TestESLintLinter:
             )
 
             with patch.object(linter, "ensure_binary", return_value=Path("/usr/bin/eslint")):
-                with patch("lucidscan.plugins.linters.eslint.run_with_streaming", return_value=mock_result):
+                with patch("lucidshark.plugins.linters.eslint.run_with_streaming", return_value=mock_result):
                     issues = linter.lint(context)
 
                     assert len(issues) == 1
@@ -174,7 +174,7 @@ class TestESLintLinter:
             )
 
             with patch.object(linter, "ensure_binary", return_value=Path("/usr/bin/eslint")):
-                with patch("lucidscan.plugins.linters.eslint.run_with_streaming",
+                with patch("lucidshark.plugins.linters.eslint.run_with_streaming",
                           side_effect=subprocess.TimeoutExpired("eslint", 120)):
                     issues = linter.lint(context)
                     assert issues == []
@@ -191,7 +191,7 @@ class TestESLintLinter:
             )
 
             with patch.object(linter, "ensure_binary", return_value=Path("/usr/bin/eslint")):
-                with patch("lucidscan.plugins.linters.eslint.run_with_streaming",
+                with patch("lucidshark.plugins.linters.eslint.run_with_streaming",
                           side_effect=OSError("command failed")):
                     issues = linter.lint(context)
                     assert issues == []
@@ -216,7 +216,7 @@ class TestESLintLinter:
             mock_result = make_completed_process(returncode=0, stdout="[]")
 
             with patch.object(linter, "ensure_binary", return_value=Path("/usr/bin/eslint")):
-                with patch("lucidscan.plugins.linters.eslint.run_with_streaming", return_value=mock_result) as mock_run:
+                with patch("lucidshark.plugins.linters.eslint.run_with_streaming", return_value=mock_result) as mock_run:
                     linter.lint(context)
                     # Check that src was passed
                     call_args = mock_run.call_args
@@ -256,7 +256,7 @@ class TestESLintFix:
             mock_result = make_completed_process(returncode=0, stdout="[]")
 
             with patch.object(linter, "ensure_binary", return_value=Path("/usr/bin/eslint")):
-                with patch("lucidscan.plugins.linters.eslint.run_with_streaming") as mock_run:
+                with patch("lucidshark.plugins.linters.eslint.run_with_streaming") as mock_run:
                     # First call (pre_issues lint) succeeds, second call (fix) times out
                     mock_run.side_effect = [
                         mock_result,
@@ -303,7 +303,7 @@ class TestESLintFix:
             post_result = make_completed_process(returncode=1, stdout=post_output)
 
             with patch.object(linter, "ensure_binary", return_value=Path("/usr/bin/eslint")):
-                with patch("lucidscan.plugins.linters.eslint.run_with_streaming") as mock_run:
+                with patch("lucidshark.plugins.linters.eslint.run_with_streaming") as mock_run:
                     mock_run.side_effect = [pre_result, post_result]
                     result = linter.fix(context)
                     assert result.issues_fixed == 1

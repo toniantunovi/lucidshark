@@ -14,21 +14,21 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from lucidscan.bootstrap.paths import LucidscanPaths
-from lucidscan.bootstrap.versions import get_tool_version
-from lucidscan.core.logging import get_logger
-from lucidscan.core.models import (
+from lucidshark.bootstrap.paths import LucidsharkPaths
+from lucidshark.bootstrap.versions import get_tool_version
+from lucidshark.core.logging import get_logger
+from lucidshark.core.models import (
     ScanContext,
     Severity,
     ToolDomain,
     UnifiedIssue,
 )
-from lucidscan.core.subprocess_runner import run_with_streaming
-from lucidscan.plugins.linters.base import FixResult, LinterPlugin
+from lucidshark.core.subprocess_runner import run_with_streaming
+from lucidshark.plugins.linters.base import FixResult, LinterPlugin
 
 LOGGER = get_logger(__name__)
 
-# Default version from pyproject.toml [tool.lucidscan.tools]
+# Default version from pyproject.toml [tool.lucidshark.tools]
 DEFAULT_VERSION = get_tool_version("biome")
 
 # Biome severity mapping
@@ -55,10 +55,10 @@ class BiomeLinter(LinterPlugin):
         """
         self._version = version
         if project_root:
-            self._paths = LucidscanPaths.for_project(project_root)
+            self._paths = LucidsharkPaths.for_project(project_root)
             self._project_root = project_root
         else:
-            self._paths = LucidscanPaths.default()
+            self._paths = LucidsharkPaths.default()
             self._project_root = None
 
     @property

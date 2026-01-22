@@ -1,23 +1,23 @@
-"""Configuration module for lucidscan.
+"""Configuration module for lucidshark.
 
 Provides configuration file loading, parsing, and validation with support for:
-- Project-level config (.lucidscan.yml)
-- Global config (~/.lucidscan/config/config.yml)
+- Project-level config (.lucidshark.yml)
+- Global config (~/.lucidshark/config/config.yml)
 - Environment variable expansion
 - Plugin-specific configuration passthrough
 """
 
-from lucidscan.config.models import (
-    LucidScanConfig,
+from lucidshark.config.models import (
+    LucidSharkConfig,
     OutputConfig,
     ScannerDomainConfig,
     DEFAULT_PLUGINS,
 )
-from lucidscan.config.loader import load_config, find_project_config, find_global_config
-from lucidscan.config.validation import validate_config, ConfigValidationWarning
+from lucidshark.config.loader import load_config, find_project_config, find_global_config
+from lucidshark.config.validation import validate_config, ConfigValidationWarning
 
 __all__ = [
-    "LucidScanConfig",
+    "LucidSharkConfig",
     "OutputConfig",
     "ScannerDomainConfig",
     "DEFAULT_PLUGINS",

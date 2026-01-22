@@ -1,17 +1,17 @@
-"""Reporter plugins for lucidscan output formatting.
+"""Reporter plugins for lucidshark output formatting.
 
-Plugins are discovered via Python entry points (lucidscan.reporters group).
+Plugins are discovered via Python entry points (lucidshark.reporters group).
 """
 
 from typing import Dict, Type
 
-from lucidscan.plugins.reporters.base import ReporterPlugin
-from lucidscan.plugins.reporters.json_reporter import JSONReporter
-from lucidscan.plugins.reporters.table_reporter import TableReporter
-from lucidscan.plugins.reporters.summary_reporter import SummaryReporter
-from lucidscan.plugins.reporters.sarif_reporter import SARIFReporter
-from lucidscan.plugins import REPORTER_ENTRY_POINT_GROUP
-from lucidscan.plugins.discovery import (
+from lucidshark.plugins.reporters.base import ReporterPlugin
+from lucidshark.plugins.reporters.json_reporter import JSONReporter
+from lucidshark.plugins.reporters.table_reporter import TableReporter
+from lucidshark.plugins.reporters.summary_reporter import SummaryReporter
+from lucidshark.plugins.reporters.sarif_reporter import SARIFReporter
+from lucidshark.plugins import REPORTER_ENTRY_POINT_GROUP
+from lucidshark.plugins.discovery import (
     discover_plugins,
     get_plugin,
     list_available_plugins as _list_plugins,

@@ -11,15 +11,15 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, IO, List, Optional
 
-from lucidscan.plugins.reporters.base import ReporterPlugin
-from lucidscan.core.models import ScanResult, Severity, UnifiedIssue
+from lucidshark.plugins.reporters.base import ReporterPlugin
+from lucidshark.core.models import ScanResult, Severity, UnifiedIssue
 
 # SARIF schema URL
 SARIF_SCHEMA = "https://json.schemastore.org/sarif-2.1.0.json"
 SARIF_VERSION = "2.1.0"
 
 # Project information
-LUCIDSCAN_INFO_URI = "https://github.com/lucidscan/lucidscan"
+LUCIDSHARK_INFO_URI = "https://github.com/lucidshark/lucidshark"
 
 # Severity mapping to SARIF security-severity (CVSS-aligned 0.0-10.0)
 # and level (error, warning, note)
@@ -63,10 +63,10 @@ class SARIFReporter(ReporterPlugin):
         Returns:
             SARIF document as a dictionary.
         """
-        # Get lucidscan version from metadata or use default
+        # Get lucidshark version from metadata or use default
         version = "unknown"
         if result.metadata:
-            version = result.metadata.lucidscan_version
+            version = result.metadata.lucidshark_version
 
         # Collect unique rules from all issues
         rules = self._collect_rules(result.issues)
@@ -84,9 +84,9 @@ class SARIFReporter(ReporterPlugin):
                 {
                     "tool": {
                         "driver": {
-                            "name": "lucidscan",
+                            "name": "lucidshark",
                             "version": version,
-                            "informationUri": LUCIDSCAN_INFO_URI,
+                            "informationUri": LUCIDSHARK_INFO_URI,
                             "rules": rules,
                         }
                     },

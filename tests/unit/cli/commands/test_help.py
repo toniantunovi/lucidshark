@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from argparse import Namespace
 
-from lucidscan.cli.commands.help import HelpCommand, get_help_content
-from lucidscan.cli.exit_codes import EXIT_SUCCESS
+from lucidshark.cli.commands.help import HelpCommand, get_help_content
+from lucidshark.cli.exit_codes import EXIT_SUCCESS
 
 
 class TestHelpCommand:
@@ -30,7 +30,7 @@ class TestHelpCommand:
 
         captured = capsys.readouterr()
         # Verify key sections are present
-        assert "LucidScan Reference Documentation" in captured.out
+        assert "LucidShark Reference Documentation" in captured.out
         assert "Quick Start" in captured.out
         assert "CLI Commands" in captured.out
         assert "MCP Tools Reference" in captured.out
@@ -50,7 +50,7 @@ class TestGetHelpContent:
         content = get_help_content()
 
         # Check for main sections
-        assert "# LucidScan Reference Documentation" in content
+        assert "# LucidShark Reference Documentation" in content
         assert "## Quick Start" in content
         assert "## CLI Commands" in content
         assert "## MCP Tools Reference" in content
@@ -61,12 +61,12 @@ class TestGetHelpContent:
         """Test that content documents CLI commands."""
         content = get_help_content()
 
-        assert "lucidscan init" in content
-        assert "lucidscan scan" in content
-        assert "lucidscan status" in content
-        assert "lucidscan serve" in content
-        assert "lucidscan autoconfigure" in content
-        assert "lucidscan help" in content
+        assert "lucidshark init" in content
+        assert "lucidshark scan" in content
+        assert "lucidshark status" in content
+        assert "lucidshark serve" in content
+        assert "lucidshark autoconfigure" in content
+        assert "lucidshark help" in content
 
     def test_contains_mcp_tools(self) -> None:
         """Test that content documents MCP tools."""
@@ -83,7 +83,7 @@ class TestGetHelpContent:
         """Test that content documents configuration options."""
         content = get_help_content()
 
-        assert "lucidscan.yml" in content
+        assert "lucidshark.yml" in content
         assert "fail_on" in content
         assert "pipeline" in content
         assert "linting" in content

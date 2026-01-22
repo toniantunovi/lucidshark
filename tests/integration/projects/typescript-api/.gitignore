@@ -8,8 +8,8 @@ build/
 # TypeScript cache
 *.tsbuildinfo
 
-# LucidScan cache (auto-created by scans)
-.lucidscan/
+# LucidShark cache (auto-created by scans)
+.lucidshark/
 
 # ESLint cache
 .eslintcache

@@ -1,6 +1,6 @@
 """Serve command implementation.
 
-Run LucidScan as an MCP server for AI agents or as a file watcher.
+Run LucidShark as an MCP server for AI agents or as a file watcher.
 """
 
 from __future__ import annotations
@@ -9,22 +9,22 @@ import asyncio
 from argparse import Namespace
 from pathlib import Path
 
-from lucidscan.cli.commands import Command
-from lucidscan.cli.exit_codes import EXIT_SUCCESS, EXIT_SCANNER_ERROR
-from lucidscan.config import LucidScanConfig
-from lucidscan.core.logging import get_logger
+from lucidshark.cli.commands import Command
+from lucidshark.cli.exit_codes import EXIT_SUCCESS, EXIT_SCANNER_ERROR
+from lucidshark.config import LucidSharkConfig
+from lucidshark.core.logging import get_logger
 
 LOGGER = get_logger(__name__)
 
 
 class ServeCommand(Command):
-    """Run LucidScan as a server for AI integration."""
+    """Run LucidShark as a server for AI integration."""
 
     def __init__(self, version: str):
         """Initialize ServeCommand.
 
         Args:
-            version: Current lucidscan version string.
+            version: Current lucidshark version string.
         """
         self._version = version
 
@@ -33,12 +33,12 @@ class ServeCommand(Command):
         """Command identifier."""
         return "serve"
 
-    def execute(self, args: Namespace, config: "LucidScanConfig | None" = None) -> int:
+    def execute(self, args: Namespace, config: "LucidSharkConfig | None" = None) -> int:
         """Execute the serve command.
 
         Args:
             args: Parsed command-line arguments.
-            config: LucidScan configuration.
+            config: LucidShark configuration.
 
         Returns:
             Exit code.
@@ -65,29 +65,29 @@ class ServeCommand(Command):
     def _run_mcp_server(
         self,
         args: Namespace,
-        config: LucidScanConfig,
+        config: LucidSharkConfig,
         project_root: Path,
     ) -> int:
-        """Run LucidScan as an MCP server.
+        """Run LucidShark as an MCP server.
 
         Args:
             args: Parsed command-line arguments.
-            config: LucidScan configuration.
+            config: LucidShark configuration.
             project_root: Project root directory.
 
         Returns:
             Exit code.
         """
         try:
-            from lucidscan.mcp.server import LucidScanMCPServer
+            from lucidshark.mcp.server import LucidSharkMCPServer
 
             LOGGER.info(f"Starting MCP server for {project_root}")
-            server = LucidScanMCPServer(project_root, config)
+            server = LucidSharkMCPServer(project_root, config)
             asyncio.run(server.run())
             return EXIT_SUCCESS
         except ImportError as e:
             LOGGER.error(f"MCP dependencies not installed: {e}")
-            LOGGER.error("Install with: pip install lucidscan[mcp]")
+            LOGGER.error("Install with: pip install lucidshark[mcp]")
             return EXIT_SCANNER_ERROR
         except Exception as e:
             LOGGER.error(f"MCP server error: {e}")
@@ -96,27 +96,27 @@ class ServeCommand(Command):
     def _run_file_watcher(
         self,
         args: Namespace,
-        config: LucidScanConfig,
+        config: LucidSharkConfig,
         project_root: Path,
     ) -> int:
-        """Run LucidScan in file watcher mode.
+        """Run LucidShark in file watcher mode.
 
         Args:
             args: Parsed command-line arguments.
-            config: LucidScan configuration.
+            config: LucidShark configuration.
             project_root: Project root directory.
 
         Returns:
             Exit code.
         """
         try:
-            from lucidscan.mcp.watcher import LucidScanFileWatcher
+            from lucidshark.mcp.watcher import LucidSharkFileWatcher
 
             debounce_ms = getattr(args, "debounce", 1000)
             LOGGER.info(f"Starting file watcher for {project_root}")
             LOGGER.info(f"Debounce: {debounce_ms}ms")
 
-            watcher = LucidScanFileWatcher(
+            watcher = LucidSharkFileWatcher(
                 project_root=project_root,
                 config=config,
                 debounce_ms=debounce_ms,

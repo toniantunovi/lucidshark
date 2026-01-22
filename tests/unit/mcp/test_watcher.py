@@ -7,12 +7,12 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from lucidscan.config import LucidScanConfig
-from lucidscan.mcp.watcher import LucidScanFileWatcher
+from lucidshark.config import LucidSharkConfig
+from lucidshark.mcp.watcher import LucidSharkFileWatcher
 
 
-class TestLucidScanFileWatcher:
-    """Tests for LucidScanFileWatcher."""
+class TestLucidSharkFileWatcher:
+    """Tests for LucidSharkFileWatcher."""
 
     @pytest.fixture
     def project_root(self, tmp_path: Path) -> Path:
@@ -20,19 +20,19 @@ class TestLucidScanFileWatcher:
         return tmp_path
 
     @pytest.fixture
-    def config(self) -> LucidScanConfig:
+    def config(self) -> LucidSharkConfig:
         """Create a test configuration."""
-        return LucidScanConfig()
+        return LucidSharkConfig()
 
     @pytest.fixture
     def watcher(
-        self, project_root: Path, config: LucidScanConfig
-    ) -> LucidScanFileWatcher:
+        self, project_root: Path, config: LucidSharkConfig
+    ) -> LucidSharkFileWatcher:
         """Create a watcher instance."""
-        return LucidScanFileWatcher(project_root, config)
+        return LucidSharkFileWatcher(project_root, config)
 
     def test_watcher_initialization(
-        self, watcher: LucidScanFileWatcher, project_root: Path
+        self, watcher: LucidSharkFileWatcher, project_root: Path
     ) -> None:
         """Test watcher initialization."""
         assert watcher.project_root == project_root
@@ -41,15 +41,15 @@ class TestLucidScanFileWatcher:
         assert len(watcher._callbacks) == 0
 
     def test_watcher_custom_debounce(
-        self, project_root: Path, config: LucidScanConfig
+        self, project_root: Path, config: LucidSharkConfig
     ) -> None:
         """Test watcher with custom debounce."""
-        watcher = LucidScanFileWatcher(
+        watcher = LucidSharkFileWatcher(
             project_root, config, debounce_ms=500
         )
         assert watcher.debounce_ms == 500
 
-    def test_on_result_callback(self, watcher: LucidScanFileWatcher) -> None:
+    def test_on_result_callback(self, watcher: LucidSharkFileWatcher) -> None:
         """Test registering callbacks."""
         callback = MagicMock()
         watcher.on_result(callback)
@@ -58,7 +58,7 @@ class TestLucidScanFileWatcher:
         assert callback in watcher._callbacks
 
     def test_on_result_multiple_callbacks(
-        self, watcher: LucidScanFileWatcher
+        self, watcher: LucidSharkFileWatcher
     ) -> None:
         """Test registering multiple callbacks."""
         callback1 = MagicMock()
@@ -69,20 +69,20 @@ class TestLucidScanFileWatcher:
         assert len(watcher._callbacks) == 2
 
     def test_default_ignore_patterns(
-        self, watcher: LucidScanFileWatcher
+        self, watcher: LucidSharkFileWatcher
     ) -> None:
         """Test default ignore patterns."""
         assert ".git" in watcher.ignore_patterns
         assert "__pycache__" in watcher.ignore_patterns
         assert "node_modules" in watcher.ignore_patterns
         assert ".venv" in watcher.ignore_patterns
-        assert ".lucidscan" in watcher.ignore_patterns
+        assert ".lucidshark" in watcher.ignore_patterns
 
     def test_custom_ignore_patterns(
-        self, project_root: Path, config: LucidScanConfig
+        self, project_root: Path, config: LucidSharkConfig
     ) -> None:
         """Test custom ignore patterns."""
-        watcher = LucidScanFileWatcher(
+        watcher = LucidSharkFileWatcher(
             project_root,
             config,
             ignore_patterns=["custom_dir", "*.log"],
@@ -94,35 +94,35 @@ class TestLucidScanFileWatcher:
         assert ".git" in watcher.ignore_patterns
 
     def test_should_ignore_git(
-        self, watcher: LucidScanFileWatcher, project_root: Path
+        self, watcher: LucidSharkFileWatcher, project_root: Path
     ) -> None:
         """Test ignoring .git directory."""
         git_file = project_root / ".git" / "config"
         assert watcher._should_ignore(git_file) is True
 
     def test_should_ignore_pycache(
-        self, watcher: LucidScanFileWatcher, project_root: Path
+        self, watcher: LucidSharkFileWatcher, project_root: Path
     ) -> None:
         """Test ignoring __pycache__ directory."""
         cache_file = project_root / "__pycache__" / "module.cpython-310.pyc"
         assert watcher._should_ignore(cache_file) is True
 
     def test_should_ignore_node_modules(
-        self, watcher: LucidScanFileWatcher, project_root: Path
+        self, watcher: LucidSharkFileWatcher, project_root: Path
     ) -> None:
         """Test ignoring node_modules directory."""
         node_file = project_root / "node_modules" / "package" / "index.js"
         assert watcher._should_ignore(node_file) is True
 
     def test_should_ignore_pyc_files(
-        self, watcher: LucidScanFileWatcher, project_root: Path
+        self, watcher: LucidSharkFileWatcher, project_root: Path
     ) -> None:
         """Test ignoring .pyc files."""
         pyc_file = project_root / "src" / "module.pyc"
         assert watcher._should_ignore(pyc_file) is True
 
     def test_should_not_ignore_regular_files(
-        self, watcher: LucidScanFileWatcher, project_root: Path
+        self, watcher: LucidSharkFileWatcher, project_root: Path
     ) -> None:
         """Test that regular files are not ignored."""
         py_file = project_root / "src" / "main.py"
@@ -132,20 +132,20 @@ class TestLucidScanFileWatcher:
         assert watcher._should_ignore(js_file) is False
 
     def test_should_not_ignore_nested_regular_files(
-        self, watcher: LucidScanFileWatcher, project_root: Path
+        self, watcher: LucidSharkFileWatcher, project_root: Path
     ) -> None:
         """Test that nested regular files are not ignored."""
         nested_file = project_root / "src" / "components" / "Button.tsx"
         assert watcher._should_ignore(nested_file) is False
 
     def test_not_running_initially(
-        self, watcher: LucidScanFileWatcher
+        self, watcher: LucidSharkFileWatcher
     ) -> None:
         """Test that watcher is not running initially."""
         assert watcher._running is False
 
     def test_stop_when_not_running(
-        self, watcher: LucidScanFileWatcher
+        self, watcher: LucidSharkFileWatcher
     ) -> None:
         """Test stopping when not running doesn't error."""
         watcher.stop()  # Should not raise
@@ -161,20 +161,20 @@ class TestFileWatcherAsync:
         return tmp_path
 
     @pytest.fixture
-    def config(self) -> LucidScanConfig:
+    def config(self) -> LucidSharkConfig:
         """Create a test configuration."""
-        return LucidScanConfig()
+        return LucidSharkConfig()
 
     @pytest.fixture
     def watcher(
-        self, project_root: Path, config: LucidScanConfig
-    ) -> LucidScanFileWatcher:
+        self, project_root: Path, config: LucidSharkConfig
+    ) -> LucidSharkFileWatcher:
         """Create a watcher instance."""
-        return LucidScanFileWatcher(project_root, config, debounce_ms=10)
+        return LucidSharkFileWatcher(project_root, config, debounce_ms=10)
 
     @pytest.mark.asyncio
     async def test_process_pending_empty(
-        self, watcher: LucidScanFileWatcher
+        self, watcher: LucidSharkFileWatcher
     ) -> None:
         """Test processing with no pending files."""
         # Should complete without error
@@ -183,7 +183,7 @@ class TestFileWatcherAsync:
 
     @pytest.mark.asyncio
     async def test_on_file_change_ignores_directories(
-        self, watcher: LucidScanFileWatcher, project_root: Path
+        self, watcher: LucidSharkFileWatcher, project_root: Path
     ) -> None:
         """Test that directories are ignored in file changes."""
         dir_path = project_root / "src"
@@ -194,7 +194,7 @@ class TestFileWatcherAsync:
 
     @pytest.mark.asyncio
     async def test_on_file_change_ignores_excluded(
-        self, watcher: LucidScanFileWatcher, project_root: Path
+        self, watcher: LucidSharkFileWatcher, project_root: Path
     ) -> None:
         """Test that excluded files are ignored."""
         git_dir = project_root / ".git"
@@ -207,7 +207,7 @@ class TestFileWatcherAsync:
 
     @pytest.mark.asyncio
     async def test_on_file_change_adds_valid_file(
-        self, watcher: LucidScanFileWatcher, project_root: Path
+        self, watcher: LucidSharkFileWatcher, project_root: Path
     ) -> None:
         """Test that valid files are added to pending."""
         src_dir = project_root / "src"
@@ -220,7 +220,7 @@ class TestFileWatcherAsync:
 
     @pytest.mark.asyncio
     async def test_on_file_change_debounce_task_created(
-        self, watcher: LucidScanFileWatcher, project_root: Path
+        self, watcher: LucidSharkFileWatcher, project_root: Path
     ) -> None:
         """Test that debounce task is created on file change."""
         src_dir = project_root / "src"
@@ -243,7 +243,7 @@ class TestFileWatcherAsync:
 
     @pytest.mark.asyncio
     async def test_process_pending_with_files(
-        self, watcher: LucidScanFileWatcher, project_root: Path
+        self, watcher: LucidSharkFileWatcher, project_root: Path
     ) -> None:
         """Test processing pending files invokes scan."""
         src_dir = project_root / "src"
@@ -278,7 +278,7 @@ class TestFileWatcherAsync:
 
     @pytest.mark.asyncio
     async def test_process_pending_with_callback_error(
-        self, watcher: LucidScanFileWatcher, project_root: Path
+        self, watcher: LucidSharkFileWatcher, project_root: Path
     ) -> None:
         """Test processing handles callback errors gracefully."""
         src_dir = project_root / "src"
@@ -307,7 +307,7 @@ class TestFileWatcherAsync:
 
     @pytest.mark.asyncio
     async def test_process_pending_with_scan_error(
-        self, watcher: LucidScanFileWatcher, project_root: Path
+        self, watcher: LucidSharkFileWatcher, project_root: Path
     ) -> None:
         """Test processing handles scan errors gracefully."""
         src_dir = project_root / "src"
@@ -336,7 +336,7 @@ class TestFileWatcherAsync:
 
     @pytest.mark.asyncio
     async def test_process_pending_file_outside_project(
-        self, watcher: LucidScanFileWatcher, tmp_path: Path
+        self, watcher: LucidSharkFileWatcher, tmp_path: Path
     ) -> None:
         """Test processing files outside project root."""
         # Create a file outside project root
@@ -363,7 +363,7 @@ class TestFileChangeHandler:
 
     def test_handler_on_modified(self, tmp_path: Path) -> None:
         """Test handler on_modified event."""
-        from lucidscan.mcp.watcher import _FileChangeHandler
+        from lucidshark.mcp.watcher import _FileChangeHandler
         from watchdog.events import FileModifiedEvent
 
         results = []
@@ -382,7 +382,7 @@ class TestFileChangeHandler:
 
     def test_handler_on_modified_directory(self, tmp_path: Path) -> None:
         """Test handler ignores directory modification."""
-        from lucidscan.mcp.watcher import _FileChangeHandler
+        from lucidshark.mcp.watcher import _FileChangeHandler
         from watchdog.events import DirModifiedEvent
 
         results = []
@@ -400,7 +400,7 @@ class TestFileChangeHandler:
 
     def test_handler_on_created(self, tmp_path: Path) -> None:
         """Test handler on_created event."""
-        from lucidscan.mcp.watcher import _FileChangeHandler
+        from lucidshark.mcp.watcher import _FileChangeHandler
         from watchdog.events import FileCreatedEvent
 
         results = []
@@ -419,7 +419,7 @@ class TestFileChangeHandler:
 
     def test_handler_on_created_directory(self, tmp_path: Path) -> None:
         """Test handler ignores directory creation."""
-        from lucidscan.mcp.watcher import _FileChangeHandler
+        from lucidshark.mcp.watcher import _FileChangeHandler
         from watchdog.events import DirCreatedEvent
 
         results = []

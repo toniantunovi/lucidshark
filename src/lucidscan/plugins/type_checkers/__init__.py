@@ -1,11 +1,11 @@
-"""Type checker plugins for lucidscan.
+"""Type checker plugins for lucidshark.
 
 This module provides type checker integrations for the quality pipeline.
-Type checkers are discovered via the lucidscan.type_checkers entry point group.
+Type checkers are discovered via the lucidshark.type_checkers entry point group.
 """
 
-from lucidscan.plugins.type_checkers.base import TypeCheckerPlugin, TypeCheckResult
-from lucidscan.plugins.discovery import (
+from lucidshark.plugins.type_checkers.base import TypeCheckerPlugin, TypeCheckResult
+from lucidshark.plugins.discovery import (
     discover_plugins,
     TYPE_CHECKER_ENTRY_POINT_GROUP,
 )

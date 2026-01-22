@@ -1,6 +1,6 @@
 """Integration tests for TypeScript project scanning.
 
-These tests run the LucidScan CLI against a realistic TypeScript project
+These tests run the LucidShark CLI against a realistic TypeScript project
 with intentional issues and verify expected results.
 
 Run with: pytest tests/integration/projects -v
@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from tests.integration.projects.conftest import (
-    run_lucidscan,
+    run_lucidshark,
     node_available,
 )
 
@@ -33,7 +33,7 @@ class TestTypeScriptLinting:
         self, typescript_project_with_deps: Path
     ) -> None:
         """Test that ESLint finds 'any' type usage."""
-        result = run_lucidscan(
+        result = run_lucidshark(
             typescript_project_with_deps, domains=["linting"]
         )
 
@@ -47,7 +47,7 @@ class TestTypeScriptLinting:
         self, typescript_project_with_deps: Path
     ) -> None:
         """Test that ESLint finds unused variables."""
-        result = run_lucidscan(
+        result = run_lucidshark(
             typescript_project_with_deps, domains=["linting"]
         )
 
@@ -69,7 +69,7 @@ class TestTypeScriptTypeChecking:
         self, typescript_project_with_deps: Path
     ) -> None:
         """Test that TypeScript compiler finds type errors."""
-        result = run_lucidscan(
+        result = run_lucidshark(
             typescript_project_with_deps, domains=["type_checking"]
         )
 
@@ -81,7 +81,7 @@ class TestTypeScriptTypeChecking:
         self, typescript_project_with_deps: Path
     ) -> None:
         """Test that tsc detects return type mismatches."""
-        result = run_lucidscan(
+        result = run_lucidshark(
             typescript_project_with_deps, domains=["type_checking"]
         )
 
@@ -98,7 +98,7 @@ class TestTypeScriptCombinedScanning:
         self, typescript_project_with_deps: Path
     ) -> None:
         """Test running both linting and type checking together."""
-        result = run_lucidscan(
+        result = run_lucidshark(
             typescript_project_with_deps,
             domains=["linting", "type_checking"],
         )
@@ -110,7 +110,7 @@ class TestTypeScriptCombinedScanning:
         self, typescript_project_with_deps: Path
     ) -> None:
         """Test that scan completes and finds issues."""
-        result = run_lucidscan(
+        result = run_lucidshark(
             typescript_project_with_deps, domains=["type_checking"]
         )
 

@@ -13,8 +13,8 @@ import tempfile
 from pathlib import Path
 
 
-from lucidscan.core.models import ScanContext, Severity
-from lucidscan.plugins.linters.ruff import RuffLinter
+from lucidshark.core.models import ScanContext, Severity
+from lucidshark.plugins.linters.ruff import RuffLinter
 from tests.integration.conftest import ruff_available
 
 

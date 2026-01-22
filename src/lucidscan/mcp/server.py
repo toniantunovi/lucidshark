@@ -1,6 +1,6 @@
-"""MCP server implementation for LucidScan.
+"""MCP server implementation for LucidShark.
 
-Exposes LucidScan tools to AI agents via the Model Context Protocol.
+Exposes LucidShark tools to AI agents via the Model Context Protocol.
 """
 
 from __future__ import annotations
@@ -12,27 +12,27 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 
-from lucidscan.config import LucidScanConfig
-from lucidscan.core.logging import get_logger
-from lucidscan.mcp.tools import MCPToolExecutor
+from lucidshark.config import LucidSharkConfig
+from lucidshark.core.logging import get_logger
+from lucidshark.mcp.tools import MCPToolExecutor
 
 LOGGER = get_logger(__name__)
 
 
-class LucidScanMCPServer:
-    """MCP server exposing LucidScan tools to AI agents."""
+class LucidSharkMCPServer:
+    """MCP server exposing LucidShark tools to AI agents."""
 
-    def __init__(self, project_root: Path, config: LucidScanConfig):
-        """Initialize LucidScanMCPServer.
+    def __init__(self, project_root: Path, config: LucidSharkConfig):
+        """Initialize LucidSharkMCPServer.
 
         Args:
             project_root: Project root directory.
-            config: LucidScan configuration.
+            config: LucidShark configuration.
         """
         self.project_root = project_root
         self.config = config
         self.executor = MCPToolExecutor(project_root, config)
-        self.server = Server("lucidscan")
+        self.server = Server("lucidshark")
         self._register_tools()
 
     def _register_tools(self):
@@ -144,7 +144,7 @@ class LucidScanMCPServer:
                 Tool(
                     name="get_status",
                     description=(
-                        "Get current LucidScan status and configuration. "
+                        "Get current LucidShark status and configuration. "
                         "Shows available tools, enabled domains, and cached issues."
                     ),
                     inputSchema={
@@ -155,7 +155,7 @@ class LucidScanMCPServer:
                 Tool(
                     name="get_help",
                     description=(
-                        "Get LucidScan documentation for AI agents. "
+                        "Get LucidShark documentation for AI agents. "
                         "Returns comprehensive markdown reference for initialization, "
                         "configuration, CLI commands, and MCP tools."
                     ),
@@ -167,8 +167,8 @@ class LucidScanMCPServer:
                 Tool(
                     name="autoconfigure",
                     description=(
-                        "Get instructions for auto-configuring LucidScan for this project. "
-                        "Returns guidance on what files to analyze and how to generate lucidscan.yml. "
+                        "Get instructions for auto-configuring LucidShark for this project. "
+                        "Returns guidance on what files to analyze and how to generate lucidshark.yml. "
                         "AI should then read the codebase, read the help docs via get_help(), "
                         "and create the configuration file."
                     ),
@@ -180,7 +180,7 @@ class LucidScanMCPServer:
                 Tool(
                     name="validate_config",
                     description=(
-                        "Validate a lucidscan.yml configuration file. "
+                        "Validate a lucidshark.yml configuration file. "
                         "Returns validation results with errors and warnings. "
                         "Use after generating or modifying configuration to ensure it's valid."
                     ),
@@ -191,7 +191,7 @@ class LucidScanMCPServer:
                                 "type": "string",
                                 "description": (
                                     "Path to configuration file (relative to project root). "
-                                    "If not provided, finds lucidscan.yml in project root."
+                                    "If not provided, finds lucidshark.yml in project root."
                                 ),
                             },
                         },
@@ -216,7 +216,7 @@ class LucidScanMCPServer:
                 clients (Claude/Cursor) display prominently during tool execution.
                 Falls back to MCP logging if progress tokens are not supported.
                 """
-                tool_name = event.get("tool", "lucidscan")
+                tool_name = event.get("tool", "lucidshark")
                 content = event.get("content", "")
                 message = f"[{tool_name}] {content}"
 
@@ -287,7 +287,7 @@ class LucidScanMCPServer:
 
     async def run(self):
         """Run the MCP server over stdio."""
-        LOGGER.info(f"LucidScan MCP server starting for {self.project_root}")
+        LOGGER.info(f"LucidShark MCP server starting for {self.project_root}")
 
         async with stdio_server() as (read_stream, write_stream):
             await self.server.run(

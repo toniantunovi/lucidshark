@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lucidscan.core.models import ToolDomain
-from lucidscan.plugins.test_runners.jest import JestRunner
+from lucidshark.core.models import ToolDomain
+from lucidshark.plugins.test_runners.jest import JestRunner
 
 
 class TestJestRunner:

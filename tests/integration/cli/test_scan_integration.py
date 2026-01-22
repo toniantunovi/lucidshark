@@ -12,7 +12,7 @@ import tempfile
 from pathlib import Path
 
 
-from lucidscan import cli
+from lucidshark import cli
 from tests.integration.conftest import ruff_available
 
 

@@ -1,4 +1,4 @@
-"""Pipeline orchestration for lucidscan.
+"""Pipeline orchestration for lucidshark.
 
 Manages the execution of scan pipeline stages:
 1. Scanner execution (parallel by default)
@@ -6,8 +6,8 @@ Manages the execution of scan pipeline stages:
 3. Result aggregation (metadata and summary)
 """
 
-from lucidscan.pipeline.executor import PipelineConfig, PipelineExecutor
-from lucidscan.pipeline.parallel import ParallelScannerExecutor, ScannerResult
+from lucidshark.pipeline.executor import PipelineConfig, PipelineExecutor
+from lucidshark.pipeline.parallel import ParallelScannerExecutor, ScannerResult
 
 __all__ = [
     "PipelineConfig",

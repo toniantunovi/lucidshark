@@ -15,15 +15,15 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 import defusedxml.ElementTree as ElementTree  # type: ignore[import-untyped]
 
-from lucidscan.core.logging import get_logger
-from lucidscan.core.models import (
+from lucidshark.core.logging import get_logger
+from lucidshark.core.models import (
     ScanContext,
     Severity,
     ToolDomain,
     UnifiedIssue,
 )
-from lucidscan.core.subprocess_runner import run_with_streaming
-from lucidscan.plugins.test_runners.base import TestRunnerPlugin, TestResult
+from lucidshark.core.subprocess_runner import run_with_streaming
+from lucidshark.plugins.test_runners.base import TestRunnerPlugin, TestResult
 
 LOGGER = get_logger(__name__)
 

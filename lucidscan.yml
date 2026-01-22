@@ -1,7 +1,7 @@
 version: 1
 
 project:
-  name: lucidscan
+  name: lucidshark
   languages: [python]
 
 pipeline:
@@ -44,6 +44,6 @@ ignore:
   - "**/build/**"
   - "**/.git/**"
   - "**/.github/**"
-  - "**/.lucidscan/**"
-  - "**/lucidscan.egg-info/**"
+  - "**/.lucidshark/**"
+  - "**/lucidshark.egg-info/**"
   - "tests/integration/projects/**"

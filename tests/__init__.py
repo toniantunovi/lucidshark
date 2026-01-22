@@ -1,3 +1,3 @@
-"""Test package for lucidscan."""
+"""Test package for lucidshark."""
 
 

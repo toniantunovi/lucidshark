@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import List
 
 
-from lucidscan.core.models import ScanContext, ToolDomain
-from lucidscan.plugins.test_runners.base import TestRunnerPlugin, TestResult
+from lucidshark.core.models import ScanContext, ToolDomain
+from lucidshark.plugins.test_runners.base import TestRunnerPlugin, TestResult
 
 
 class TestTestResult:

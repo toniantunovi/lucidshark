@@ -1,21 +1,21 @@
-"""Enricher plugins for lucidscan post-processing.
+"""Enricher plugins for lucidshark post-processing.
 
 Enricher plugins process scan results after scanner execution,
 adding context, metadata, or performing transformations like
 deduplication or AI-powered explanations.
 
-Plugins are discovered via Python entry points (lucidscan.enrichers group).
+Plugins are discovered via Python entry points (lucidshark.enrichers group).
 
 Example registration in pyproject.toml:
-    [project.entry-points."lucidscan.enrichers"]
-    dedup = "lucidscan_dedup:DedupEnricher"
-    epss = "lucidscan_epss:EPSSEnricher"
+    [project.entry-points."lucidshark.enrichers"]
+    dedup = "lucidshark_dedup:DedupEnricher"
+    epss = "lucidshark_epss:EPSSEnricher"
 """
 
 from typing import Dict, List, Optional, Type
 
-from lucidscan.plugins.enrichers.base import EnricherPlugin
-from lucidscan.plugins.discovery import (
+from lucidshark.plugins.enrichers.base import EnricherPlugin
+from lucidshark.plugins.discovery import (
     ENRICHER_ENTRY_POINT_GROUP,
     discover_plugins,
     get_plugin,

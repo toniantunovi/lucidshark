@@ -13,17 +13,17 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.request import urlopen
 
-from lucidscan.plugins.scanners.base import ScannerPlugin
-from lucidscan.core.models import ScanContext, ScanDomain, Severity, UnifiedIssue
-from lucidscan.bootstrap.paths import LucidscanPaths
-from lucidscan.bootstrap.platform import get_platform_info
-from lucidscan.bootstrap.versions import get_tool_version
-from lucidscan.core.logging import get_logger
-from lucidscan.core.subprocess_runner import run_with_streaming
+from lucidshark.plugins.scanners.base import ScannerPlugin
+from lucidshark.core.models import ScanContext, ScanDomain, Severity, UnifiedIssue
+from lucidshark.bootstrap.paths import LucidsharkPaths
+from lucidshark.bootstrap.platform import get_platform_info
+from lucidshark.bootstrap.versions import get_tool_version
+from lucidshark.core.logging import get_logger
+from lucidshark.core.subprocess_runner import run_with_streaming
 
 LOGGER = get_logger(__name__)
 
-# Default version from pyproject.toml [tool.lucidscan.tools]
+# Default version from pyproject.toml [tool.lucidshark.tools]
 DEFAULT_VERSION = get_tool_version("trivy")
 
 # Trivy severity mapping to unified severity
@@ -45,8 +45,8 @@ class TrivyScanner(ScannerPlugin):
 
     Binary management:
     - Downloads from https://github.com/aquasecurity/trivy/releases/
-    - Caches at {project}/.lucidscan/bin/trivy/{version}/trivy
-    - Uses cache directory at {project}/.lucidscan/cache/trivy/
+    - Caches at {project}/.lucidshark/bin/trivy/{version}/trivy
+    - Uses cache directory at {project}/.lucidshark/cache/trivy/
     """
 
     def __init__(
@@ -56,9 +56,9 @@ class TrivyScanner(ScannerPlugin):
     ) -> None:
         self._version = version
         if project_root:
-            self._paths = LucidscanPaths.for_project(project_root)
+            self._paths = LucidsharkPaths.for_project(project_root)
         else:
-            self._paths = LucidscanPaths.default()
+            self._paths = LucidsharkPaths.default()
 
     @property
     def name(self) -> str:
@@ -236,7 +236,7 @@ class TrivyScanner(ScannerPlugin):
         if severity and isinstance(severity, list):
             cmd.extend(["--severity", ",".join(severity)])
 
-        # Apply ignore patterns from .lucidscanignore and config
+        # Apply ignore patterns from .lucidsharkignore and config
         exclude_patterns = context.get_exclude_patterns()
         for pattern in exclude_patterns:
             # Trivy uses --skip-dirs for directory patterns

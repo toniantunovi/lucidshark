@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lucidscan.core.models import Severity, ToolDomain
-from lucidscan.plugins.test_runners.pytest import PytestRunner
+from lucidshark.core.models import Severity, ToolDomain
+from lucidshark.plugins.test_runners.pytest import PytestRunner
 
 
 class TestPytestRunner:

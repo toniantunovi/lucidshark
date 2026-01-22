@@ -13,9 +13,9 @@ import subprocess
 from pathlib import Path
 
 
-from lucidscan.config.models import LucidScanConfig, ScannerDomainConfig
-from lucidscan.core.models import ScanContext, ScanDomain, Severity
-from lucidscan.plugins.scanners.checkov import CheckovScanner
+from lucidshark.config.models import LucidSharkConfig, ScannerDomainConfig
+from lucidshark.core.models import ScanContext, ScanDomain, Severity
+from lucidshark.plugins.scanners.checkov import CheckovScanner
 from tests.integration.conftest import checkov_available
 
 
@@ -220,7 +220,7 @@ spec:
 ''')
 
         # Scan only Terraform
-        config = LucidScanConfig(
+        config = LucidSharkConfig(
             scanners={
                 "iac": ScannerDomainConfig(
                     enabled=True,

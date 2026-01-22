@@ -1,4 +1,4 @@
-"""Platform detection for lucidscan scanner plugins.
+"""Platform detection for lucidshark scanner plugins.
 
 Detects OS and architecture to determine which scanner binaries to download.
 """

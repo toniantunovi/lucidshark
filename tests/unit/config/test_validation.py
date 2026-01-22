@@ -1,10 +1,10 @@
-"""Tests for lucidscan.config.validation."""
+"""Tests for lucidshark.config.validation."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from lucidscan.config.validation import (
+from lucidshark.config.validation import (
     ConfigValidationWarning,
     ConfigValidationIssue,
     ValidationSeverity,
@@ -174,7 +174,7 @@ class TestValidateConfigFile:
     """Tests for validate_config_file function."""
 
     def test_valid_config_returns_valid(self, tmp_path: Path) -> None:
-        config_file = tmp_path / "lucidscan.yml"
+        config_file = tmp_path / "lucidshark.yml"
         config_file.write_text("fail_on: high\nignore:\n  - tests/**\n")
 
         is_valid, issues = validate_config_file(config_file)
@@ -193,7 +193,7 @@ class TestValidateConfigFile:
         assert "not found" in issues[0].message
 
     def test_yaml_syntax_error_returns_error(self, tmp_path: Path) -> None:
-        config_file = tmp_path / "lucidscan.yml"
+        config_file = tmp_path / "lucidshark.yml"
         config_file.write_text("invalid: yaml: content:\n  - bad")
 
         is_valid, issues = validate_config_file(config_file)
@@ -204,7 +204,7 @@ class TestValidateConfigFile:
         assert "YAML" in issues[0].message
 
     def test_empty_file_returns_warning(self, tmp_path: Path) -> None:
-        config_file = tmp_path / "lucidscan.yml"
+        config_file = tmp_path / "lucidshark.yml"
         config_file.write_text("")
 
         is_valid, issues = validate_config_file(config_file)
@@ -216,7 +216,7 @@ class TestValidateConfigFile:
         assert "empty" in issues[0].message
 
     def test_unknown_key_returns_warning(self, tmp_path: Path) -> None:
-        config_file = tmp_path / "lucidscan.yml"
+        config_file = tmp_path / "lucidshark.yml"
         config_file.write_text("unknown_key: value\n")
 
         is_valid, issues = validate_config_file(config_file)
@@ -228,7 +228,7 @@ class TestValidateConfigFile:
         assert "unknown_key" in issues[0].message
 
     def test_type_error_returns_error(self, tmp_path: Path) -> None:
-        config_file = tmp_path / "lucidscan.yml"
+        config_file = tmp_path / "lucidshark.yml"
         config_file.write_text("fail_on: 123\n")  # Should be string
 
         is_valid, issues = validate_config_file(config_file)
@@ -239,7 +239,7 @@ class TestValidateConfigFile:
         assert "must be a" in issues[0].message
 
     def test_invalid_severity_returns_error(self, tmp_path: Path) -> None:
-        config_file = tmp_path / "lucidscan.yml"
+        config_file = tmp_path / "lucidshark.yml"
         config_file.write_text("fail_on: super_high\n")  # Invalid severity
 
         is_valid, issues = validate_config_file(config_file)
@@ -250,7 +250,7 @@ class TestValidateConfigFile:
         assert "Invalid severity" in issues[0].message
 
     def test_typo_suggestion_included(self, tmp_path: Path) -> None:
-        config_file = tmp_path / "lucidscan.yml"
+        config_file = tmp_path / "lucidshark.yml"
         config_file.write_text("fail_ob: high\n")  # Typo: should be fail_on
 
         is_valid, issues = validate_config_file(config_file)

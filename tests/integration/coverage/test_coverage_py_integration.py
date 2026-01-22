@@ -6,8 +6,8 @@ import tempfile
 from pathlib import Path
 
 
-from lucidscan.core.models import ScanContext, ToolDomain
-from lucidscan.plugins.coverage.coverage_py import CoveragePyPlugin
+from lucidshark.core.models import ScanContext, ToolDomain
+from lucidshark.plugins.coverage.coverage_py import CoveragePyPlugin
 
 from tests.integration.conftest import coverage_py_available, pytest_runner_available
 

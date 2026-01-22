@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from tests.integration.projects.conftest import (
-    run_lucidscan,
+    run_lucidshark,
     trivy_available,
     opengrep_available,
     node_available,
@@ -31,7 +31,7 @@ class TestPythonSCA:
         self, python_project: Path
     ) -> None:
         """Test that Trivy finds vulnerable dependencies in requirements.txt."""
-        result = run_lucidscan(python_project, domains=["sca"])
+        result = run_lucidshark(python_project, domains=["sca"])
 
         # requirements.txt has known vulnerable packages
         # requests==2.25.0, urllib3==1.26.4, flask==2.0.0
@@ -44,7 +44,7 @@ class TestPythonSCA:
 
     def test_sca_reports_cve_ids(self, python_project: Path) -> None:
         """Test that SCA issues include CVE identifiers."""
-        result = run_lucidscan(python_project, domains=["sca"])
+        result = run_lucidshark(python_project, domains=["sca"])
 
         sca_issues = result.issues_by_domain("sca")
         if sca_issues:
@@ -67,7 +67,7 @@ class TestTypeScriptSCA:
         self, typescript_project_with_deps: Path
     ) -> None:
         """Test that Trivy finds vulnerable npm dependencies."""
-        result = run_lucidscan(
+        result = run_lucidshark(
             typescript_project_with_deps, domains=["sca"]
         )
 
@@ -86,7 +86,7 @@ class TestPythonSAST:
 
     def test_opengrep_finds_sql_injection(self, python_project: Path) -> None:
         """Test that OpenGrep finds SQL injection vulnerability."""
-        result = run_lucidscan(python_project, domains=["sast"])
+        result = run_lucidshark(python_project, domains=["sast"])
 
         # app.py has SQL injection: query = "SELECT * FROM users WHERE id = " + user_id
         sast_issues = result.issues_by_domain("sast")
@@ -100,7 +100,7 @@ class TestPythonSAST:
         self, python_project: Path
     ) -> None:
         """Test that OpenGrep finds command injection vulnerability."""
-        result = run_lucidscan(python_project, domains=["sast"])
+        result = run_lucidshark(python_project, domains=["sast"])
 
         # app.py has: subprocess.run(cmd, shell=True, ...)
         sast_issues = result.issues_by_domain("sast")
@@ -127,7 +127,7 @@ class TestTypeScriptSAST:
         self, typescript_project_with_deps: Path
     ) -> None:
         """Test that OpenGrep finds hardcoded secrets."""
-        result = run_lucidscan(
+        result = run_lucidshark(
             typescript_project_with_deps, domains=["sast"]
         )
 
@@ -146,7 +146,7 @@ class TestCombinedSecurityScanning:
     @opengrep_available
     def test_python_full_security_scan(self, python_project: Path) -> None:
         """Test running both SAST and SCA on Python project."""
-        result = run_lucidscan(
+        result = run_lucidshark(
             python_project, domains=["sast", "sca"]
         )
 
@@ -164,7 +164,7 @@ class TestCombinedSecurityScanning:
         self, typescript_project_with_deps: Path
     ) -> None:
         """Test running both SAST and SCA on TypeScript project."""
-        result = run_lucidscan(
+        result = run_lucidshark(
             typescript_project_with_deps, domains=["sast", "sca"]
         )
 
@@ -185,7 +185,7 @@ class TestSecuritySeverities:
     @trivy_available
     def test_sca_issues_have_severity(self, python_project: Path) -> None:
         """Test that SCA issues include severity ratings."""
-        result = run_lucidscan(python_project, domains=["sca"])
+        result = run_lucidshark(python_project, domains=["sca"])
 
         sca_issues = result.issues_by_domain("sca")
         if sca_issues:
@@ -200,7 +200,7 @@ class TestSecuritySeverities:
         self, python_project: Path
     ) -> None:
         """Test that high/critical severity vulnerabilities are found."""
-        result = run_lucidscan(python_project, domains=["sca"])
+        result = run_lucidshark(python_project, domains=["sca"])
 
         high_sev = result.issues_by_severity("high")
         critical_sev = result.issues_by_severity("critical")

@@ -1,7 +1,7 @@
 """Tests for exclusion pattern handling across all scanner plugins.
 
-This module tests that exclusion patterns configured in lucidscan.yml or
-.lucidscanignore are correctly applied to all scanning tools.
+This module tests that exclusion patterns configured in lucidshark.yml or
+.lucidsharkignore are correctly applied to all scanning tools.
 """
 
 from __future__ import annotations
@@ -10,8 +10,8 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 
-from lucidscan.config.ignore import IgnorePatterns
-from lucidscan.core.models import ScanContext, ScanDomain, ToolDomain
+from lucidshark.config.ignore import IgnorePatterns
+from lucidshark.core.models import ScanContext, ScanDomain, ToolDomain
 
 
 class TestScanContextExcludePatterns:
@@ -50,7 +50,7 @@ class TestRuffExclusionPatterns:
 
     def test_ruff_adds_exclude_flags(self) -> None:
         """Test that Ruff adds --extend-exclude flags for each pattern."""
-        from lucidscan.plugins.linters.ruff import RuffLinter
+        from lucidshark.plugins.linters.ruff import RuffLinter
 
         linter = RuffLinter()
         ignore = IgnorePatterns(["*.log", ".venv/**"])
@@ -79,7 +79,7 @@ class TestESLintExclusionPatterns:
 
     def test_eslint_adds_ignore_pattern_flags(self) -> None:
         """Test that ESLint adds --ignore-pattern flags for each pattern."""
-        from lucidscan.plugins.linters.eslint import ESLintLinter
+        from lucidshark.plugins.linters.eslint import ESLintLinter
 
         linter = ESLintLinter()
         ignore = IgnorePatterns(["*.log", "node_modules/**"])
@@ -106,7 +106,7 @@ class TestMypyExclusionPatterns:
 
     def test_mypy_adds_exclude_flags(self) -> None:
         """Test that mypy adds --exclude flags for each pattern."""
-        from lucidscan.plugins.type_checkers.mypy import MypyChecker
+        from lucidshark.plugins.type_checkers.mypy import MypyChecker
 
         checker = MypyChecker()
         ignore = IgnorePatterns(["tests/**", ".venv/**"])
@@ -133,7 +133,7 @@ class TestTrivyExclusionPatterns:
 
     def test_trivy_splits_directory_patterns(self) -> None:
         """Test that Trivy uses --skip-dirs for directory patterns."""
-        from lucidscan.plugins.scanners.trivy import TrivyScanner
+        from lucidshark.plugins.scanners.trivy import TrivyScanner
 
         scanner = TrivyScanner()
         # Patterns ending with / or /** should be treated as directories
@@ -159,7 +159,7 @@ class TestTrivyExclusionPatterns:
 
     def test_trivy_uses_skip_files_for_file_patterns(self) -> None:
         """Test that Trivy uses --skip-files for file patterns."""
-        from lucidscan.plugins.scanners.trivy import TrivyScanner
+        from lucidshark.plugins.scanners.trivy import TrivyScanner
 
         scanner = TrivyScanner()
         # Patterns NOT ending with / or /** should be treated as files
@@ -187,7 +187,7 @@ class TestOpengrepExclusionPatterns:
 
     def test_opengrep_adds_exclude_flags(self) -> None:
         """Test that OpenGrep adds --exclude flags for each pattern."""
-        from lucidscan.plugins.scanners.opengrep import OpenGrepScanner
+        from lucidshark.plugins.scanners.opengrep import OpenGrepScanner
 
         scanner = OpenGrepScanner()
         ignore = IgnorePatterns(["tests/**", ".venv/**"])
@@ -214,7 +214,7 @@ class TestCheckovExclusionPatterns:
 
     def test_checkov_adds_skip_path_flags(self) -> None:
         """Test that Checkov adds --skip-path flags with regex patterns."""
-        from lucidscan.plugins.scanners.checkov import CheckovScanner
+        from lucidshark.plugins.scanners.checkov import CheckovScanner
 
         scanner = CheckovScanner()
         ignore = IgnorePatterns([".venv/**", "tests/**"])
@@ -237,7 +237,7 @@ class TestCheckovExclusionPatterns:
 
     def test_checkov_converts_glob_to_regex(self) -> None:
         """Test that Checkov converts glob patterns to regex."""
-        from lucidscan.plugins.scanners.checkov import _glob_to_regex
+        from lucidshark.plugins.scanners.checkov import _glob_to_regex
 
         # The .venv/** pattern should be converted to \.venv/.*
         assert _glob_to_regex(".venv/**") == r"\.venv/.*"
@@ -250,7 +250,7 @@ class TestCheckstyleExclusionPatterns:
 
     def test_checkstyle_filters_files_with_ignore_patterns(self, tmp_path: Path) -> None:
         """Test that Checkstyle uses IgnorePatterns.matches() to filter files."""
-        from lucidscan.plugins.linters.checkstyle import CheckstyleLinter
+        from lucidshark.plugins.linters.checkstyle import CheckstyleLinter
 
         # Create test directory structure
         src_dir = tmp_path / "src"
@@ -281,7 +281,7 @@ class TestCheckstyleExclusionPatterns:
 
     def test_checkstyle_respects_glob_patterns(self, tmp_path: Path) -> None:
         """Test that Checkstyle correctly matches gitignore glob patterns."""
-        from lucidscan.plugins.linters.checkstyle import CheckstyleLinter
+        from lucidshark.plugins.linters.checkstyle import CheckstyleLinter
 
         # Create test directory structure with various files
         src_dir = tmp_path / "src"
@@ -316,7 +316,7 @@ class TestCheckstyleExclusionPatterns:
 
     def test_checkstyle_handles_no_ignore_patterns(self, tmp_path: Path) -> None:
         """Test that Checkstyle works when no ignore patterns are set."""
-        from lucidscan.plugins.linters.checkstyle import CheckstyleLinter
+        from lucidshark.plugins.linters.checkstyle import CheckstyleLinter
 
         src_dir = tmp_path / "src"
         src_dir.mkdir()

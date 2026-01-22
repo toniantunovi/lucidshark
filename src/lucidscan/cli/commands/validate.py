@@ -1,6 +1,6 @@
 """Validate command implementation.
 
-Validates lucidscan.yml configuration files and reports issues.
+Validates lucidshark.yml configuration files and reports issues.
 """
 
 from __future__ import annotations
@@ -10,32 +10,32 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from lucidscan.config.models import LucidScanConfig
+    from lucidshark.config.models import LucidSharkConfig
 
-from lucidscan.cli.commands import Command
-from lucidscan.cli.exit_codes import EXIT_ISSUES_FOUND, EXIT_INVALID_USAGE, EXIT_SUCCESS
-from lucidscan.config.validation import (
+from lucidshark.cli.commands import Command
+from lucidshark.cli.exit_codes import EXIT_ISSUES_FOUND, EXIT_INVALID_USAGE, EXIT_SUCCESS
+from lucidshark.config.validation import (
     ConfigValidationIssue,
     validate_config_at_path,
 )
 
 
 class ValidateCommand(Command):
-    """Validates lucidscan.yml configuration files."""
+    """Validates lucidshark.yml configuration files."""
 
     @property
     def name(self) -> str:
         """Command identifier."""
         return "validate"
 
-    def execute(self, args: Namespace, config: "LucidScanConfig | None" = None) -> int:
+    def execute(self, args: Namespace, config: "LucidSharkConfig | None" = None) -> int:
         """Execute the validate command.
 
         Validates a configuration file and reports errors/warnings.
 
         Args:
             args: Parsed command-line arguments.
-            config: Optional LucidScan configuration (unused).
+            config: Optional LucidShark configuration (unused).
 
         Returns:
             Exit code: 0 = valid, 1 = has errors, 3 = file not found.
@@ -46,7 +46,7 @@ class ValidateCommand(Command):
         if result.error_message:
             print(result.error_message)
             if result.config_path is None:
-                print("Looked for: .lucidscan.yml, .lucidscan.yaml, lucidscan.yml, lucidscan.yaml")
+                print("Looked for: .lucidshark.yml, .lucidshark.yaml, lucidshark.yml, lucidshark.yaml")
             return EXIT_INVALID_USAGE
 
         print(f"Validating {result.config_path}...")

@@ -1,4 +1,4 @@
-"""Configuration validation for lucidscan.
+"""Configuration validation for lucidshark.
 
 Validates core configuration keys and warns on unknown keys.
 Plugin-specific options are passed through without validation.
@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 import yaml
 
-from lucidscan.core.logging import get_logger
+from lucidshark.core.logging import get_logger
 
 LOGGER = get_logger(__name__)
 
@@ -684,12 +684,12 @@ def validate_config_at_path(
     Args:
         project_root: Project root directory.
         config_path: Optional path to config file (relative to project root).
-            If not provided, searches for lucidscan.yml in project root.
+            If not provided, searches for lucidshark.yml in project root.
 
     Returns:
         ValidationResult with categorized issues.
     """
-    from lucidscan.config.loader import find_project_config
+    from lucidshark.config.loader import find_project_config
 
     # Determine config path
     path: Optional[Path]

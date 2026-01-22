@@ -11,8 +11,8 @@ import tempfile
 from pathlib import Path
 
 
-from lucidscan.core.models import ScanContext
-from lucidscan.plugins.linters.checkstyle import CheckstyleLinter
+from lucidshark.core.models import ScanContext
+from lucidshark.plugins.linters.checkstyle import CheckstyleLinter
 from tests.integration.conftest import java_available
 
 

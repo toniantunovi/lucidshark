@@ -15,7 +15,7 @@ __all__ = ["CoveragePlugin", "CoverageResult", "FileCoverage", "TestStatistics"]
 
 from typing import Any
 
-from lucidscan.core.models import CoverageSummary, ScanContext, UnifiedIssue, ToolDomain
+from lucidshark.core.models import CoverageSummary, ScanContext, UnifiedIssue, ToolDomain
 
 
 @dataclass

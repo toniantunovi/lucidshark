@@ -7,20 +7,20 @@ from argparse import Namespace
 from pathlib import Path
 from typing import List, Optional
 
-from lucidscan.cli.commands import Command
-from lucidscan.cli.config_bridge import ConfigBridge
-from lucidscan.cli.exit_codes import (
+from lucidshark.cli.commands import Command
+from lucidshark.cli.config_bridge import ConfigBridge
+from lucidshark.cli.exit_codes import (
     EXIT_ISSUES_FOUND,
     EXIT_SCANNER_ERROR,
     EXIT_SUCCESS,
 )
-from lucidscan.config.models import LucidScanConfig
-from lucidscan.core.domain_runner import DomainRunner, check_severity_threshold
-from lucidscan.core.logging import get_logger
-from lucidscan.core.models import CoverageSummary, ScanContext, ScanResult, UnifiedIssue
-from lucidscan.core.streaming import CLIStreamHandler, StreamHandler
-from lucidscan.pipeline import PipelineConfig, PipelineExecutor
-from lucidscan.plugins.reporters import get_reporter_plugin
+from lucidshark.config.models import LucidSharkConfig
+from lucidshark.core.domain_runner import DomainRunner, check_severity_threshold
+from lucidshark.core.logging import get_logger
+from lucidshark.core.models import CoverageSummary, ScanContext, ScanResult, UnifiedIssue
+from lucidshark.core.streaming import CLIStreamHandler, StreamHandler
+from lucidshark.pipeline import PipelineConfig, PipelineExecutor
+from lucidshark.plugins.reporters import get_reporter_plugin
 
 LOGGER = get_logger(__name__)
 
@@ -32,7 +32,7 @@ class ScanCommand(Command):
         """Initialize ScanCommand.
 
         Args:
-            version: Current lucidscan version string.
+            version: Current lucidshark version string.
         """
         self._version = version
 
@@ -41,7 +41,7 @@ class ScanCommand(Command):
         """Command identifier."""
         return "scan"
 
-    def execute(self, args: Namespace, config: LucidScanConfig | None = None) -> int:
+    def execute(self, args: Namespace, config: LucidSharkConfig | None = None) -> int:
         """Execute the scan command.
 
         Args:
@@ -95,7 +95,7 @@ class ScanCommand(Command):
             raise
 
     def _run_scan(
-        self, args: Namespace, config: LucidScanConfig
+        self, args: Namespace, config: LucidSharkConfig
     ) -> ScanResult:
         """Execute the scan based on CLI arguments and config.
 
@@ -238,7 +238,7 @@ class ScanCommand(Command):
                 executor = PipelineExecutor(
                     config=config,
                     pipeline_config=pipeline_config,
-                    lucidscan_version=self._version,
+                    lucidshark_version=self._version,
                 )
 
                 pipeline_result = executor.execute(needed_scanners, context)
@@ -256,7 +256,7 @@ class ScanCommand(Command):
         return result
 
     def _check_domain_thresholds(
-        self, issues: List[UnifiedIssue], config: LucidScanConfig
+        self, issues: List[UnifiedIssue], config: LucidSharkConfig
     ) -> bool:
         """Check if any issues exceed their domain's fail_on threshold.
 
@@ -269,7 +269,7 @@ class ScanCommand(Command):
         Returns:
             True if any domain exceeds its threshold, False otherwise.
         """
-        from lucidscan.core.models import ScanDomain, ToolDomain
+        from lucidshark.core.models import ScanDomain, ToolDomain
 
         # Map issue domains to config domain names
         # ScanDomain values (SCA, CONTAINER, IAC, SAST) all map to "security"

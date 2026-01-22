@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from lucidscan.core.models import ScanDomain, Severity, ToolDomain, UnifiedIssue
-from lucidscan.mcp.formatter import FixInstruction, InstructionFormatter
+from lucidshark.core.models import ScanDomain, Severity, ToolDomain, UnifiedIssue
+from lucidshark.mcp.formatter import FixInstruction, InstructionFormatter
 
 
 class TestFixInstruction:

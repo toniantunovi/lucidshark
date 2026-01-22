@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import List
 
 
-from lucidscan.core.models import ScanContext, ToolDomain
-from lucidscan.plugins.coverage.base import (
+from lucidshark.core.models import ScanContext, ToolDomain
+from lucidshark.plugins.coverage.base import (
     CoveragePlugin,
     CoverageResult,
     FileCoverage,

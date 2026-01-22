@@ -1,11 +1,11 @@
-"""Test runner plugins for lucidscan.
+"""Test runner plugins for lucidshark.
 
 This module provides test runner integrations for the quality pipeline.
-Test runners are discovered via the lucidscan.test_runners entry point group.
+Test runners are discovered via the lucidshark.test_runners entry point group.
 """
 
-from lucidscan.plugins.test_runners.base import TestRunnerPlugin, TestResult
-from lucidscan.plugins.discovery import (
+from lucidshark.plugins.test_runners.base import TestRunnerPlugin, TestResult
+from lucidshark.plugins.discovery import (
     discover_plugins,
     TEST_RUNNER_ENTRY_POINT_GROUP,
 )

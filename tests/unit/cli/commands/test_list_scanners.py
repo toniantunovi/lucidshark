@@ -6,8 +6,8 @@ from argparse import Namespace
 from unittest.mock import patch, MagicMock
 
 
-from lucidscan.cli.commands.list_scanners import ListScannersCommand
-from lucidscan.cli.exit_codes import EXIT_SUCCESS
+from lucidshark.cli.commands.list_scanners import ListScannersCommand
+from lucidshark.cli.exit_codes import EXIT_SUCCESS
 
 
 class TestListScannersCommand:
@@ -30,7 +30,7 @@ class TestListScannersCommand:
         plugins = {"test-scanner": mock_plugin_class}
 
         with patch(
-            "lucidscan.cli.commands.list_scanners.discover_scanner_plugins",
+            "lucidshark.cli.commands.list_scanners.discover_scanner_plugins",
             return_value=plugins,
         ):
             cmd = ListScannersCommand()
@@ -44,7 +44,7 @@ class TestListScannersCommand:
     def test_execute_with_no_plugins(self, capsys) -> None:
         """Test execute with no available plugins."""
         with patch(
-            "lucidscan.cli.commands.list_scanners.discover_scanner_plugins",
+            "lucidshark.cli.commands.list_scanners.discover_scanner_plugins",
             return_value={},
         ):
             cmd = ListScannersCommand()
@@ -63,7 +63,7 @@ class TestListScannersCommand:
         plugins = {"broken-scanner": mock_plugin_class}
 
         with patch(
-            "lucidscan.cli.commands.list_scanners.discover_scanner_plugins",
+            "lucidshark.cli.commands.list_scanners.discover_scanner_plugins",
             return_value=plugins,
         ):
             cmd = ListScannersCommand()
@@ -76,7 +76,7 @@ class TestListScannersCommand:
 
     def test_execute_shows_domains(self, capsys) -> None:
         """Test execute shows plugin domains."""
-        from lucidscan.core.models import ScanDomain
+        from lucidshark.core.models import ScanDomain
 
         mock_plugin = MagicMock()
         mock_plugin.domains = [ScanDomain.SAST, ScanDomain.SCA]
@@ -87,7 +87,7 @@ class TestListScannersCommand:
         plugins = {"multi-domain-scanner": mock_plugin_class}
 
         with patch(
-            "lucidscan.cli.commands.list_scanners.discover_scanner_plugins",
+            "lucidshark.cli.commands.list_scanners.discover_scanner_plugins",
             return_value=plugins,
         ):
             cmd = ListScannersCommand()

@@ -6,15 +6,15 @@ from argparse import Namespace
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from lucidscan.config.models import LucidScanConfig
+    from lucidshark.config.models import LucidSharkConfig
 
-from lucidscan.bootstrap.paths import get_lucidscan_home, LucidscanPaths
-from lucidscan.bootstrap.platform import get_platform_info
-from lucidscan.bootstrap.validation import validate_binary, ToolStatus
-from lucidscan.cli.commands import Command
-from lucidscan.cli.exit_codes import EXIT_SUCCESS
-from lucidscan.plugins.discovery import get_all_available_tools
-from lucidscan.plugins.scanners import discover_scanner_plugins
+from lucidshark.bootstrap.paths import get_lucidshark_home, LucidsharkPaths
+from lucidshark.bootstrap.platform import get_platform_info
+from lucidshark.bootstrap.validation import validate_binary, ToolStatus
+from lucidshark.cli.commands import Command
+from lucidshark.cli.exit_codes import EXIT_SUCCESS
+from lucidshark.plugins.discovery import get_all_available_tools
+from lucidshark.plugins.scanners import discover_scanner_plugins
 
 
 class StatusCommand(Command):
@@ -24,7 +24,7 @@ class StatusCommand(Command):
         """Initialize StatusCommand.
 
         Args:
-            version: Current lucidscan version string.
+            version: Current lucidshark version string.
         """
         self._version = version
 
@@ -33,24 +33,24 @@ class StatusCommand(Command):
         """Command identifier."""
         return "status"
 
-    def execute(self, args: Namespace, config: "LucidScanConfig | None" = None) -> int:
+    def execute(self, args: Namespace, config: "LucidSharkConfig | None" = None) -> int:
         """Execute the status command.
 
-        Displays lucidscan version, platform info, and scanner plugin status.
+        Displays lucidshark version, platform info, and scanner plugin status.
 
         Args:
             args: Parsed command-line arguments.
-            config: Optional LucidScan configuration (unused).
+            config: Optional LucidShark configuration (unused).
 
         Returns:
             Exit code (always 0 for status).
         """
         # Use current directory as project root
-        home = get_lucidscan_home()
-        paths = LucidscanPaths(home)
+        home = get_lucidshark_home()
+        paths = LucidsharkPaths(home)
         platform_info = get_platform_info()
 
-        print(f"lucidscan version: {self._version}")
+        print(f"lucidshark version: {self._version}")
         print(f"Platform: {platform_info.os}-{platform_info.arch}")
         print(f"Tool cache: {home}/bin/")
         print()
@@ -93,6 +93,6 @@ class StatusCommand(Command):
             print(f"Coverage plugins: {', '.join(sorted(all_tools['coverage']))}")
 
         print()
-        print("Security tools are downloaded to .lucidscan/ on first scan.")
+        print("Security tools are downloaded to .lucidshark/ on first scan.")
 
         return EXIT_SUCCESS

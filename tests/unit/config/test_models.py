@@ -1,11 +1,11 @@
-"""Tests for lucidscan.config.models."""
+"""Tests for lucidshark.config.models."""
 
 from __future__ import annotations
 
 
-from lucidscan.config.models import (
+from lucidshark.config.models import (
     DEFAULT_PLUGINS,
-    LucidScanConfig,
+    LucidSharkConfig,
     OutputConfig,
     ScannerDomainConfig,
 )
@@ -65,31 +65,31 @@ class TestDefaultPlugins:
         assert DEFAULT_PLUGINS["iac"] == "checkov"
 
 
-class TestLucidScanConfig:
-    """Tests for LucidScanConfig dataclass."""
+class TestLucidSharkConfig:
+    """Tests for LucidSharkConfig dataclass."""
 
     def test_default_fail_on_is_none(self) -> None:
-        config = LucidScanConfig()
+        config = LucidSharkConfig()
         assert config.fail_on is None
 
     def test_default_ignore_is_empty_list(self) -> None:
-        config = LucidScanConfig()
+        config = LucidSharkConfig()
         assert config.ignore == []
 
     def test_default_output_is_json(self) -> None:
-        config = LucidScanConfig()
+        config = LucidSharkConfig()
         assert config.output.format == "json"
 
     def test_default_scanners_is_empty_dict(self) -> None:
-        config = LucidScanConfig()
+        config = LucidSharkConfig()
         assert config.scanners == {}
 
     def test_default_enrichers_is_empty_dict(self) -> None:
-        config = LucidScanConfig()
+        config = LucidSharkConfig()
         assert config.enrichers == {}
 
     def test_custom_values(self) -> None:
-        config = LucidScanConfig(
+        config = LucidSharkConfig(
             fail_on="high",
             ignore=["tests/**"],
             output=OutputConfig(format="table"),
@@ -99,18 +99,18 @@ class TestLucidScanConfig:
         assert config.output.format == "table"
 
 
-class TestLucidScanConfigGetScannerConfig:
-    """Tests for LucidScanConfig.get_scanner_config method."""
+class TestLucidSharkConfigGetScannerConfig:
+    """Tests for LucidSharkConfig.get_scanner_config method."""
 
     def test_returns_default_for_unconfigured_domain(self) -> None:
-        config = LucidScanConfig()
+        config = LucidSharkConfig()
         domain_config = config.get_scanner_config("sca")
         assert domain_config.enabled is True
         assert domain_config.plugin == ""
         assert domain_config.options == {}
 
     def test_returns_configured_domain(self) -> None:
-        config = LucidScanConfig(
+        config = LucidSharkConfig(
             scanners={
                 "sca": ScannerDomainConfig(
                     enabled=False,
@@ -125,15 +125,15 @@ class TestLucidScanConfigGetScannerConfig:
         assert domain_config.options == {"api_token": "test"}
 
 
-class TestLucidScanConfigGetEnabledDomains:
-    """Tests for LucidScanConfig.get_enabled_domains method."""
+class TestLucidSharkConfigGetEnabledDomains:
+    """Tests for LucidSharkConfig.get_enabled_domains method."""
 
     def test_returns_empty_list_when_no_scanners(self) -> None:
-        config = LucidScanConfig()
+        config = LucidSharkConfig()
         assert config.get_enabled_domains() == []
 
     def test_returns_enabled_domains(self) -> None:
-        config = LucidScanConfig(
+        config = LucidSharkConfig(
             scanners={
                 "sca": ScannerDomainConfig(enabled=True),
                 "sast": ScannerDomainConfig(enabled=False),
@@ -146,18 +146,18 @@ class TestLucidScanConfigGetEnabledDomains:
         assert "iac" in enabled
 
 
-class TestLucidScanConfigGetPluginForDomain:
-    """Tests for LucidScanConfig.get_plugin_for_domain method."""
+class TestLucidSharkConfigGetPluginForDomain:
+    """Tests for LucidSharkConfig.get_plugin_for_domain method."""
 
     def test_returns_default_plugin_when_not_configured(self) -> None:
-        config = LucidScanConfig()
+        config = LucidSharkConfig()
         assert config.get_plugin_for_domain("sca") == "trivy"
         assert config.get_plugin_for_domain("sast") == "opengrep"
         assert config.get_plugin_for_domain("iac") == "checkov"
         assert config.get_plugin_for_domain("container") == "trivy"
 
     def test_returns_configured_plugin(self) -> None:
-        config = LucidScanConfig(
+        config = LucidSharkConfig(
             scanners={
                 "sca": ScannerDomainConfig(plugin="snyk"),
             }
@@ -165,19 +165,19 @@ class TestLucidScanConfigGetPluginForDomain:
         assert config.get_plugin_for_domain("sca") == "snyk"
 
     def test_returns_empty_string_for_unknown_domain(self) -> None:
-        config = LucidScanConfig()
+        config = LucidSharkConfig()
         assert config.get_plugin_for_domain("unknown") == ""
 
 
-class TestLucidScanConfigGetScannerOptions:
-    """Tests for LucidScanConfig.get_scanner_options method."""
+class TestLucidSharkConfigGetScannerOptions:
+    """Tests for LucidSharkConfig.get_scanner_options method."""
 
     def test_returns_empty_dict_when_no_options(self) -> None:
-        config = LucidScanConfig()
+        config = LucidSharkConfig()
         assert config.get_scanner_options("sca") == {}
 
     def test_returns_configured_options(self) -> None:
-        config = LucidScanConfig(
+        config = LucidSharkConfig(
             scanners={
                 "sca": ScannerDomainConfig(
                     options={"ignore_unfixed": True, "severity": ["HIGH"]},

@@ -1,13 +1,13 @@
-"""Tests for lucidscan.config.ignore module."""
+"""Tests for lucidshark.config.ignore module."""
 
 from __future__ import annotations
 
 from pathlib import Path
 
 
-from lucidscan.config.ignore import (
+from lucidshark.config.ignore import (
     IgnorePatterns,
-    find_lucidscanignore,
+    find_lucidsharkignore,
     load_ignore_patterns,
 )
 
@@ -115,7 +115,7 @@ class TestIgnorePatternsFromFile:
 
     def test_loads_from_file(self, tmp_path: Path) -> None:
         """Test loading patterns from a file."""
-        ignore_file = tmp_path / ".lucidscanignore"
+        ignore_file = tmp_path / ".lucidsharkignore"
         ignore_file.write_text("*.log\ntemp/\n# Comment\n")
 
         patterns = IgnorePatterns.from_file(ignore_file)
@@ -130,7 +130,7 @@ class TestIgnorePatternsFromFile:
 
     def test_handles_empty_file(self, tmp_path: Path) -> None:
         """Test loading an empty file."""
-        ignore_file = tmp_path / ".lucidscanignore"
+        ignore_file = tmp_path / ".lucidsharkignore"
         ignore_file.write_text("")
 
         patterns = IgnorePatterns.from_file(ignore_file)
@@ -167,20 +167,20 @@ class TestIgnorePatternsMerge:
         assert merged.get_exclude_patterns() == []
 
 
-class TestFindLucidscanignore:
-    """Tests for find_lucidscanignore function."""
+class TestFindLucidsharkignore:
+    """Tests for find_lucidsharkignore function."""
 
-    def test_finds_lucidscanignore(self, tmp_path: Path) -> None:
-        """Test finding .lucidscanignore in project root."""
-        ignore_file = tmp_path / ".lucidscanignore"
+    def test_finds_lucidsharkignore(self, tmp_path: Path) -> None:
+        """Test finding .lucidsharkignore in project root."""
+        ignore_file = tmp_path / ".lucidsharkignore"
         ignore_file.write_text("*.log\n")
 
-        result = find_lucidscanignore(tmp_path)
+        result = find_lucidsharkignore(tmp_path)
         assert result == ignore_file
 
     def test_returns_none_when_missing(self, tmp_path: Path) -> None:
         """Test that missing file returns None."""
-        result = find_lucidscanignore(tmp_path)
+        result = find_lucidsharkignore(tmp_path)
         assert result is None
 
 
@@ -188,8 +188,8 @@ class TestLoadIgnorePatterns:
     """Tests for load_ignore_patterns function."""
 
     def test_loads_from_file(self, tmp_path: Path) -> None:
-        """Test loading patterns from .lucidscanignore file."""
-        ignore_file = tmp_path / ".lucidscanignore"
+        """Test loading patterns from .lucidsharkignore file."""
+        ignore_file = tmp_path / ".lucidsharkignore"
         ignore_file.write_text("*.log\ntemp/\n")
 
         patterns = load_ignore_patterns(tmp_path, [])
@@ -208,7 +208,7 @@ class TestLoadIgnorePatterns:
 
     def test_merges_file_and_config(self, tmp_path: Path) -> None:
         """Test merging patterns from both file and config."""
-        ignore_file = tmp_path / ".lucidscanignore"
+        ignore_file = tmp_path / ".lucidsharkignore"
         ignore_file.write_text("*.log\n")
 
         patterns = load_ignore_patterns(tmp_path, ["tests/**"])
@@ -224,7 +224,7 @@ class TestLoadIgnorePatterns:
 
     def test_config_patterns_after_file(self, tmp_path: Path) -> None:
         """Test that config patterns come after file patterns in merge."""
-        ignore_file = tmp_path / ".lucidscanignore"
+        ignore_file = tmp_path / ".lucidsharkignore"
         ignore_file.write_text("*.log\n")
 
         patterns = load_ignore_patterns(tmp_path, ["vendor/"])

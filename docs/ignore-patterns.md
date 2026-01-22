@@ -1,12 +1,12 @@
-# Ignore Patterns in LucidScan
+# Ignore Patterns in LucidShark
 
-LucidScan supports multiple ways to exclude files and findings from your quality pipeline.
+LucidShark supports multiple ways to exclude files and findings from your quality pipeline.
 
 ## File-Level Ignores
 
-### .lucidscanignore File
+### .lucidsharkignore File
 
-Create a `.lucidscanignore` file in your project root with gitignore-style patterns:
+Create a `.lucidsharkignore` file in your project root with gitignore-style patterns:
 
 ```gitignore
 # Dependencies
@@ -44,7 +44,7 @@ __pycache__/
 
 ### Config File Ignores
 
-Add patterns to `lucidscan.yml`:
+Add patterns to `lucidshark.yml`:
 
 ```yaml
 ignore:
@@ -54,11 +54,11 @@ ignore:
   - "*.md"
 ```
 
-**Note:** Patterns from both `.lucidscanignore` and `lucidscan.yml` are merged.
+**Note:** Patterns from both `.lucidsharkignore` and `lucidshark.yml` are merged.
 
 ## How Ignore Patterns Work
 
-LucidScan passes ignore patterns to each tool using their native exclude mechanisms:
+LucidShark passes ignore patterns to each tool using their native exclude mechanisms:
 
 | Domain | Tool | CLI Flag Used |
 |--------|------|---------------|
@@ -266,7 +266,7 @@ pipeline:
 
 ### Tool-Specific Ignores
 
-Some tools have their own ignore files that LucidScan respects:
+Some tools have their own ignore files that LucidShark respects:
 
 | Tool | Ignore File |
 |------|-------------|
@@ -277,7 +277,7 @@ Some tools have their own ignore files that LucidScan respects:
 | Checkov | `.checkov.yml` |
 | pytest | `pytest.ini`, `pyproject.toml` |
 
-LucidScan doesn't override these — they work alongside `.lucidscanignore`.
+LucidShark doesn't override these — they work alongside `.lucidsharkignore`.
 
 ## Best Practices
 
@@ -307,7 +307,7 @@ LucidScan doesn't override these — they work alongside `.lucidscanignore`.
 
 ### Python Project
 
-`.lucidscanignore`:
+`.lucidsharkignore`:
 
 ```gitignore
 # Virtual environments
@@ -332,7 +332,7 @@ tests/fixtures/
 
 ### JavaScript/TypeScript Project
 
-`.lucidscanignore`:
+`.lucidsharkignore`:
 
 ```gitignore
 # Dependencies
@@ -355,7 +355,7 @@ coverage/
 
 ### Infrastructure Project
 
-`.lucidscanignore`:
+`.lucidsharkignore`:
 
 ```gitignore
 # Example configurations
@@ -376,7 +376,7 @@ samples/
 
 ### Monorepo
 
-`.lucidscanignore`:
+`.lucidsharkignore`:
 
 ```gitignore
 # Shared dependencies

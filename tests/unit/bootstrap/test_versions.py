@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lucidscan.bootstrap.versions import (
+from lucidshark.bootstrap.versions import (
     _FALLBACK_VERSIONS,
     _load_pyproject_versions,
     get_tool_version,
@@ -29,9 +29,9 @@ class TestLoadPyprojectVersions:
         """Test fallback when tomllib is not available."""
         _load_pyproject_versions.cache_clear()
 
-        with patch("lucidscan.bootstrap.versions._tomllib", None):
+        with patch("lucidshark.bootstrap.versions._tomllib", None):
             # Need to reload to pick up the patched value
-            from lucidscan.bootstrap import versions as v
+            from lucidshark.bootstrap import versions as v
 
             v._load_pyproject_versions.cache_clear()
 
@@ -45,7 +45,7 @@ class TestLoadPyprojectVersions:
         _load_pyproject_versions.cache_clear()
 
         with patch("pathlib.Path.exists", return_value=False):
-            from lucidscan.bootstrap import versions as v
+            from lucidshark.bootstrap import versions as v
 
             v._load_pyproject_versions.cache_clear()
 
@@ -61,10 +61,10 @@ class TestLoadPyprojectVersions:
         mock_tomllib = MagicMock()
         mock_tomllib.load.side_effect = Exception("Parse error")
 
-        with patch("lucidscan.bootstrap.versions._tomllib", mock_tomllib):
+        with patch("lucidshark.bootstrap.versions._tomllib", mock_tomllib):
             with patch("pathlib.Path.exists", return_value=True):
                 with patch("builtins.open", MagicMock()):
-                    from lucidscan.bootstrap import versions as v
+                    from lucidshark.bootstrap import versions as v
 
                     v._load_pyproject_versions.cache_clear()
                     result = v._load_pyproject_versions()
@@ -72,12 +72,12 @@ class TestLoadPyprojectVersions:
                     assert isinstance(result, dict)
 
     def test_loads_from_tools_section(self) -> None:
-        """Test loading versions from [tool.lucidscan.tools] section."""
+        """Test loading versions from [tool.lucidshark.tools] section."""
         _load_pyproject_versions.cache_clear()
 
         mock_data = {
             "tool": {
-                "lucidscan": {
+                "lucidshark": {
                     "tools": {
                         "trivy": "1.0.0",
                         "ruff": "2.0.0",
@@ -89,10 +89,10 @@ class TestLoadPyprojectVersions:
         mock_tomllib = MagicMock()
         mock_tomllib.load.return_value = mock_data
 
-        with patch("lucidscan.bootstrap.versions._tomllib", mock_tomllib):
+        with patch("lucidshark.bootstrap.versions._tomllib", mock_tomllib):
             with patch("pathlib.Path.exists", return_value=True):
                 with patch("builtins.open", MagicMock()):
-                    from lucidscan.bootstrap import versions as v
+                    from lucidshark.bootstrap import versions as v
 
                     v._load_pyproject_versions.cache_clear()
                     result = v._load_pyproject_versions()
@@ -101,12 +101,12 @@ class TestLoadPyprojectVersions:
                     assert result.get("ruff") == "2.0.0"
 
     def test_loads_from_legacy_scanners_section(self) -> None:
-        """Test loading versions from legacy [tool.lucidscan.scanners] section."""
+        """Test loading versions from legacy [tool.lucidshark.scanners] section."""
         _load_pyproject_versions.cache_clear()
 
         mock_data = {
             "tool": {
-                "lucidscan": {
+                "lucidshark": {
                     "tools": {},  # Empty tools section
                     "scanners": {
                         "trivy": "1.0.0",  # Legacy section
@@ -118,10 +118,10 @@ class TestLoadPyprojectVersions:
         mock_tomllib = MagicMock()
         mock_tomllib.load.return_value = mock_data
 
-        with patch("lucidscan.bootstrap.versions._tomllib", mock_tomllib):
+        with patch("lucidshark.bootstrap.versions._tomllib", mock_tomllib):
             with patch("pathlib.Path.exists", return_value=True):
                 with patch("builtins.open", MagicMock()):
-                    from lucidscan.bootstrap import versions as v
+                    from lucidshark.bootstrap import versions as v
 
                     v._load_pyproject_versions.cache_clear()
                     result = v._load_pyproject_versions()
@@ -134,7 +134,7 @@ class TestLoadPyprojectVersions:
 
         mock_data = {
             "tool": {
-                "lucidscan": {
+                "lucidshark": {
                     "tools": {
                         "trivy": "2.0.0",  # Should win
                     },
@@ -148,10 +148,10 @@ class TestLoadPyprojectVersions:
         mock_tomllib = MagicMock()
         mock_tomllib.load.return_value = mock_data
 
-        with patch("lucidscan.bootstrap.versions._tomllib", mock_tomllib):
+        with patch("lucidshark.bootstrap.versions._tomllib", mock_tomllib):
             with patch("pathlib.Path.exists", return_value=True):
                 with patch("builtins.open", MagicMock()):
-                    from lucidscan.bootstrap import versions as v
+                    from lucidshark.bootstrap import versions as v
 
                     v._load_pyproject_versions.cache_clear()
                     result = v._load_pyproject_versions()
@@ -165,7 +165,7 @@ class TestLoadPyprojectVersions:
         # Only provide one tool version
         mock_data = {
             "tool": {
-                "lucidscan": {
+                "lucidshark": {
                     "tools": {
                         "trivy": "1.0.0",
                     }
@@ -176,10 +176,10 @@ class TestLoadPyprojectVersions:
         mock_tomllib = MagicMock()
         mock_tomllib.load.return_value = mock_data
 
-        with patch("lucidscan.bootstrap.versions._tomllib", mock_tomllib):
+        with patch("lucidshark.bootstrap.versions._tomllib", mock_tomllib):
             with patch("pathlib.Path.exists", return_value=True):
                 with patch("builtins.open", MagicMock()):
-                    from lucidscan.bootstrap import versions as v
+                    from lucidshark.bootstrap import versions as v
 
                     v._load_pyproject_versions.cache_clear()
                     result = v._load_pyproject_versions()

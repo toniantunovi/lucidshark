@@ -1,3 +1,3 @@
-"""Unit tests for lucidscan."""
+"""Unit tests for lucidshark."""
 
 

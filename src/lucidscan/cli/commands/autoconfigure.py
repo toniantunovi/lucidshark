@@ -4,7 +4,7 @@ Opinionated project autoconfiguration that:
 1. Detects project characteristics
 2. Auto-selects recommended tools when none are detected
 3. Installs tools to package manager files
-4. Generates lucidscan.yml configuration
+4. Generates lucidshark.yml configuration
 """
 
 from __future__ import annotations
@@ -14,16 +14,16 @@ from pathlib import Path
 from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
-    from lucidscan.config.models import LucidScanConfig
+    from lucidshark.config.models import LucidSharkConfig
 
 import questionary
 from questionary import Style
 
-from lucidscan.cli.commands import Command
-from lucidscan.cli.exit_codes import EXIT_SUCCESS, EXIT_INVALID_USAGE
-from lucidscan.core.logging import get_logger
-from lucidscan.detection import CodebaseDetector, ProjectContext
-from lucidscan.generation import ConfigGenerator, InitChoices, PackageInstaller
+from lucidshark.cli.commands import Command
+from lucidshark.cli.exit_codes import EXIT_SUCCESS, EXIT_INVALID_USAGE
+from lucidshark.core.logging import get_logger
+from lucidshark.detection import CodebaseDetector, ProjectContext
+from lucidshark.generation import ConfigGenerator, InitChoices, PackageInstaller
 
 LOGGER = get_logger(__name__)
 
@@ -56,12 +56,12 @@ class AutoconfigureCommand(Command):
         """Command identifier."""
         return "autoconfigure"
 
-    def execute(self, args: Namespace, config: "LucidScanConfig | None" = None) -> int:
+    def execute(self, args: Namespace, config: "LucidSharkConfig | None" = None) -> int:
         """Execute the autoconfigure command.
 
         Args:
             args: Parsed command-line arguments.
-            config: Optional LucidScan configuration (unused).
+            config: Optional LucidShark configuration (unused).
 
         Returns:
             Exit code.
@@ -73,14 +73,14 @@ class AutoconfigureCommand(Command):
             return EXIT_INVALID_USAGE
 
         # Check for existing config
-        config_path = project_root / "lucidscan.yml"
+        config_path = project_root / "lucidshark.yml"
         if config_path.exists() and not args.force:
             if args.non_interactive:
                 print(f"Error: {config_path} already exists. Use --force to overwrite.")
                 return EXIT_INVALID_USAGE
 
             overwrite = questionary.confirm(
-                "lucidscan.yml already exists. Overwrite?",
+                "lucidshark.yml already exists. Overwrite?",
                 default=False,
                 style=STYLE,
             ).ask()
@@ -143,8 +143,8 @@ class AutoconfigureCommand(Command):
 
         # Summary
         print("\nDone! Next steps:")
-        print("  1. Review the generated lucidscan.yml")
-        print("  2. Run 'lucidscan scan --all' to test the configuration")
+        print("  1. Review the generated lucidshark.yml")
+        print("  2. Run 'lucidshark scan --all' to test the configuration")
 
         return EXIT_SUCCESS
 

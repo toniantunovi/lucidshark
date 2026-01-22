@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 
-from lucidscan.detection.languages import (
+from lucidshark.detection.languages import (
     LanguageInfo,
     detect_languages,
     _walk_files,

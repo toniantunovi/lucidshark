@@ -1,6 +1,6 @@
 """Init command implementation.
 
-Configure AI tools (Claude Code, Cursor) to use LucidScan via MCP.
+Configure AI tools (Claude Code, Cursor) to use LucidShark via MCP.
 """
 
 from __future__ import annotations
@@ -13,22 +13,22 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 if TYPE_CHECKING:
-    from lucidscan.config.models import LucidScanConfig
+    from lucidshark.config.models import LucidSharkConfig
 
-from lucidscan.cli.commands import Command
-from lucidscan.cli.exit_codes import EXIT_SUCCESS, EXIT_INVALID_USAGE
-from lucidscan.core.logging import get_logger
+from lucidshark.cli.commands import Command
+from lucidshark.cli.exit_codes import EXIT_SUCCESS, EXIT_INVALID_USAGE
+from lucidshark.core.logging import get_logger
 
 LOGGER = get_logger(__name__)
 
-# MCP server arguments for LucidScan
-LUCIDSCAN_MCP_ARGS = ["serve", "--mcp"]
+# MCP server arguments for LucidShark
+LUCIDSHARK_MCP_ARGS = ["serve", "--mcp"]
 
-# Instructions to add to CLAUDE.md for proactive lucidscan usage
-LUCIDSCAN_CLAUDE_MD_INSTRUCTIONS = """
-## Code Quality with LucidScan
+# Instructions to add to CLAUDE.md for proactive lucidshark usage
+LUCIDSHARK_CLAUDE_MD_INSTRUCTIONS = """
+## Code Quality with LucidShark
 
-IMPORTANT: You MUST run LucidScan after completing code changes. This is required, not optional.
+IMPORTANT: You MUST run LucidShark after completing code changes. This is required, not optional.
 
 ### When to Scan
 
@@ -71,18 +71,18 @@ scan(domains=["all"])
 5. Report completion to user
 """
 
-LUCIDSCAN_CLAUDE_MD_MARKER = "## Code Quality with LucidScan"
+LUCIDSHARK_CLAUDE_MD_MARKER = "## Code Quality with LucidShark"
 
-# Cursor rules for proactive lucidscan usage
-LUCIDSCAN_CURSOR_RULES = """---
-description: LucidScan code quality rules
+# Cursor rules for proactive lucidshark usage
+LUCIDSHARK_CURSOR_RULES = """---
+description: LucidShark code quality rules
 globs: ["**/*.py", "**/*.ts", "**/*.js", "**/*.tsx", "**/*.jsx"]
 alwaysApply: true
 ---
 
-# LucidScan Code Quality
+# LucidShark Code Quality
 
-IMPORTANT: You MUST run LucidScan after completing code changes. This is required, not optional.
+IMPORTANT: You MUST run LucidShark after completing code changes. This is required, not optional.
 
 ## When to Scan
 
@@ -126,13 +126,13 @@ scan(domains=["all"])
 """
 
 class InitCommand(Command):
-    """Configure AI tools to use LucidScan via MCP."""
+    """Configure AI tools to use LucidShark via MCP."""
 
     def __init__(self, version: str):
         """Initialize InitCommand.
 
         Args:
-            version: Current lucidscan version string.
+            version: Current lucidshark version string.
         """
         self._version = version
 
@@ -141,12 +141,12 @@ class InitCommand(Command):
         """Command identifier."""
         return "init"
 
-    def execute(self, args: Namespace, config: "LucidScanConfig | None" = None) -> int:
+    def execute(self, args: Namespace, config: "LucidSharkConfig | None" = None) -> int:
         """Execute the init command.
 
         Args:
             args: Parsed command-line arguments.
-            config: Optional LucidScan configuration (unused).
+            config: Optional LucidShark configuration (unused).
 
         Returns:
             Exit code.
@@ -162,7 +162,7 @@ class InitCommand(Command):
 
         if not configure_claude and not configure_cursor:
             print("No AI tool specified. Use --claude-code, --cursor, or --all.")
-            print("\nRun 'lucidscan init --help' for more options.")
+            print("\nRun 'lucidshark init --help' for more options.")
             return EXIT_INVALID_USAGE
 
         dry_run = getattr(args, "dry_run", False)
@@ -195,7 +195,7 @@ class InitCommand(Command):
         Args:
             dry_run: If True, only show what would be done.
             force: If True, overwrite existing config.
-            remove: If True, remove LucidScan from config.
+            remove: If True, remove LucidShark from config.
 
         Returns:
             True if successful.
@@ -237,7 +237,7 @@ class InitCommand(Command):
         Args:
             dry_run: If True, only show what would be done.
             force: If True, overwrite existing config.
-            remove: If True, remove LucidScan from config.
+            remove: If True, remove LucidShark from config.
 
         Returns:
             True if successful.
@@ -267,8 +267,8 @@ class InitCommand(Command):
 
         return mcp_success and rules_success
 
-    def _find_lucidscan_path(self, portable: bool = False) -> Optional[str]:
-        """Find the lucidscan executable path.
+    def _find_lucidshark_path(self, portable: bool = False) -> Optional[str]:
+        """Find the lucidshark executable path.
 
         Searches in order:
         1. PATH via shutil.which
@@ -279,29 +279,29 @@ class InitCommand(Command):
             portable: If True, return a relative path suitable for version control.
 
         Returns:
-            Path to lucidscan executable, or None if not found.
+            Path to lucidshark executable, or None if not found.
         """
         # First try PATH (only if not looking for portable path)
         if not portable:
-            lucidscan_path = shutil.which("lucidscan")
-            if lucidscan_path:
-                return lucidscan_path
+            lucidshark_path = shutil.which("lucidshark")
+            if lucidshark_path:
+                return lucidshark_path
 
         # Try to find in the same directory as the Python interpreter
-        # This handles venv installations where lucidscan isn't in global PATH
+        # This handles venv installations where lucidshark isn't in global PATH
         python_dir = Path(sys.executable).parent
         cwd = Path.cwd()
 
         if sys.platform == "win32":
             # On Windows, check both Scripts and the python directory
             candidates = [
-                python_dir / "lucidscan.exe",
-                python_dir / "Scripts" / "lucidscan.exe",
+                python_dir / "lucidshark.exe",
+                python_dir / "Scripts" / "lucidshark.exe",
             ]
         else:
             # On Unix-like systems
             candidates = [
-                python_dir / "lucidscan",
+                python_dir / "lucidshark",
             ]
 
         for candidate in candidates:
@@ -317,25 +317,25 @@ class InitCommand(Command):
                 else:
                     return str(candidate)
 
-        # For portable, fall back to just "lucidscan"
+        # For portable, fall back to just "lucidshark"
         if portable:
             return None
 
         return None
 
-    def _build_mcp_config(self, lucidscan_path: Optional[str]) -> dict:
+    def _build_mcp_config(self, lucidshark_path: Optional[str]) -> dict:
         """Build MCP server configuration.
 
         Args:
-            lucidscan_path: Full path to lucidscan executable, or None.
+            lucidshark_path: Full path to lucidshark executable, or None.
 
         Returns:
             MCP server configuration dict.
         """
-        command = lucidscan_path if lucidscan_path else "lucidscan"
+        command = lucidshark_path if lucidshark_path else "lucidshark"
         return {
             "command": command,
-            "args": LUCIDSCAN_MCP_ARGS.copy(),
+            "args": LUCIDSHARK_MCP_ARGS.copy(),
         }
 
     def _configure_mcp_tool(
@@ -356,19 +356,19 @@ class InitCommand(Command):
             config_key: Key in the config for MCP servers.
             dry_run: If True, only show what would be done.
             force: If True, overwrite existing config.
-            remove: If True, remove LucidScan from config.
+            remove: If True, remove LucidShark from config.
             use_portable_path: If True, use relative path for version control.
 
         Returns:
             True if successful.
         """
-        # Find lucidscan executable
-        lucidscan_path = self._find_lucidscan_path(portable=use_portable_path)
-        if lucidscan_path:
-            print(f"  Using lucidscan command: {lucidscan_path}")
+        # Find lucidshark executable
+        lucidshark_path = self._find_lucidshark_path(portable=use_portable_path)
+        if lucidshark_path:
+            print(f"  Using lucidshark command: {lucidshark_path}")
         elif not dry_run:
-            print("  Warning: 'lucidscan' command not found in PATH or venv.")
-            print("  Using 'lucidscan' as command (must be in PATH at runtime).")
+            print("  Warning: 'lucidshark' command not found in PATH or venv.")
+            print("  Using 'lucidshark' as command (must be in PATH at runtime).")
 
         # Read existing config
         config, error = self._read_json_config(config_path)
@@ -380,30 +380,30 @@ class InitCommand(Command):
         mcp_servers = config.get(config_key, {})
 
         if remove:
-            # Remove LucidScan from config
-            if "lucidscan" in mcp_servers:
+            # Remove LucidShark from config
+            if "lucidshark" in mcp_servers:
                 if dry_run:
-                    print(f"  Would remove lucidscan from {config_path}")
+                    print(f"  Would remove lucidshark from {config_path}")
                 else:
-                    del mcp_servers["lucidscan"]
+                    del mcp_servers["lucidshark"]
                     config[config_key] = mcp_servers
                     if not mcp_servers:
                         del config[config_key]
                     self._write_json_config(config_path, config)
-                    print(f"  Removed lucidscan from {config_path}")
+                    print(f"  Removed lucidshark from {config_path}")
             else:
-                print(f"  lucidscan not found in {config_path}")
+                print(f"  lucidshark not found in {config_path}")
             return True
 
-        # Check if LucidScan is already configured
-        if "lucidscan" in mcp_servers and not force:
-            print(f"  LucidScan already configured in {config_path}")
+        # Check if LucidShark is already configured
+        if "lucidshark" in mcp_servers and not force:
+            print(f"  LucidShark already configured in {config_path}")
             print("  Use --force to overwrite.")
             return True
 
-        # Add LucidScan config with found path
-        mcp_config = self._build_mcp_config(lucidscan_path)
-        mcp_servers["lucidscan"] = mcp_config
+        # Add LucidShark config with found path
+        mcp_config = self._build_mcp_config(lucidshark_path)
+        mcp_servers["lucidshark"] = mcp_config
         config[config_key] = mcp_servers
 
         if dry_run:
@@ -417,7 +417,7 @@ class InitCommand(Command):
         # Write config
         success = self._write_json_config(config_path, config)
         if success:
-            print(f"  Added lucidscan to {config_path}")
+            print(f"  Added lucidshark to {config_path}")
             self._print_available_tools()
         return success
 
@@ -427,12 +427,12 @@ class InitCommand(Command):
         force: bool = False,
         remove: bool = False,
     ) -> bool:
-        """Configure CLAUDE.md with lucidscan instructions.
+        """Configure CLAUDE.md with lucidshark instructions.
 
         Args:
             dry_run: If True, only show what would be done.
             force: If True, overwrite existing instructions.
-            remove: If True, remove lucidscan instructions.
+            remove: If True, remove lucidshark instructions.
 
         Returns:
             True if successful.
@@ -450,41 +450,41 @@ class InitCommand(Command):
                 print(f"  Error reading {claude_md_path}: {e}")
                 return False
 
-        has_lucidscan_section = LUCIDSCAN_CLAUDE_MD_MARKER in existing_content
+        has_lucidshark_section = LUCIDSHARK_CLAUDE_MD_MARKER in existing_content
 
         if remove:
-            if has_lucidscan_section:
+            if has_lucidshark_section:
                 if dry_run:
-                    print(f"  Would remove lucidscan instructions from {claude_md_path}")
+                    print(f"  Would remove lucidshark instructions from {claude_md_path}")
                 else:
-                    # Remove the lucidscan section
-                    new_content = self._remove_lucidscan_section(existing_content)
+                    # Remove the lucidshark section
+                    new_content = self._remove_lucidshark_section(existing_content)
                     try:
                         claude_md_path.write_text(new_content)
-                        print(f"  Removed lucidscan instructions from {claude_md_path}")
+                        print(f"  Removed lucidshark instructions from {claude_md_path}")
                     except Exception as e:
                         print(f"  Error writing {claude_md_path}: {e}")
                         return False
             else:
-                print(f"  Lucidscan instructions not found in {claude_md_path}")
+                print(f"  Lucidshark instructions not found in {claude_md_path}")
             return True
 
-        if has_lucidscan_section and not force:
-            print(f"  Lucidscan instructions already in {claude_md_path}")
+        if has_lucidshark_section and not force:
+            print(f"  Lucidshark instructions already in {claude_md_path}")
             print("  Use --force to overwrite.")
             return True
 
         # Build new content
-        if has_lucidscan_section:
+        if has_lucidshark_section:
             # Replace existing section
-            new_content = self._remove_lucidscan_section(existing_content)
-            new_content = new_content.rstrip() + LUCIDSCAN_CLAUDE_MD_INSTRUCTIONS
+            new_content = self._remove_lucidshark_section(existing_content)
+            new_content = new_content.rstrip() + LUCIDSHARK_CLAUDE_MD_INSTRUCTIONS
         else:
             # Append to existing content
-            new_content = existing_content.rstrip() + LUCIDSCAN_CLAUDE_MD_INSTRUCTIONS
+            new_content = existing_content.rstrip() + LUCIDSHARK_CLAUDE_MD_INSTRUCTIONS
 
         if dry_run:
-            print(f"  Would add lucidscan instructions to {claude_md_path}")
+            print(f"  Would add lucidshark instructions to {claude_md_path}")
             return True
 
         # Ensure directory exists
@@ -492,35 +492,35 @@ class InitCommand(Command):
 
         try:
             claude_md_path.write_text(new_content)
-            print(f"  Added lucidscan instructions to {claude_md_path}")
+            print(f"  Added lucidshark instructions to {claude_md_path}")
             return True
         except Exception as e:
             print(f"  Error writing {claude_md_path}: {e}")
             return False
 
-    def _remove_lucidscan_section(self, content: str) -> str:
-        """Remove the lucidscan section from CLAUDE.md content.
+    def _remove_lucidshark_section(self, content: str) -> str:
+        """Remove the lucidshark section from CLAUDE.md content.
 
         Args:
             content: The current CLAUDE.md content.
 
         Returns:
-            Content with lucidscan section removed.
+            Content with lucidshark section removed.
         """
         lines = content.split("\n")
         new_lines = []
-        in_lucidscan_section = False
+        in_lucidshark_section = False
 
         for line in lines:
-            if line.strip() == LUCIDSCAN_CLAUDE_MD_MARKER.strip():
-                in_lucidscan_section = True
+            if line.strip() == LUCIDSHARK_CLAUDE_MD_MARKER.strip():
+                in_lucidshark_section = True
                 continue
-            if in_lucidscan_section:
+            if in_lucidshark_section:
                 # Check if we've hit another section (line starting with ##)
-                if line.startswith("## ") and LUCIDSCAN_CLAUDE_MD_MARKER.strip() not in line:
-                    in_lucidscan_section = False
+                if line.startswith("## ") and LUCIDSHARK_CLAUDE_MD_MARKER.strip() not in line:
+                    in_lucidshark_section = False
                     new_lines.append(line)
-                # Skip lines in the lucidscan section
+                # Skip lines in the lucidshark section
                 continue
             new_lines.append(line)
 
@@ -537,13 +537,13 @@ class InitCommand(Command):
         Args:
             dry_run: If True, only show what would be done.
             force: If True, overwrite existing rules.
-            remove: If True, remove lucidscan rules.
+            remove: If True, remove lucidshark rules.
 
         Returns:
             True if successful.
         """
         rules_dir = Path.cwd() / ".cursor" / "rules"
-        rules_file = rules_dir / "lucidscan.mdc"
+        rules_file = rules_dir / "lucidshark.mdc"
 
         print("Configuring Cursor rules...")
 
@@ -555,11 +555,11 @@ class InitCommand(Command):
                     rules_file.unlink()
                     print(f"  Removed {rules_file}")
             else:
-                print(f"  LucidScan rules not found at {rules_file}")
+                print(f"  LucidShark rules not found at {rules_file}")
             return True
 
         if rules_file.exists() and not force:
-            print(f"  LucidScan rules already exist at {rules_file}")
+            print(f"  LucidShark rules already exist at {rules_file}")
             print("  Use --force to overwrite.")
             return True
 
@@ -569,7 +569,7 @@ class InitCommand(Command):
 
         rules_dir.mkdir(parents=True, exist_ok=True)
         try:
-            rules_file.write_text(LUCIDSCAN_CURSOR_RULES.lstrip())
+            rules_file.write_text(LUCIDSHARK_CURSOR_RULES.lstrip())
             print(f"  Created {rules_file}")
             return True
         except Exception as e:
@@ -652,5 +652,5 @@ class InitCommand(Command):
         print("    - check_file: Check a specific file")
         print("    - get_fix_instructions: Get detailed fix guidance")
         print("    - apply_fix: Auto-fix linting issues")
-        print("    - get_status: Show LucidScan configuration")
-        print("    - autoconfigure: Get instructions for generating lucidscan.yml")
+        print("    - get_status: Show LucidShark configuration")
+        print("    - autoconfigure: Get instructions for generating lucidshark.yml")

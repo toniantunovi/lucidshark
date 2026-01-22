@@ -12,8 +12,8 @@ import tempfile
 from pathlib import Path
 
 
-from lucidscan.core.models import ScanContext, Severity, ToolDomain
-from lucidscan.plugins.type_checkers.pyright import PyrightChecker
+from lucidshark.core.models import ScanContext, Severity, ToolDomain
+from lucidshark.plugins.type_checkers.pyright import PyrightChecker
 from tests.integration.conftest import pyright_available
 
 

@@ -1,3 +1,3 @@
-"""Core domain models and infrastructure for lucidscan."""
+"""Core domain models and infrastructure for lucidshark."""
 
 

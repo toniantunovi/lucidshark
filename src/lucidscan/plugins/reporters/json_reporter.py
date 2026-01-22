@@ -1,4 +1,4 @@
-"""JSON reporter plugin for lucidscan."""
+"""JSON reporter plugin for lucidshark."""
 
 from __future__ import annotations
 
@@ -6,8 +6,8 @@ import json
 from dataclasses import asdict
 from typing import Any, Dict, IO
 
-from lucidscan.core.models import ScanResult, UnifiedIssue
-from lucidscan.plugins.reporters.base import ReporterPlugin
+from lucidshark.core.models import ScanResult, UnifiedIssue
+from lucidshark.plugins.reporters.base import ReporterPlugin
 
 
 class JSONReporter(ReporterPlugin):

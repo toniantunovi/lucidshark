@@ -1,7 +1,7 @@
 """Centralized tool version management.
 
-Reads tool versions from pyproject.toml [tool.lucidscan.tools] section.
-This is the single source of truth for all lucidscan-managed tool versions.
+Reads tool versions from pyproject.toml [tool.lucidshark.tools] section.
+This is the single source of truth for all lucidshark-managed tool versions.
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ _FALLBACK_VERSIONS: Dict[str, str] = {
 
 @lru_cache(maxsize=1)
 def _load_pyproject_versions() -> Dict[str, str]:
-    """Load tool versions from lucidscan's pyproject.toml.
+    """Load tool versions from lucidshark's pyproject.toml.
 
     Returns:
         Dictionary mapping tool names to versions.
@@ -52,7 +52,7 @@ def _load_pyproject_versions() -> Dict[str, str]:
         return _FALLBACK_VERSIONS.copy()
 
     # Find pyproject.toml relative to this module
-    # Structure: src/lucidscan/bootstrap/versions.py -> ../../../pyproject.toml
+    # Structure: src/lucidshark/bootstrap/versions.py -> ../../../pyproject.toml
     pyproject_path = Path(__file__).parent.parent.parent.parent / "pyproject.toml"
 
     if not pyproject_path.exists():
@@ -65,12 +65,12 @@ def _load_pyproject_versions() -> Dict[str, str]:
 
         versions = {}
 
-        # Read from [tool.lucidscan.tools] section (new unified section)
-        tools_section = data.get("tool", {}).get("lucidscan", {}).get("tools", {})
+        # Read from [tool.lucidshark.tools] section (new unified section)
+        tools_section = data.get("tool", {}).get("lucidshark", {}).get("tools", {})
         versions.update(tools_section)
 
-        # Also read from legacy [tool.lucidscan.scanners] section for backwards compat
-        scanners_section = data.get("tool", {}).get("lucidscan", {}).get("scanners", {})
+        # Also read from legacy [tool.lucidshark.scanners] section for backwards compat
+        scanners_section = data.get("tool", {}).get("lucidshark", {}).get("scanners", {})
         for tool, version in scanners_section.items():
             if tool not in versions:
                 versions[tool] = version

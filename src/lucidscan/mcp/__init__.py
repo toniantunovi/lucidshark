@@ -1,20 +1,20 @@
-"""MCP (Model Context Protocol) integration for LucidScan.
+"""MCP (Model Context Protocol) integration for LucidShark.
 
 This package provides MCP server functionality for AI agent integration,
-enabling tools like Claude Code and Cursor to invoke LucidScan checks.
+enabling tools like Claude Code and Cursor to invoke LucidShark checks.
 """
 
 from __future__ import annotations
 
-from lucidscan.mcp.server import LucidScanMCPServer
-from lucidscan.mcp.formatter import InstructionFormatter, FixInstruction
-from lucidscan.mcp.tools import MCPToolExecutor
-from lucidscan.mcp.watcher import LucidScanFileWatcher
+from lucidshark.mcp.server import LucidSharkMCPServer
+from lucidshark.mcp.formatter import InstructionFormatter, FixInstruction
+from lucidshark.mcp.tools import MCPToolExecutor
+from lucidshark.mcp.watcher import LucidSharkFileWatcher
 
 __all__ = [
-    "LucidScanMCPServer",
+    "LucidSharkMCPServer",
     "InstructionFormatter",
     "FixInstruction",
     "MCPToolExecutor",
-    "LucidScanFileWatcher",
+    "LucidSharkFileWatcher",
 ]

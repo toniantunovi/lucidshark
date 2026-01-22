@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, List
 
 if TYPE_CHECKING:
-    from lucidscan.core.models import ScanContext, UnifiedIssue
+    from lucidshark.core.models import ScanContext, UnifiedIssue
 
 
 class EnricherPlugin(ABC):
@@ -37,7 +37,7 @@ class EnricherPlugin(ABC):
 
         This name is used for:
         - Plugin discovery via entry points
-        - Configuration in .lucidscan.yml
+        - Configuration in .lucidshark.yml
         - Logging and error messages
         """
 

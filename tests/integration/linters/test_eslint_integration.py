@@ -11,8 +11,8 @@ import tempfile
 from pathlib import Path
 
 
-from lucidscan.core.models import ScanContext
-from lucidscan.plugins.linters.eslint import ESLintLinter
+from lucidshark.core.models import ScanContext
+from lucidshark.plugins.linters.eslint import ESLintLinter
 from tests.integration.conftest import eslint_available, node_available
 
 

@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 
-import lucidscan.cli as cli
+import lucidshark.cli as cli
 
 
 class TestBuildParser:
@@ -60,10 +60,10 @@ class TestStatusCommand:
 
     def test_status_shows_plugin_info(self, capsys, tmp_path: Path) -> None:
         """Test that status shows scanner plugin information."""
-        home = tmp_path / ".lucidscan"
+        home = tmp_path / ".lucidshark"
         home.mkdir(parents=True)
 
-        with patch("lucidscan.cli.commands.status.get_lucidscan_home", return_value=home):
+        with patch("lucidshark.cli.commands.status.get_lucidshark_home", return_value=home):
             exit_code = cli.main(["status"])
 
             captured = capsys.readouterr()
@@ -72,10 +72,10 @@ class TestStatusCommand:
 
     def test_status_shows_discovered_plugins(self, capsys, tmp_path: Path) -> None:
         """Test that status shows plugins discovered via entry points."""
-        home = tmp_path / ".lucidscan"
+        home = tmp_path / ".lucidshark"
         home.mkdir(parents=True)
 
-        with patch("lucidscan.cli.commands.status.get_lucidscan_home", return_value=home):
+        with patch("lucidshark.cli.commands.status.get_lucidshark_home", return_value=home):
             exit_code = cli.main(["status"])
 
             captured = capsys.readouterr()
@@ -86,10 +86,10 @@ class TestStatusCommand:
 
     def test_status_shows_plugin_not_downloaded(self, capsys, tmp_path: Path) -> None:
         """Test that status shows 'not downloaded' for plugins without binary."""
-        home = tmp_path / ".lucidscan"
+        home = tmp_path / ".lucidshark"
         home.mkdir(parents=True)
 
-        with patch("lucidscan.cli.commands.status.get_lucidscan_home", return_value=home):
+        with patch("lucidshark.cli.commands.status.get_lucidshark_home", return_value=home):
             exit_code = cli.main(["status"])
 
             captured = capsys.readouterr()
@@ -98,10 +98,10 @@ class TestStatusCommand:
 
     def test_status_shows_platform_info(self, capsys, tmp_path: Path) -> None:
         """Test that status shows platform information."""
-        home = tmp_path / ".lucidscan"
+        home = tmp_path / ".lucidshark"
         home.mkdir(parents=True)
 
-        with patch("lucidscan.cli.commands.status.get_lucidscan_home", return_value=home):
+        with patch("lucidshark.cli.commands.status.get_lucidshark_home", return_value=home):
             exit_code = cli.main(["status"])
 
             captured = capsys.readouterr()
@@ -121,9 +121,9 @@ class TestExitCodes:
         assert exit_code == 0
 
     def test_exit_code_0_on_status(self, tmp_path: Path) -> None:
-        home = tmp_path / ".lucidscan"
+        home = tmp_path / ".lucidshark"
         home.mkdir(parents=True)
 
-        with patch("lucidscan.cli.commands.status.get_lucidscan_home", return_value=home):
+        with patch("lucidshark.cli.commands.status.get_lucidshark_home", return_value=home):
             exit_code = cli.main(["status"])
             assert exit_code == 0

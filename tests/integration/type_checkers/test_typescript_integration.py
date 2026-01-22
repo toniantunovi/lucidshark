@@ -12,8 +12,8 @@ import tempfile
 from pathlib import Path
 
 
-from lucidscan.core.models import ScanContext, Severity, ToolDomain
-from lucidscan.plugins.type_checkers.typescript import TypeScriptChecker
+from lucidshark.core.models import ScanContext, Severity, ToolDomain
+from lucidshark.plugins.type_checkers.typescript import TypeScriptChecker
 from tests.integration.conftest import tsc_available, node_available
 
 

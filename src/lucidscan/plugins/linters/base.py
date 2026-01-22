@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional
 
-from lucidscan.core.models import ScanContext, UnifiedIssue, ToolDomain
+from lucidshark.core.models import ScanContext, UnifiedIssue, ToolDomain
 
 
 @dataclass

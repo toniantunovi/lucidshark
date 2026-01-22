@@ -13,15 +13,15 @@ import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from lucidscan.core.logging import get_logger
-from lucidscan.core.models import (
+from lucidshark.core.logging import get_logger
+from lucidshark.core.models import (
     ScanContext,
     Severity,
     ToolDomain,
     UnifiedIssue,
 )
-from lucidscan.core.subprocess_runner import run_with_streaming
-from lucidscan.plugins.linters.base import FixResult, LinterPlugin
+from lucidshark.core.subprocess_runner import run_with_streaming
+from lucidshark.plugins.linters.base import FixResult, LinterPlugin
 
 LOGGER = get_logger(__name__)
 

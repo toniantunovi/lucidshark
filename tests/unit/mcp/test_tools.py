@@ -7,15 +7,15 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lucidscan.config import LucidScanConfig
-from lucidscan.config.models import (
+from lucidshark.config import LucidSharkConfig
+from lucidshark.config.models import (
     DomainPipelineConfig,
     CoveragePipelineConfig,
     PipelineConfig,
     ToolConfig,
 )
-from lucidscan.core.domain_runner import detect_language, get_domains_for_language
-from lucidscan.core.models import (
+from lucidshark.core.domain_runner import detect_language, get_domains_for_language
+from lucidshark.core.models import (
     ScanContext,
     ScanDomain,
     Severity,
@@ -23,7 +23,7 @@ from lucidscan.core.models import (
     UnifiedIssue,
     _DOMAIN_MAP,
 )
-from lucidscan.mcp.tools import MCPToolExecutor
+from lucidshark.mcp.tools import MCPToolExecutor
 
 
 def create_full_pipeline_config() -> PipelineConfig:
@@ -54,25 +54,25 @@ class TestMCPToolExecutor:
         return tmp_path
 
     @pytest.fixture
-    def config(self) -> LucidScanConfig:
+    def config(self) -> LucidSharkConfig:
         """Create a test configuration."""
-        return LucidScanConfig()
+        return LucidSharkConfig()
 
     @pytest.fixture
-    def full_config(self) -> LucidScanConfig:
+    def full_config(self) -> LucidSharkConfig:
         """Create a test configuration with all domains enabled."""
-        return LucidScanConfig(pipeline=create_full_pipeline_config())
+        return LucidSharkConfig(pipeline=create_full_pipeline_config())
 
     @pytest.fixture
     def executor(
-        self, project_root: Path, config: LucidScanConfig
+        self, project_root: Path, config: LucidSharkConfig
     ) -> MCPToolExecutor:
         """Create an executor instance."""
         return MCPToolExecutor(project_root, config)
 
     @pytest.fixture
     def full_executor(
-        self, project_root: Path, full_config: LucidScanConfig
+        self, project_root: Path, full_config: LucidSharkConfig
     ) -> MCPToolExecutor:
         """Create an executor instance with full config."""
         return MCPToolExecutor(project_root, full_config)
@@ -189,13 +189,13 @@ class TestMCPToolExecutorAsync:
         return tmp_path
 
     @pytest.fixture
-    def config(self) -> LucidScanConfig:
+    def config(self) -> LucidSharkConfig:
         """Create a test configuration."""
-        return LucidScanConfig()
+        return LucidSharkConfig()
 
     @pytest.fixture
     def executor(
-        self, project_root: Path, config: LucidScanConfig
+        self, project_root: Path, config: LucidSharkConfig
     ) -> MCPToolExecutor:
         """Create an executor instance."""
         return MCPToolExecutor(project_root, config)
@@ -279,7 +279,7 @@ class TestMCPToolExecutorAsync:
         assert "documentation" in result
         assert "format" in result
         assert result["format"] == "markdown"
-        assert "LucidScan Reference Documentation" in result["documentation"]
+        assert "LucidShark Reference Documentation" in result["documentation"]
         assert "Quick Start" in result["documentation"]
         assert "CLI Commands" in result["documentation"]
         assert "MCP Tools Reference" in result["documentation"]
@@ -416,19 +416,19 @@ class TestMCPToolExecutorRunMethods:
         return tmp_path
 
     @pytest.fixture
-    def config(self) -> LucidScanConfig:
+    def config(self) -> LucidSharkConfig:
         """Create a test configuration."""
-        return LucidScanConfig()
+        return LucidSharkConfig()
 
     @pytest.fixture
     def executor(
-        self, project_root: Path, config: LucidScanConfig
+        self, project_root: Path, config: LucidSharkConfig
     ) -> MCPToolExecutor:
         """Create an executor instance."""
         return MCPToolExecutor(project_root, config)
 
     @pytest.fixture
-    def mock_context(self, project_root: Path, config: LucidScanConfig) -> ScanContext:
+    def mock_context(self, project_root: Path, config: LucidSharkConfig) -> ScanContext:
         """Create a mock scan context."""
         return ScanContext(
             project_root=project_root,
@@ -445,7 +445,7 @@ class TestMCPToolExecutorRunMethods:
         mock_linter = MagicMock()
         mock_linter.lint.return_value = []
 
-        with patch('lucidscan.plugins.linters.discover_linter_plugins', return_value={'mock': lambda **k: mock_linter}):
+        with patch('lucidshark.plugins.linters.discover_linter_plugins', return_value={'mock': lambda **k: mock_linter}):
             result = await executor._run_linting(mock_context)
             assert result == []
 
@@ -459,7 +459,7 @@ class TestMCPToolExecutorRunMethods:
             linter.lint.side_effect = Exception("Linter failed")
             return linter
 
-        with patch('lucidscan.plugins.linters.discover_linter_plugins', return_value={'mock': create_failing_linter}):
+        with patch('lucidshark.plugins.linters.discover_linter_plugins', return_value={'mock': create_failing_linter}):
             result = await executor._run_linting(mock_context)
             assert result == []
 
@@ -471,7 +471,7 @@ class TestMCPToolExecutorRunMethods:
         mock_checker = MagicMock()
         mock_checker.check.return_value = []
 
-        with patch('lucidscan.plugins.type_checkers.discover_type_checker_plugins', return_value={'mock': lambda **k: mock_checker}):
+        with patch('lucidshark.plugins.type_checkers.discover_type_checker_plugins', return_value={'mock': lambda **k: mock_checker}):
             result = await executor._run_type_checking(mock_context)
             assert result == []
 
@@ -485,7 +485,7 @@ class TestMCPToolExecutorRunMethods:
             checker.check.side_effect = Exception("Checker failed")
             return checker
 
-        with patch('lucidscan.plugins.type_checkers.discover_type_checker_plugins', return_value={'mock': create_failing_checker}):
+        with patch('lucidshark.plugins.type_checkers.discover_type_checker_plugins', return_value={'mock': create_failing_checker}):
             result = await executor._run_type_checking(mock_context)
             assert result == []
 
@@ -498,7 +498,7 @@ class TestMCPToolExecutorRunMethods:
         mock_scanner.domains = [ScanDomain.SAST]
         mock_scanner.scan.return_value = []
 
-        with patch('lucidscan.plugins.scanners.discover_scanner_plugins', return_value={'mock': lambda **k: mock_scanner}):
+        with patch('lucidshark.plugins.scanners.discover_scanner_plugins', return_value={'mock': lambda **k: mock_scanner}):
             result = await executor._run_security(mock_context, ScanDomain.SAST)
             assert result == []
 
@@ -511,7 +511,7 @@ class TestMCPToolExecutorRunMethods:
         mock_scanner.domains = [ScanDomain.SCA]  # Not SAST
         mock_scanner.scan.return_value = []
 
-        with patch('lucidscan.plugins.scanners.discover_scanner_plugins', return_value={'mock': lambda **k: mock_scanner}):
+        with patch('lucidshark.plugins.scanners.discover_scanner_plugins', return_value={'mock': lambda **k: mock_scanner}):
             await executor._run_security(mock_context, ScanDomain.SAST)
             mock_scanner.scan.assert_not_called()
 
@@ -524,7 +524,7 @@ class TestMCPToolExecutorRunMethods:
         mock_scanner.domains = [ScanDomain.SCA]
         mock_scanner.scan.return_value = []
 
-        with patch('lucidscan.plugins.scanners.discover_scanner_plugins', return_value={'mock': lambda **k: mock_scanner}):
+        with patch('lucidshark.plugins.scanners.discover_scanner_plugins', return_value={'mock': lambda **k: mock_scanner}):
             result = await executor._run_security(mock_context, ScanDomain.SCA)
             assert result == []
 
@@ -537,7 +537,7 @@ class TestMCPToolExecutorRunMethods:
         mock_scanner.domains = [ScanDomain.IAC]
         mock_scanner.scan.return_value = []
 
-        with patch('lucidscan.plugins.scanners.discover_scanner_plugins', return_value={'mock': lambda **k: mock_scanner}):
+        with patch('lucidshark.plugins.scanners.discover_scanner_plugins', return_value={'mock': lambda **k: mock_scanner}):
             result = await executor._run_security(mock_context, ScanDomain.IAC)
             assert result == []
 
@@ -550,7 +550,7 @@ class TestMCPToolExecutorRunMethods:
         mock_scanner.domains = [ScanDomain.CONTAINER]
         mock_scanner.scan.return_value = []
 
-        with patch('lucidscan.plugins.scanners.discover_scanner_plugins', return_value={'mock': lambda **k: mock_scanner}):
+        with patch('lucidshark.plugins.scanners.discover_scanner_plugins', return_value={'mock': lambda **k: mock_scanner}):
             result = await executor._run_security(mock_context, ScanDomain.CONTAINER)
             assert result == []
 
@@ -562,7 +562,7 @@ class TestMCPToolExecutorRunMethods:
         mock_runner = MagicMock()
         mock_runner.run_tests.return_value = MagicMock(issues=[])
 
-        with patch('lucidscan.plugins.test_runners.discover_test_runner_plugins', return_value={'mock': lambda **k: mock_runner}):
+        with patch('lucidshark.plugins.test_runners.discover_test_runner_plugins', return_value={'mock': lambda **k: mock_runner}):
             result = await executor._run_testing(mock_context)
             assert result == []
 
@@ -576,7 +576,7 @@ class TestMCPToolExecutorRunMethods:
             runner.run_tests.side_effect = Exception("Runner failed")
             return runner
 
-        with patch('lucidscan.plugins.test_runners.discover_test_runner_plugins', return_value={'mock': create_failing_runner}):
+        with patch('lucidshark.plugins.test_runners.discover_test_runner_plugins', return_value={'mock': create_failing_runner}):
             result = await executor._run_testing(mock_context)
             assert result == []
 
@@ -588,7 +588,7 @@ class TestMCPToolExecutorRunMethods:
         mock_plugin = MagicMock()
         mock_plugin.measure_coverage.return_value = MagicMock(issues=[])
 
-        with patch('lucidscan.plugins.coverage.discover_coverage_plugins', return_value={'mock': lambda **k: mock_plugin}):
+        with patch('lucidshark.plugins.coverage.discover_coverage_plugins', return_value={'mock': lambda **k: mock_plugin}):
             result = await executor._run_coverage(mock_context)
             assert result == []
 
@@ -602,7 +602,7 @@ class TestMCPToolExecutorRunMethods:
             plugin.measure_coverage.side_effect = Exception("Coverage failed")
             return plugin
 
-        with patch('lucidscan.plugins.coverage.discover_coverage_plugins', return_value={'mock': create_failing_plugin}):
+        with patch('lucidshark.plugins.coverage.discover_coverage_plugins', return_value={'mock': create_failing_plugin}):
             result = await executor._run_coverage(mock_context)
             assert result == []
 

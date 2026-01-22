@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import IO
 
-from lucidscan.core.models import ScanResult
+from lucidshark.core.models import ScanResult
 
 
 class ReporterPlugin(ABC):

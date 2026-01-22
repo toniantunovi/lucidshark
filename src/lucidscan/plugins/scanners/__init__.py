@@ -1,17 +1,17 @@
 """Scanner plugins for integrating external security tools.
 
-Plugins are discovered via Python entry points (lucidscan.scanners group).
+Plugins are discovered via Python entry points (lucidshark.scanners group).
 """
 
 from pathlib import Path
 from typing import Dict, Optional, Type
 
-from lucidscan.plugins.scanners.base import ScannerPlugin
-from lucidscan.plugins.scanners.trivy import TrivyScanner
-from lucidscan.plugins.scanners.opengrep import OpenGrepScanner
-from lucidscan.plugins.scanners.checkov import CheckovScanner
-from lucidscan.plugins import SCANNER_ENTRY_POINT_GROUP
-from lucidscan.plugins.discovery import discover_plugins, get_plugin, list_available_plugins as _list_plugins
+from lucidshark.plugins.scanners.base import ScannerPlugin
+from lucidshark.plugins.scanners.trivy import TrivyScanner
+from lucidshark.plugins.scanners.opengrep import OpenGrepScanner
+from lucidshark.plugins.scanners.checkov import CheckovScanner
+from lucidshark.plugins import SCANNER_ENTRY_POINT_GROUP
+from lucidshark.plugins.discovery import discover_plugins, get_plugin, list_available_plugins as _list_plugins
 
 
 def discover_scanner_plugins() -> Dict[str, Type[ScannerPlugin]]:
@@ -28,7 +28,7 @@ def get_scanner_plugin(
     Args:
         name: Scanner plugin name (e.g., 'trivy').
         project_root: Optional project root for tool installation.
-                     If provided, tools are installed to {project_root}/.lucidscan/
+                     If provided, tools are installed to {project_root}/.lucidshark/
 
     Returns:
         Instantiated scanner plugin or None if not found.

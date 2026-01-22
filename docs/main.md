@@ -1,4 +1,4 @@
-# LucidScan
+# LucidShark
 
 ## 1. Problem Statement
 
@@ -32,54 +32,54 @@ This trust layer doesn't replace existing tools — it orchestrates them and bri
 
 ### 1.2 Vision: Guardrails for AI Coding
 
-LucidScan is the **trust layer for AI-assisted development**. It provides:
+LucidShark is the **trust layer for AI-assisted development**. It provides:
 
 ```
-lucidscan init --all
+lucidshark init --all
 → Configures AI tools (Claude Code, Cursor)
 
-"Autoconfigure LucidScan" (via AI)
+"Autoconfigure LucidShark" (via AI)
 → AI analyzes your codebase
 → Asks you targeted questions
-→ Generates lucidscan.yml configuration
-AI writes code → LucidScan checks → AI fixes → repeat
+→ Generates lucidshark.yml configuration
+AI writes code → LucidShark checks → AI fixes → repeat
 ```
 
-The core insight: **deterministic tools catch mistakes reliably, but the feedback loop to AI agents is broken**. LucidScan bridges this gap by letting your AI assistant configure and run quality checks.
+The core insight: **deterministic tools catch mistakes reliably, but the feedback loop to AI agents is broken**. LucidShark bridges this gap by letting your AI assistant configure and run quality checks.
 
-| Traditional Workflow | LucidScan Workflow |
+| Traditional Workflow | LucidShark Workflow |
 |---------------------|-------------------|
 | AI writes code | AI writes code |
-| Human runs linters manually | LucidScan runs automatically |
-| Human reads error output | LucidScan formats instructions |
-| Human tells AI what to fix | LucidScan tells AI what to fix |
-| AI fixes, human re-runs | AI fixes, LucidScan re-checks |
+| Human runs linters manually | LucidShark runs automatically |
+| Human reads error output | LucidShark formats instructions |
+| Human tells AI what to fix | LucidShark tells AI what to fix |
+| AI fixes, human re-runs | AI fixes, LucidShark re-checks |
 | Repeat 5-10 times | Automated loop |
 
 ---
 
 ## 2. Goals
 
-LucidScan is a **unified code quality pipeline** with native AI agent integration. It achieves:
+LucidShark is a **unified code quality pipeline** with native AI agent integration. It achieves:
 
 ### 2.1 Zero-Config Initialization
 
 ```bash
 # 1. Set up AI tools
-lucidscan init --all
+lucidshark init --all
 
-# 2. Ask your AI: "Autoconfigure LucidScan for this project"
+# 2. Ask your AI: "Autoconfigure LucidShark for this project"
 ```
 
 The AI-assisted setup:
 - Detects languages, frameworks, and existing tools in your codebase
 - Asks targeted questions about coverage thresholds and strictness
-- Generates a complete `lucidscan.yml` configuration
+- Generates a complete `lucidshark.yml` configuration
 
 Alternative CLI approach:
 ```bash
-lucidscan autoconfigure              # Interactive
-lucidscan autoconfigure --non-interactive  # Use defaults
+lucidshark autoconfigure              # Interactive
+lucidshark autoconfigure --non-interactive  # Use defaults
 ```
 
 ### 2.2 Unified Pipeline
@@ -98,19 +98,19 @@ All results normalized to a common schema. One exit code for automation.
 
 ### 2.3 AI Agent Integration
 
-LucidScan bridges deterministic tools and AI agents via MCP (Model Context Protocol):
+LucidShark bridges deterministic tools and AI agents via MCP (Model Context Protocol):
 
 ```bash
 # Configure AI tools (creates MCP config and instructions)
-lucidscan init --claude-code  # Configure Claude Code
-lucidscan init --cursor       # Configure Cursor
-lucidscan init --all          # Configure all AI tools
+lucidshark init --claude-code  # Configure Claude Code
+lucidshark init --cursor       # Configure Cursor
+lucidshark init --all          # Configure all AI tools
 
 # Then restart your AI tool for changes to take effect
 ```
 
 When configured:
-- LucidScan runs as an MCP server that AI tools connect to
+- LucidShark runs as an MCP server that AI tools connect to
 - Issues are formatted as structured instructions for the AI
 - The AI receives: "Fix issue X in file Y by doing Z"
 - Automatic feedback loop until code passes
@@ -119,11 +119,11 @@ When configured:
 
 ## 3. Non-Goals
 
-LucidScan focuses on orchestration and integration, not reimplementing tools:
+LucidShark focuses on orchestration and integration, not reimplementing tools:
 
 ### 3.1 Not a Scanner/Linter
 
-LucidScan does **not** implement:
+LucidShark does **not** implement:
 - Custom linting rules (uses ESLint, Ruff, etc.)
 - Custom security scanning (uses Trivy, OpenGrep, etc.)
 - Custom test runners (uses pytest, Jest, etc.)
@@ -132,7 +132,7 @@ It orchestrates existing best-in-class tools.
 
 ### 3.2 Not a Dashboard
 
-LucidScan is **CLI-first**:
+LucidShark is **CLI-first**:
 - No web dashboard
 - No hosted service
 - No accounts or authentication
@@ -146,7 +146,7 @@ AI does **not** make decisions:
 - AI cannot change severity levels
 - AI cannot skip checks
 
-LucidScan uses AI to **explain and fix** issues, not to decide what matters.
+LucidShark uses AI to **explain and fix** issues, not to decide what matters.
 
 ---
 
@@ -186,7 +186,7 @@ Teams that:
 
 ### 5.1 The `autoconfigure` Command
 
-The `lucidscan autoconfigure` command is the primary entry point for project setup. It MUST:
+The `lucidshark autoconfigure` command is the primary entry point for project setup. It MUST:
 
 #### 5.1.1 Codebase Detection
 
@@ -220,10 +220,10 @@ Questions MUST:
 
 #### 5.1.3 Configuration Generation
 
-Generate `lucidscan.yml` with all settings:
+Generate `lucidshark.yml` with all settings:
 
 ```yaml
-# Generated by lucidscan autoconfigure
+# Generated by lucidshark autoconfigure
 version: 1
 
 project:
@@ -279,7 +279,7 @@ ignore:
 ### 5.2 The `scan` Command
 
 ```bash
-lucidscan scan [--fix] [--format FORMAT]
+lucidshark scan [--fix] [--format FORMAT]
 ```
 
 #### 5.2.1 Pipeline Execution
@@ -296,7 +296,7 @@ Each stage produces normalized results. Stages can run in parallel where indepen
 
 #### 5.2.2 Partial Scanning (Default Behavior)
 
-LucidScan scans only changed files (uncommitted changes) by default. Use `--all-files` (CLI) or `all_files=true` (MCP) for full project scans.
+LucidShark scans only changed files (uncommitted changes) by default. Use `--all-files` (CLI) or `all_files=true` (MCP) for full project scans.
 
 | Domain | Partial Scan Support | Behavior |
 |--------|---------------------|----------|
@@ -366,7 +366,7 @@ All results normalized to common schema:
 #### 5.2.5 Auto-Fix Mode
 
 ```bash
-lucidscan scan --fix
+lucidshark scan --fix
 ```
 
 When `--fix` is enabled:
@@ -377,7 +377,7 @@ When `--fix` is enabled:
 ### 5.3 The `serve` Command (AI Integration)
 
 ```bash
-lucidscan serve [--mcp] [--port PORT]
+lucidshark serve [--mcp] [--port PORT]
 ```
 
 #### 5.3.1 MCP Server Mode
@@ -385,7 +385,7 @@ lucidscan serve [--mcp] [--port PORT]
 Run as an MCP (Model Context Protocol) server that AI tools can connect to:
 
 ```bash
-lucidscan serve --mcp
+lucidshark serve --mcp
 ```
 
 The MCP server provides:
@@ -397,7 +397,7 @@ The MCP server provides:
 #### 5.3.2 File Watcher Mode
 
 ```bash
-lucidscan serve --watch
+lucidshark serve --watch
 ```
 
 Watch for file changes and run relevant checks:
@@ -439,7 +439,7 @@ When serving AI agents, issues are formatted as actionable instructions:
 
 #### 5.4.1 Configuration File
 
-`lucidscan.yml` in project root:
+`lucidshark.yml` in project root:
 
 ```yaml
 version: 1
@@ -497,11 +497,11 @@ output:
   format: json | table | sarif | summary
 ```
 
-> **Note**: AI tool integration is configured via `lucidscan init --claude-code` or `lucidscan init --cursor`, not through lucidscan.yml.
+> **Note**: AI tool integration is configured via `lucidshark init --claude-code` or `lucidshark init --cursor`, not through lucidshark.yml.
 
 #### 5.4.2 Ignore File
 
-`.lucidscanignore` supports gitignore syntax:
+`.lucidsharkignore` supports gitignore syntax:
 
 ```
 # Dependencies
@@ -533,7 +533,7 @@ Support tool-native inline ignores:
 Tools are installed automatically when needed:
 
 ```bash
-$ lucidscan scan
+$ lucidshark scan
 Installing ruff 0.8.0... done
 Installing trivy 0.58.0... done
 Running pipeline...
@@ -546,11 +546,11 @@ Installation uses:
 
 #### 5.5.2 Version Pinning
 
-LucidScan pins tool versions internally for reproducibility. Versions are defined in `pyproject.toml` under `[tool.lucidscan.tools]`:
+LucidShark pins tool versions internally for reproducibility. Versions are defined in `pyproject.toml` under `[tool.lucidshark.tools]`:
 
 ```toml
 # pyproject.toml
-[tool.lucidscan.tools]
+[tool.lucidshark.tools]
 trivy = "0.68.2"
 opengrep = "1.15.0"
 checkov = "3.2.497"
@@ -558,14 +558,14 @@ ruff = "0.14.11"
 biome = "2.3.11"
 ```
 
-When installed as a package, LucidScan uses hardcoded fallback versions.
+When installed as a package, LucidShark uses hardcoded fallback versions.
 
 #### 5.5.3 Binary Cache
 
-Binaries cached at `~/.lucidscan/`:
+Binaries cached at `~/.lucidshark/`:
 
 ```
-~/.lucidscan/
+~/.lucidshark/
 ├── bin/
 │   ├── trivy/0.58.0/trivy
 │   ├── opengrep/1.12.0/opengrep
@@ -583,7 +583,7 @@ Binaries cached at `~/.lucidscan/`:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        LucidScan CLI                            │
+│                        LucidShark CLI                            │
 ├─────────────────────────────────────────────────────────────────┤
 │  Commands                                                       │
 │  ├── init      → Codebase detection, config generation          │
@@ -680,7 +680,7 @@ Detection strategy:
 The MCP server exposes tools for AI agents. By default, scans only changed files (uncommitted changes):
 
 ```python
-class LucidScanMCPServer:
+class LucidSharkMCPServer:
     """MCP server for AI agent integration."""
 
     @tool
@@ -778,21 +778,21 @@ class UnifiedIssue:
 
 ### 7.1 Integration Modes
 
-LucidScan supports multiple integration modes with AI coding tools:
+LucidShark supports multiple integration modes with AI coding tools:
 
 #### 7.1.1 MCP Server Mode (Recommended)
 
-LucidScan runs as an MCP server that AI tools connect to:
+LucidShark runs as an MCP server that AI tools connect to:
 
 ```bash
-lucidscan serve --mcp
+lucidshark serve --mcp
 ```
 
 **For Claude Code** (`~/.claude/mcp_servers.json`):
 ```json
 {
-  "lucidscan": {
-    "command": "lucidscan",
+  "lucidshark": {
+    "command": "lucidshark",
     "args": ["serve", "--mcp"],
     "cwd": "/path/to/project"
   }
@@ -803,8 +803,8 @@ lucidscan serve --mcp
 ```json
 {
   "mcpServers": {
-    "lucidscan": {
-      "command": "lucidscan",
+    "lucidshark": {
+      "command": "lucidshark",
       "args": ["serve", "--mcp"]
     }
   }
@@ -813,7 +813,7 @@ lucidscan serve --mcp
 
 #### 7.1.2 Hooks Mode
 
-LucidScan can run via editor hooks:
+LucidShark can run via editor hooks:
 
 **Claude Code hooks** (`~/.claude/settings.json`):
 ```json
@@ -822,7 +822,7 @@ LucidScan can run via editor hooks:
     "post_tool_call": [
       {
         "match": { "tool": "write", "edit": "*" },
-        "command": "lucidscan scan --files $CHANGED_FILES --format ai"
+        "command": "lucidshark scan --files $CHANGED_FILES --format ai"
       }
     ]
   }
@@ -834,7 +834,7 @@ LucidScan can run via editor hooks:
 For editors without MCP/hooks support:
 
 ```bash
-lucidscan serve --watch --output /tmp/lucidscan-issues.json
+lucidshark serve --watch --output /tmp/lucidshark-issues.json
 ```
 
 Editor plugins can read the output file and display issues.
@@ -896,17 +896,17 @@ The AI integration creates an automated feedback loop with partial scanning for 
 
 ```
 1. AI writes/modifies code
-2. LucidScan runs partial scan on changed files (via MCP files parameter)
+2. LucidShark runs partial scan on changed files (via MCP files parameter)
 3. Issues are formatted as instructions
 4. AI receives instructions and applies fixes
-5. LucidScan re-checks (partial scan on fixed files)
+5. LucidShark re-checks (partial scan on fixed files)
 6. Repeat until clean
 7. Before commit: run full scan for comprehensive check
 ```
 
-The feedback loop is driven by instructions provided to the AI tool via `lucidscan init`, which creates:
+The feedback loop is driven by instructions provided to the AI tool via `lucidshark init`, which creates:
 - `.claude/CLAUDE.md` for Claude Code with scan workflow instructions
-- `.cursor/rules/lucidscan.mdc` for Cursor with auto-scan rules
+- `.cursor/rules/lucidshark.mdc` for Cursor with auto-scan rules
 
 These instruct the AI to:
 - Run **default scans** (changed files only) after code changes for fast feedback
@@ -914,7 +914,7 @@ These instruct the AI to:
 
 ### 7.4 Partial Scanning for AI Agents (Default Behavior)
 
-LucidScan scans only changed files by default, enabling fast feedback loops:
+LucidShark scans only changed files by default, enabling fast feedback loops:
 
 | Scenario | Scan Type | Example |
 |----------|-----------|---------|
@@ -945,10 +945,10 @@ LucidScan scans only changed files by default, enabling fast feedback loops:
 ### 8.1 Global Options
 
 ```
-lucidscan [OPTIONS] COMMAND [ARGS]
+lucidshark [OPTIONS] COMMAND [ARGS]
 
 Global Options:
-  --config, -c PATH    Configuration file (default: lucidscan.yml)
+  --config, -c PATH    Configuration file (default: lucidshark.yml)
   --verbose, -v        Verbose output
   --quiet, -q          Minimal output
   --debug              Debug mode with full traces
@@ -961,9 +961,9 @@ Global Options:
 #### 8.2.1 `init`
 
 ```
-lucidscan init [OPTIONS]
+lucidshark init [OPTIONS]
 
-Configure AI tools (Claude Code, Cursor) to use LucidScan.
+Configure AI tools (Claude Code, Cursor) to use LucidShark.
 
 Options:
   --claude-code        Configure Claude Code MCP settings
@@ -971,34 +971,34 @@ Options:
   --all                Configure all supported AI tools
   --dry-run            Show changes without applying
   --force              Overwrite existing configuration
-  --remove             Remove LucidScan from tool configuration
+  --remove             Remove LucidShark from tool configuration
 
 Examples:
-  lucidscan init --claude-code      # Configure Claude Code
-  lucidscan init --cursor           # Configure Cursor
-  lucidscan init --all              # Configure all AI tools
+  lucidshark init --claude-code      # Configure Claude Code
+  lucidshark init --cursor           # Configure Cursor
+  lucidshark init --all              # Configure all AI tools
 ```
 
 #### 8.2.2 `autoconfigure`
 
 ```
-lucidscan autoconfigure [OPTIONS]
+lucidshark autoconfigure [OPTIONS]
 
-Auto-configure LucidScan for the current project (detect languages, generate lucidscan.yml).
+Auto-configure LucidShark for the current project (detect languages, generate lucidshark.yml).
 
 Options:
   --non-interactive    Use defaults without prompting
   --force              Overwrite existing configuration
 
 Examples:
-  lucidscan autoconfigure                    # Interactive setup
-  lucidscan autoconfigure --non-interactive  # Use all defaults
+  lucidshark autoconfigure                    # Interactive setup
+  lucidshark autoconfigure --non-interactive  # Use all defaults
 ```
 
 #### 8.2.3 `scan`
 
 ```
-lucidscan scan [OPTIONS] [PATHS...]
+lucidshark scan [OPTIONS] [PATHS...]
 
 Run the quality pipeline. By default, scans only changed files (uncommitted changes).
 
@@ -1012,20 +1012,20 @@ Options:
   --fail-on LEVEL      Override fail threshold
 
 Examples:
-  lucidscan scan --linting          # Lint changed files (default)
-  lucidscan scan --all --all-files  # Full project scan
-  lucidscan scan --files src/a.py   # Scan specific files
-  lucidscan scan --fix              # Auto-fix changed files
-  lucidscan scan --stream           # See live output
-  lucidscan scan --format json      # JSON output
+  lucidshark scan --linting          # Lint changed files (default)
+  lucidshark scan --all --all-files  # Full project scan
+  lucidshark scan --files src/a.py   # Scan specific files
+  lucidshark scan --fix              # Auto-fix changed files
+  lucidshark scan --stream           # See live output
+  lucidshark scan --format json      # JSON output
 ```
 
 #### 8.2.4 `serve`
 
 ```
-lucidscan serve [OPTIONS]
+lucidshark serve [OPTIONS]
 
-Run LucidScan as a server for AI integration.
+Run LucidShark as a server for AI integration.
 
 Options:
   --mcp                Run as MCP server
@@ -1033,14 +1033,14 @@ Options:
   --port PORT          HTTP port for status endpoint (default: 7432)
 
 Examples:
-  lucidscan serve --mcp             # MCP server for Claude Code/Cursor
-  lucidscan serve --watch           # File watcher mode
+  lucidshark serve --mcp             # MCP server for Claude Code/Cursor
+  lucidshark serve --watch           # File watcher mode
 ```
 
 #### 8.2.5 `status`
 
 ```
-lucidscan status [OPTIONS]
+lucidshark status [OPTIONS]
 
 Show current configuration and tool status.
 
@@ -1049,8 +1049,8 @@ Options:
   --config             Show effective configuration
 
 Examples:
-  lucidscan status                  # Overview
-  lucidscan status --tools          # Tool versions
+  lucidshark status                  # Overview
+  lucidshark status --tools          # Tool versions
 ```
 
 ### 8.3 Exit Codes
@@ -1127,7 +1127,7 @@ All linting tools support partial scanning via the `files` parameter.
 **Goal**: Core pipeline with `init` and `scan` commands
 
 - [x] Codebase detector (languages, frameworks, existing tools)
-- [x] Configuration generator (`lucidscan init`)
+- [x] Configuration generator (`lucidshark init`)
 - [x] Pipeline orchestrator
 - [x] Initial tool plugins:
   - [x] Ruff (Python linting)
@@ -1138,7 +1138,7 @@ All linting tools support partial scanning via the `files` parameter.
   - [x] pytest (Python testing)
 - [x] Reporters: Table, JSON, SARIF
 
-**Milestone**: `lucidscan init && lucidscan scan` works end-to-end
+**Milestone**: `lucidshark init && lucidshark scan` works end-to-end
 
 ### Phase 2: Expanded Coverage ✅ COMPLETE
 
@@ -1163,14 +1163,14 @@ All linting tools support partial scanning via the `files` parameter.
 
 **Goal**: MCP server and AI feedback loop
 
-- [x] MCP server implementation (`lucidscan serve --mcp`)
+- [x] MCP server implementation (`lucidshark serve --mcp`)
 - [x] AI instruction formatter
 - [x] File watcher mode
 - [x] Claude Code integration guide
 - [x] Cursor integration guide
 - [x] Feedback loop configuration
 
-**Milestone**: AI agents can invoke LucidScan and receive fix instructions
+**Milestone**: AI agents can invoke LucidShark and receive fix instructions
 
 ### Phase 4: Polish
 
@@ -1194,20 +1194,20 @@ All linting tools support partial scanning via the `files` parameter.
 |------|------------|
 | **Domain** | Category of checks: linting, type checking, security, testing, coverage |
 | **Tool** | Underlying program (Ruff, Trivy, pytest) |
-| **Plugin** | LucidScan adapter for a tool |
+| **Plugin** | LucidShark adapter for a tool |
 | **Pipeline** | Sequence of domains to execute |
 | **Issue** | Single finding from any tool |
 | **MCP** | Model Context Protocol, standard for AI tool integration |
 
 ### B. Configuration Schema
 
-Full JSON Schema for `lucidscan.yml` available at:
-`https://lucidscan.dev/schema/v1.json`
+Full JSON Schema for `lucidshark.yml` available at:
+`https://lucidshark.dev/schema/v1.json`
 
 ### C. Environment Variables
 
 | Variable | Purpose |
 |----------|---------|
-| `LUCIDSCAN_CONFIG` | Path to config file |
-| `LUCIDSCAN_CACHE_DIR` | Cache directory (default: `~/.lucidscan`) |
-| `LUCIDSCAN_NO_COLOR` | Disable colored output |
+| `LUCIDSHARK_CONFIG` | Path to config file |
+| `LUCIDSHARK_CACHE_DIR` | Cache directory (default: `~/.lucidshark`) |
+| `LUCIDSHARK_NO_COLOR` | Disable colored output |

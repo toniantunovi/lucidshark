@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from lucidscan.core.models import ScanContext, ScanDomain, ScanResult, Severity, UnifiedIssue
+from lucidshark.core.models import ScanContext, ScanDomain, ScanResult, Severity, UnifiedIssue
 
 
 def test_unified_issue_minimal_construction() -> None:

@@ -7,50 +7,50 @@ from pathlib import Path
 from unittest.mock import patch
 
 
-from lucidscan.bootstrap.paths import (
-    get_lucidscan_home,
-    LucidscanPaths,
+from lucidshark.bootstrap.paths import (
+    get_lucidshark_home,
+    LucidsharkPaths,
     DEFAULT_HOME_DIR_NAME,
 )
 
 
-class TestGetLucidscanHome:
-    """Tests for get_lucidscan_home function."""
+class TestGetLucidsharkHome:
+    """Tests for get_lucidshark_home function."""
 
     def test_returns_default_in_cwd(self) -> None:
-        """Default is cwd/.lucidscan when no project_root is provided."""
+        """Default is cwd/.lucidshark when no project_root is provided."""
         with patch.dict(os.environ, {}, clear=False):
-            # Remove LUCIDSCAN_HOME if it exists
-            os.environ.pop("LUCIDSCAN_HOME", None)
-            home = get_lucidscan_home()
+            # Remove LUCIDSHARK_HOME if it exists
+            os.environ.pop("LUCIDSHARK_HOME", None)
+            home = get_lucidshark_home()
             assert home == Path.cwd() / DEFAULT_HOME_DIR_NAME
 
-    def test_returns_project_root_lucidscan(self, tmp_path: Path) -> None:
-        """When project_root is provided, returns {project_root}/.lucidscan."""
+    def test_returns_project_root_lucidshark(self, tmp_path: Path) -> None:
+        """When project_root is provided, returns {project_root}/.lucidshark."""
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("LUCIDSCAN_HOME", None)
-            home = get_lucidscan_home(project_root=tmp_path)
+            os.environ.pop("LUCIDSHARK_HOME", None)
+            home = get_lucidshark_home(project_root=tmp_path)
             assert home == tmp_path / DEFAULT_HOME_DIR_NAME
 
-    def test_respects_lucidscan_home_env_var(self, tmp_path: Path) -> None:
-        """LUCIDSCAN_HOME env var overrides project-local path."""
-        custom_home = tmp_path / "custom-lucidscan"
-        with patch.dict(os.environ, {"LUCIDSCAN_HOME": str(custom_home)}):
+    def test_respects_lucidshark_home_env_var(self, tmp_path: Path) -> None:
+        """LUCIDSHARK_HOME env var overrides project-local path."""
+        custom_home = tmp_path / "custom-lucidshark"
+        with patch.dict(os.environ, {"LUCIDSHARK_HOME": str(custom_home)}):
             # Even with project_root, env var takes precedence
-            home = get_lucidscan_home(project_root=tmp_path / "some_project")
+            home = get_lucidshark_home(project_root=tmp_path / "some_project")
             assert home == custom_home
 
     def test_returns_path_object(self) -> None:
-        home = get_lucidscan_home()
+        home = get_lucidshark_home()
         assert isinstance(home, Path)
 
 
-class TestLucidscanPaths:
-    """Tests for LucidscanPaths class."""
+class TestLucidsharkPaths:
+    """Tests for LucidsharkPaths class."""
 
     def test_paths_from_home(self, tmp_path: Path) -> None:
-        home = tmp_path / ".lucidscan"
-        paths = LucidscanPaths(home)
+        home = tmp_path / ".lucidshark"
+        paths = LucidsharkPaths(home)
 
         assert paths.home == home
         assert paths.bin_dir == home / "bin"
@@ -60,8 +60,8 @@ class TestLucidscanPaths:
 
     def test_plugin_bin_dir(self, tmp_path: Path) -> None:
         """Test plugin-specific binary directory structure."""
-        home = tmp_path / ".lucidscan"
-        paths = LucidscanPaths(home)
+        home = tmp_path / ".lucidshark"
+        paths = LucidsharkPaths(home)
 
         # Generic plugin bin dir works for any plugin name
         assert paths.plugin_bin_dir("my_plugin", "1.0.0") == home / "bin" / "my_plugin" / "1.0.0"
@@ -69,15 +69,15 @@ class TestLucidscanPaths:
 
     def test_plugin_cache_dir(self, tmp_path: Path) -> None:
         """Test plugin-specific cache directory."""
-        home = tmp_path / ".lucidscan"
-        paths = LucidscanPaths(home)
+        home = tmp_path / ".lucidshark"
+        paths = LucidsharkPaths(home)
 
         assert paths.plugin_cache_dir("my_plugin") == home / "cache" / "my_plugin"
         assert paths.plugin_cache_dir("another") == home / "cache" / "another"
 
     def test_ensure_directories_creates_all_dirs(self, tmp_path: Path) -> None:
-        home = tmp_path / ".lucidscan"
-        paths = LucidscanPaths(home)
+        home = tmp_path / ".lucidshark"
+        paths = LucidsharkPaths(home)
 
         # Directories should not exist yet
         assert not paths.home.exists()
@@ -93,8 +93,8 @@ class TestLucidscanPaths:
         assert paths.logs_dir.exists()
 
     def test_ensure_directories_is_idempotent(self, tmp_path: Path) -> None:
-        home = tmp_path / ".lucidscan"
-        paths = LucidscanPaths(home)
+        home = tmp_path / ".lucidshark"
+        paths = LucidsharkPaths(home)
 
         # Call multiple times
         paths.ensure_directories()
@@ -104,15 +104,15 @@ class TestLucidscanPaths:
         assert paths.home.exists()
 
     def test_is_initialized_false_when_empty(self, tmp_path: Path) -> None:
-        home = tmp_path / ".lucidscan"
-        paths = LucidscanPaths(home)
+        home = tmp_path / ".lucidshark"
+        paths = LucidsharkPaths(home)
 
         assert paths.is_initialized() is False
 
     def test_is_initialized_true_when_plugin_installed(self, tmp_path: Path) -> None:
         """Test that is_initialized returns True when a plugin directory exists."""
-        home = tmp_path / ".lucidscan"
-        paths = LucidscanPaths(home)
+        home = tmp_path / ".lucidshark"
+        paths = LucidsharkPaths(home)
 
         paths.ensure_directories()
         # Create a plugin directory
@@ -122,10 +122,10 @@ class TestLucidscanPaths:
         assert paths.is_initialized() is True
 
     def test_default_factory(self) -> None:
-        """Test that default() creates paths from lucidscan home."""
-        with patch("lucidscan.bootstrap.paths.get_lucidscan_home") as mock_home:
-            mock_home.return_value = Path("/mock/home/.lucidscan")
-            paths = LucidscanPaths.default()
+        """Test that default() creates paths from lucidshark home."""
+        with patch("lucidshark.bootstrap.paths.get_lucidshark_home") as mock_home:
+            mock_home.return_value = Path("/mock/home/.lucidshark")
+            paths = LucidsharkPaths.default()
 
-            assert paths.home == Path("/mock/home/.lucidscan")
+            assert paths.home == Path("/mock/home/.lucidshark")
             mock_home.assert_called_once()

@@ -5,9 +5,9 @@ from __future__ import annotations
 import argparse
 from typing import Any, Dict, List
 
-from lucidscan.config.models import LucidScanConfig
-from lucidscan.core.logging import get_logger
-from lucidscan.core.models import ScanDomain
+from lucidshark.config.models import LucidSharkConfig
+from lucidshark.core.logging import get_logger
+from lucidshark.core.models import ScanDomain
 
 LOGGER = get_logger(__name__)
 
@@ -82,7 +82,7 @@ class ConfigBridge:
 
     @staticmethod
     def get_enabled_domains(
-        config: LucidScanConfig,
+        config: LucidSharkConfig,
         args: argparse.Namespace,
     ) -> List[ScanDomain]:
         """Determine which scan domains are enabled.
@@ -137,7 +137,7 @@ class ConfigBridge:
             return []
 
         # --all or no flags: use config file settings
-        # This respects what's actually configured in lucidscan.yml
+        # This respects what's actually configured in lucidshark.yml
         enabled_domains: List[ScanDomain] = []
         for domain_name in config.get_enabled_domains():
             try:

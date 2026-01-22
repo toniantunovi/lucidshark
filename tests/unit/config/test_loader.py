@@ -1,4 +1,4 @@
-"""Tests for lucidscan.config.loader."""
+"""Tests for lucidshark.config.loader."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from unittest.mock import patch
 
 import pytest
 
-from lucidscan.config.loader import (
+from lucidshark.config.loader import (
     ConfigError,
     dict_to_config,
     expand_env_vars,
@@ -17,7 +17,7 @@ from lucidscan.config.loader import (
     load_yaml_file,
     merge_configs,
 )
-from lucidscan.config.models import LucidScanConfig
+from lucidshark.config.models import LucidSharkConfig
 
 
 class TestExpandEnvVars:
@@ -163,14 +163,14 @@ class TestDictToConfig:
 class TestFindProjectConfig:
     """Tests for find_project_config function."""
 
-    def test_finds_lucidscan_yml(self, tmp_path: Path) -> None:
-        config_file = tmp_path / ".lucidscan.yml"
+    def test_finds_lucidshark_yml(self, tmp_path: Path) -> None:
+        config_file = tmp_path / ".lucidshark.yml"
         config_file.write_text("fail_on: high")
         result = find_project_config(tmp_path)
         assert result == config_file
 
-    def test_finds_lucidscan_yaml(self, tmp_path: Path) -> None:
-        config_file = tmp_path / ".lucidscan.yaml"
+    def test_finds_lucidshark_yaml(self, tmp_path: Path) -> None:
+        config_file = tmp_path / ".lucidshark.yaml"
         config_file.write_text("fail_on: high")
         result = find_project_config(tmp_path)
         assert result == config_file
@@ -180,8 +180,8 @@ class TestFindProjectConfig:
         assert result is None
 
     def test_prefers_yml_over_yaml(self, tmp_path: Path) -> None:
-        yml_file = tmp_path / ".lucidscan.yml"
-        yaml_file = tmp_path / ".lucidscan.yaml"
+        yml_file = tmp_path / ".lucidshark.yml"
+        yaml_file = tmp_path / ".lucidshark.yaml"
         yml_file.write_text("fail_on: high")
         yaml_file.write_text("fail_on: low")
         result = find_project_config(tmp_path)
@@ -221,17 +221,17 @@ class TestLoadConfig:
 
     def test_returns_default_config_when_no_files(self, tmp_path: Path) -> None:
         config = load_config(tmp_path)
-        assert isinstance(config, LucidScanConfig)
+        assert isinstance(config, LucidSharkConfig)
         assert config.fail_on is None
 
     def test_loads_project_config(self, tmp_path: Path) -> None:
-        config_file = tmp_path / ".lucidscan.yml"
+        config_file = tmp_path / ".lucidshark.yml"
         config_file.write_text("fail_on: high")
         config = load_config(tmp_path)
         assert config.fail_on == "high"
 
     def test_cli_overrides_take_precedence(self, tmp_path: Path) -> None:
-        config_file = tmp_path / ".lucidscan.yml"
+        config_file = tmp_path / ".lucidshark.yml"
         config_file.write_text("fail_on: low")
         config = load_config(
             tmp_path,
@@ -252,14 +252,14 @@ class TestLoadConfig:
         assert "not found" in str(exc_info.value)
 
     def test_tracks_config_sources(self, tmp_path: Path) -> None:
-        config_file = tmp_path / ".lucidscan.yml"
+        config_file = tmp_path / ".lucidshark.yml"
         config_file.write_text("fail_on: high")
         config = load_config(tmp_path, cli_overrides={"ignore": ["*.md"]})
         assert any("project" in s for s in config._config_sources)
         assert "cli" in config._config_sources
 
     def test_env_vars_expanded_in_config(self, tmp_path: Path) -> None:
-        config_file = tmp_path / ".lucidscan.yml"
+        config_file = tmp_path / ".lucidshark.yml"
         config_file.write_text(
             "scanners:\n"
             "  sca:\n"
@@ -274,7 +274,7 @@ class TestLoadConfigMerging:
     """Tests for config merging behavior."""
 
     def test_scanner_options_merged(self, tmp_path: Path) -> None:
-        config_file = tmp_path / ".lucidscan.yml"
+        config_file = tmp_path / ".lucidshark.yml"
         config_file.write_text(
             "scanners:\n"
             "  sca:\n"

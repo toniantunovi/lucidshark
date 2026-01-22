@@ -3,9 +3,9 @@ requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "lucidscan"
+name = "lucidshark"
 version = "0.5.14"
-description = "LucidScan - The trust layer for AI-assisted development"
+description = "LucidShark - The trust layer for AI-assisted development"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "Apache-2.0" }
@@ -73,39 +73,13 @@ dev = [
 ]
 
 [project.scripts]
-lucidscan = "lucidscan.cli:main"
+lucidshark = "lucidshark.cli:main"
 
-[project.entry-points."lucidscan.scanners"]
-trivy = "lucidscan.plugins.scanners.trivy:TrivyScanner"
-opengrep = "lucidscan.plugins.scanners.opengrep:OpenGrepScanner"
-checkov = "lucidscan.plugins.scanners.checkov:CheckovScanner"
-
-[project.entry-points."lucidscan.reporters"]
-json = "lucidscan.plugins.reporters.json_reporter:JSONReporter"
-table = "lucidscan.plugins.reporters.table_reporter:TableReporter"
-summary = "lucidscan.plugins.reporters.summary_reporter:SummaryReporter"
-sarif = "lucidscan.plugins.reporters.sarif_reporter:SARIFReporter"
-
-[project.entry-points."lucidscan.linters"]
-ruff = "lucidscan.plugins.linters.ruff:RuffLinter"
-eslint = "lucidscan.plugins.linters.eslint:ESLintLinter"
-biome = "lucidscan.plugins.linters.biome:BiomeLinter"
-checkstyle = "lucidscan.plugins.linters.checkstyle:CheckstyleLinter"
-
-[project.entry-points."lucidscan.type_checkers"]
-mypy = "lucidscan.plugins.type_checkers.mypy:MypyChecker"
-pyright = "lucidscan.plugins.type_checkers.pyright:PyrightChecker"
-typescript = "lucidscan.plugins.type_checkers.typescript:TypeScriptChecker"
-
-[project.entry-points."lucidscan.test_runners"]
-pytest = "lucidscan.plugins.test_runners.pytest:PytestRunner"
-jest = "lucidscan.plugins.test_runners.jest:JestRunner"
-karma = "lucidscan.plugins.test_runners.karma:KarmaRunner"
-playwright = "lucidscan.plugins.test_runners.playwright:PlaywrightRunner"
-
-[project.entry-points."lucidscan.coverage"]
-coverage_py = "lucidscan.plugins.coverage.coverage_py:CoveragePyPlugin"
-istanbul = "lucidscan.plugins.coverage.istanbul:IstanbulPlugin"
+[project.entry-points."lucidshark.linters"]
+ruff = "lucidshark.plugins.linters.ruff:RuffLinter"
+eslint = "lucidshark.plugins.linters.eslint:ESLintLinter"
+biome = "lucidshark.plugins.linters.biome:BiomeLinter"
+checkstyle = "lucidshark.plugins.linters.checkstyle:CheckstyleLinter"
 
 # Pytest configuration
 [tool.pytest.ini_options]
@@ -120,9 +94,9 @@ markers = [
     "integration: marks tests as integration tests (run with: pytest -m integration)",
 ]
 
-# Tool versions - single source of truth for all lucidscan-managed tools
-# These versions are used when lucidscan downloads/installs the tools
-[tool.lucidscan.tools]
+# Tool versions - single source of truth for all lucidshark-managed tools
+# These versions are used when lucidshark downloads/installs the tools
+[tool.lucidshark.tools]
 # Security scanners
 trivy = "0.68.2"
 opengrep = "1.15.0"

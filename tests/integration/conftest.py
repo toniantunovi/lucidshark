@@ -8,20 +8,20 @@ from pathlib import Path
 
 import pytest
 
-from lucidscan.plugins.scanners.trivy import TrivyScanner
-from lucidscan.plugins.scanners.opengrep import OpenGrepScanner
-from lucidscan.plugins.scanners.checkov import CheckovScanner
-from lucidscan.plugins.linters.ruff import RuffLinter
-from lucidscan.plugins.linters.biome import BiomeLinter
-from lucidscan.plugins.linters.eslint import ESLintLinter
-from lucidscan.plugins.linters.checkstyle import CheckstyleLinter
-from lucidscan.plugins.type_checkers.mypy import MypyChecker
-from lucidscan.plugins.type_checkers.pyright import PyrightChecker
-from lucidscan.plugins.type_checkers.typescript import TypeScriptChecker
-from lucidscan.plugins.test_runners.pytest import PytestRunner
-from lucidscan.plugins.test_runners.jest import JestRunner
-from lucidscan.plugins.coverage.coverage_py import CoveragePyPlugin
-from lucidscan.plugins.coverage.istanbul import IstanbulPlugin
+from lucidshark.plugins.scanners.trivy import TrivyScanner
+from lucidshark.plugins.scanners.opengrep import OpenGrepScanner
+from lucidshark.plugins.scanners.checkov import CheckovScanner
+from lucidshark.plugins.linters.ruff import RuffLinter
+from lucidshark.plugins.linters.biome import BiomeLinter
+from lucidshark.plugins.linters.eslint import ESLintLinter
+from lucidshark.plugins.linters.checkstyle import CheckstyleLinter
+from lucidshark.plugins.type_checkers.mypy import MypyChecker
+from lucidshark.plugins.type_checkers.pyright import PyrightChecker
+from lucidshark.plugins.type_checkers.typescript import TypeScriptChecker
+from lucidshark.plugins.test_runners.pytest import PytestRunner
+from lucidshark.plugins.test_runners.jest import JestRunner
+from lucidshark.plugins.coverage.coverage_py import CoveragePyPlugin
+from lucidshark.plugins.coverage.istanbul import IstanbulPlugin
 
 
 def _ensure_trivy_downloaded() -> bool:
@@ -119,7 +119,7 @@ docker_available = pytest.mark.skipif(
 
 @pytest.fixture
 def project_root() -> Path:
-    """Return the lucidscan project root directory."""
+    """Return the lucidshark project root directory."""
     return Path(__file__).parent.parent.parent
 
 

@@ -1,6 +1,6 @@
 """CLI runner orchestration.
 
-This module handles command dispatch and execution for the lucidscan CLI.
+This module handles command dispatch and execution for the lucidshark CLI.
 """
 
 from __future__ import annotations
@@ -10,34 +10,34 @@ from typing import Iterable, Optional
 
 from importlib.metadata import version, PackageNotFoundError
 
-from lucidscan.cli.arguments import build_parser
-from lucidscan.cli.config_bridge import ConfigBridge
-from lucidscan.cli.exit_codes import (
+from lucidshark.cli.arguments import build_parser
+from lucidshark.cli.config_bridge import ConfigBridge
+from lucidshark.cli.exit_codes import (
     EXIT_INVALID_USAGE,
     EXIT_SCANNER_ERROR,
     EXIT_SUCCESS,
 )
-from lucidscan.cli.commands.status import StatusCommand
-from lucidscan.cli.commands.scan import ScanCommand
-from lucidscan.cli.commands.help import HelpCommand
-from lucidscan.config import load_config
-from lucidscan.config.loader import ConfigError
-from lucidscan.core.logging import configure_logging, get_logger
+from lucidshark.cli.commands.status import StatusCommand
+from lucidshark.cli.commands.scan import ScanCommand
+from lucidshark.cli.commands.help import HelpCommand
+from lucidshark.config import load_config
+from lucidshark.config.loader import ConfigError
+from lucidshark.core.logging import configure_logging, get_logger
 
 LOGGER = get_logger(__name__)
 
 
 def get_version() -> str:
-    """Get lucidscan version.
+    """Get lucidshark version.
 
     Returns:
         Version string from package metadata or fallback.
     """
     try:
-        return version("lucidscan")
+        return version("lucidshark")
     except PackageNotFoundError:
         # Fallback for editable installs that have not yet built metadata.
-        from lucidscan import __version__
+        from lucidshark import __version__
         return __version__
 
 
@@ -60,7 +60,7 @@ class CLIRunner:
         """Lazy-load InitCommand to avoid import errors during development."""
         if self._init_cmd is None:
             try:
-                from lucidscan.cli.commands.init import InitCommand
+                from lucidshark.cli.commands.init import InitCommand
                 self._init_cmd = InitCommand(version=self._version)
             except ImportError:
                 self._init_cmd = None
@@ -71,7 +71,7 @@ class CLIRunner:
         """Lazy-load AutoconfigureCommand to avoid import errors during development."""
         if self._autoconfigure_cmd is None:
             try:
-                from lucidscan.cli.commands.autoconfigure import AutoconfigureCommand
+                from lucidshark.cli.commands.autoconfigure import AutoconfigureCommand
                 self._autoconfigure_cmd = AutoconfigureCommand()
             except ImportError:
                 self._autoconfigure_cmd = None
@@ -147,7 +147,7 @@ class CLIRunner:
         return self.init_cmd.execute(args)
 
     def _handle_autoconfigure(self, args) -> int:
-        """Handle the autoconfigure command (generate lucidscan.yml).
+        """Handle the autoconfigure command (generate lucidshark.yml).
 
         Args:
             args: Parsed command-line arguments.
@@ -213,7 +213,7 @@ class CLIRunner:
 
         # No scanners selected - show scan help
         print("No scan domains selected. Use --sca, --sast, --iac, --linting, --type-checking, or --all.")
-        print("\nRun 'lucidscan scan --help' for more options.")
+        print("\nRun 'lucidshark scan --help' for more options.")
         return EXIT_SUCCESS
 
     def _handle_status(self, args) -> int:
@@ -251,7 +251,7 @@ class CLIRunner:
             return EXIT_INVALID_USAGE
 
         try:
-            from lucidscan.cli.commands.serve import ServeCommand
+            from lucidshark.cli.commands.serve import ServeCommand
             serve_cmd = ServeCommand(version=self._version)
             return serve_cmd.execute(args, config)
         except ImportError as e:
@@ -278,7 +278,7 @@ class CLIRunner:
         Returns:
             Exit code.
         """
-        from lucidscan.cli.commands.validate import ValidateCommand
+        from lucidshark.cli.commands.validate import ValidateCommand
 
         validate_cmd = ValidateCommand()
         return validate_cmd.execute(args)

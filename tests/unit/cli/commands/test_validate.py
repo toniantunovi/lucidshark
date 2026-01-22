@@ -5,8 +5,8 @@ from __future__ import annotations
 from argparse import Namespace
 from pathlib import Path
 
-from lucidscan.cli.commands.validate import ValidateCommand
-from lucidscan.cli.exit_codes import EXIT_ISSUES_FOUND, EXIT_INVALID_USAGE, EXIT_SUCCESS
+from lucidshark.cli.commands.validate import ValidateCommand
+from lucidshark.cli.exit_codes import EXIT_ISSUES_FOUND, EXIT_INVALID_USAGE, EXIT_SUCCESS
 
 
 class TestValidateCommand:
@@ -19,7 +19,7 @@ class TestValidateCommand:
 
     def test_valid_config_returns_success(self, tmp_path: Path, monkeypatch, capsys) -> None:
         """Test valid config returns exit code 0."""
-        config_file = tmp_path / "lucidscan.yml"
+        config_file = tmp_path / "lucidshark.yml"
         config_file.write_text("fail_on: high\nignore:\n  - tests/**\n")
 
         monkeypatch.chdir(tmp_path)
@@ -34,7 +34,7 @@ class TestValidateCommand:
 
     def test_invalid_config_returns_issues_found(self, tmp_path: Path, monkeypatch, capsys) -> None:
         """Test config with errors returns exit code 1."""
-        config_file = tmp_path / "lucidscan.yml"
+        config_file = tmp_path / "lucidshark.yml"
         config_file.write_text("fail_on: 123\n")  # Wrong type
 
         monkeypatch.chdir(tmp_path)
@@ -75,7 +75,7 @@ class TestValidateCommand:
 
     def test_yaml_syntax_error(self, tmp_path: Path, monkeypatch, capsys) -> None:
         """Test YAML syntax errors are reported."""
-        config_file = tmp_path / "lucidscan.yml"
+        config_file = tmp_path / "lucidshark.yml"
         config_file.write_text("invalid: yaml: content:\n  - bad")
 
         monkeypatch.chdir(tmp_path)
@@ -90,7 +90,7 @@ class TestValidateCommand:
 
     def test_warnings_dont_fail_validation(self, tmp_path: Path, monkeypatch, capsys) -> None:
         """Test that warnings alone don't cause validation failure."""
-        config_file = tmp_path / "lucidscan.yml"
+        config_file = tmp_path / "lucidshark.yml"
         config_file.write_text("unknown_key: value\nfail_on: high\n")  # Unknown key is just a warning
 
         monkeypatch.chdir(tmp_path)
@@ -105,7 +105,7 @@ class TestValidateCommand:
 
     def test_typo_suggestion_shown(self, tmp_path: Path, monkeypatch, capsys) -> None:
         """Test that typo suggestions are shown in output."""
-        config_file = tmp_path / "lucidscan.yml"
+        config_file = tmp_path / "lucidshark.yml"
         config_file.write_text("fail_ob: high\n")  # Typo: should be fail_on
 
         monkeypatch.chdir(tmp_path)

@@ -1,8 +1,8 @@
-# LucidScan Roadmap
+# LucidShark Roadmap
 
 > **Vision**: The trust layer for AI-assisted development
 
-LucidScan unifies code quality tools (linting, type checking, security, testing, coverage) into a single pipeline that auto-configures for any project and integrates with AI coding tools like Claude Code and Cursor.
+LucidShark unifies code quality tools (linting, type checking, security, testing, coverage) into a single pipeline that auto-configures for any project and integrates with AI coding tools like Claude Code and Cursor.
 
 ---
 
@@ -28,7 +28,7 @@ LucidScan unifies code quality tools (linting, type checking, security, testing,
 
 ## Completed (v0.1 - v0.5)
 
-All foundational work is complete. LucidScan is a fully functional code quality platform with AI integration.
+All foundational work is complete. LucidShark is a fully functional code quality platform with AI integration.
 
 ### What's Built
 
@@ -54,15 +54,15 @@ All foundational work is complete. LucidScan is a fully functional code quality 
 ### Commands Available Today
 
 ```bash
-lucidscan init --claude-code         # Configure Claude Code
-lucidscan init --cursor              # Configure Cursor
-lucidscan autoconfigure              # Generate lucidscan.yml
-lucidscan scan --all                 # Run complete pipeline
-lucidscan scan --linting --fix       # Lint with auto-fix
-lucidscan scan --type-checking       # Type checking
-lucidscan scan --testing --coverage  # Tests with coverage
-lucidscan serve --mcp                # MCP server for AI tools
-lucidscan status                     # Show tool status
+lucidshark init --claude-code         # Configure Claude Code
+lucidshark init --cursor              # Configure Cursor
+lucidshark autoconfigure              # Generate lucidshark.yml
+lucidshark scan --all                 # Run complete pipeline
+lucidshark scan --linting --fix       # Lint with auto-fix
+lucidshark scan --type-checking       # Type checking
+lucidshark scan --testing --coverage  # Tests with coverage
+lucidshark serve --mcp                # MCP server for AI tools
+lucidshark status                     # Show tool status
 ```
 
 ---
@@ -73,7 +73,7 @@ lucidscan status                     # Show tool status
 
 ### Problem
 
-Currently, LucidScan scans the entire project by default. For large codebases, this is slow and produces noise from files the developer hasn't touched. AI coding assistants (Claude Code, Cursor) primarily care about the code they just modified.
+Currently, LucidShark scans the entire project by default. For large codebases, this is slow and produces noise from files the developer hasn't touched. AI coding assistants (Claude Code, Cursor) primarily care about the code they just modified.
 
 ### Solution
 
@@ -86,7 +86,7 @@ Change the default behavior:
 
 | Component | Change |
 |-----------|--------|
-| **CLI** | `lucidscan scan` defaults to changed files; add `--all-files` flag for full scan |
+| **CLI** | `lucidshark scan` defaults to changed files; add `--all-files` flag for full scan |
 | **MCP Server** | `scan()` defaults to changed files; add `all_files` parameter |
 | **Git Integration** | Detect git repo, get list of uncommitted files (staged + modified + untracked) |
 | **Fallback** | If not a git repo or git unavailable, scan entire project |
@@ -95,13 +95,13 @@ Change the default behavior:
 
 ```bash
 # Default: scan only changed files (git diff + untracked)
-lucidscan scan --linting --type-checking
+lucidshark scan --linting --type-checking
 
 # Explicit full project scan
-lucidscan scan --linting --type-checking --all-files
+lucidshark scan --linting --type-checking --all-files
 
 # Still works: explicit file list
-lucidscan scan --linting --files src/foo.py src/bar.py
+lucidshark scan --linting --files src/foo.py src/bar.py
 ```
 
 ### MCP Server
@@ -293,8 +293,8 @@ Security scanning remains the same across all languages:
 
 | Feature | Description |
 |---------|-------------|
-| **GitHub Actions** | Generate `.github/workflows/lucidscan.yml` |
-| **GitLab CI** | Generate `.gitlab-ci.yml` with LucidScan job |
+| **GitHub Actions** | Generate `.github/workflows/lucidshark.yml` |
+| **GitLab CI** | Generate `.gitlab-ci.yml` with LucidShark job |
 | **SARIF upload** | Automatic upload to GitHub Security tab |
 | **CI output mode** | Optimized output for CI environments |
 | **Exit codes** | Clear pass/fail for pipeline gating |
@@ -303,19 +303,19 @@ Security scanning remains the same across all languages:
 
 ```bash
 # Generate CI configuration
-lucidscan init --github-actions      # Create GitHub workflow
-lucidscan init --gitlab-ci           # Create GitLab CI config
+lucidshark init --github-actions      # Create GitHub workflow
+lucidshark init --gitlab-ci           # Create GitLab CI config
 
 # CI-optimized scanning
-lucidscan scan --all --ci            # CI mode with proper exit codes
-lucidscan scan --all --sarif-upload  # Upload results to GitHub
+lucidshark scan --all --ci            # CI mode with proper exit codes
+lucidshark scan --all --sarif-upload  # Upload results to GitHub
 ```
 
 ### Generated GitHub Actions Workflow
 
 ```yaml
-# .github/workflows/lucidscan.yml
-name: LucidScan
+# .github/workflows/lucidshark.yml
+name: LucidShark
 on: [push, pull_request]
 
 jobs:
@@ -323,10 +323,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install LucidScan
-        run: pip install lucidscan
+      - name: Install LucidShark
+        run: pip install lucidshark
       - name: Run quality checks
-        run: lucidscan scan --all --format sarif --output results.sarif
+        run: lucidshark scan --all --format sarif --output results.sarif
       - name: Upload SARIF
         uses: github/codeql-action/upload-sarif@v3
         with:

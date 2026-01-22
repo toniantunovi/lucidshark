@@ -1,12 +1,12 @@
 """Configuration generation module.
 
 This module provides generators for:
-- lucidscan.yml configuration files
+- lucidshark.yml configuration files
 - Package manager tool installation
 """
 
-from lucidscan.generation.config_generator import ConfigGenerator, InitChoices
-from lucidscan.generation.package_installer import PackageInstaller
+from lucidshark.generation.config_generator import ConfigGenerator, InitChoices
+from lucidshark.generation.package_installer import PackageInstaller
 
 __all__ = [
     "ConfigGenerator",

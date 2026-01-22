@@ -1,3 +1,3 @@
-"""Integration tests for lucidscan."""
+"""Integration tests for lucidshark."""
 
 

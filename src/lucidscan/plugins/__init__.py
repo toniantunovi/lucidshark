@@ -1,19 +1,19 @@
-"""Plugin infrastructure for lucidscan.
+"""Plugin infrastructure for lucidshark.
 
 This package provides the plugin discovery and management infrastructure
 for all plugin types:
-- Scanner plugins (lucidscan.scanners) - Security scanners
-- Linter plugins (lucidscan.linters) - Code linting
-- Type checker plugins (lucidscan.type_checkers) - Type checking
-- Test runner plugins (lucidscan.test_runners) - Test execution
-- Coverage plugins (lucidscan.coverage) - Coverage analysis
-- Enricher plugins (lucidscan.enrichers) - Post-processing
-- Reporter plugins (lucidscan.reporters) - Output formatting
+- Scanner plugins (lucidshark.scanners) - Security scanners
+- Linter plugins (lucidshark.linters) - Code linting
+- Type checker plugins (lucidshark.type_checkers) - Type checking
+- Test runner plugins (lucidshark.test_runners) - Test execution
+- Coverage plugins (lucidshark.coverage) - Coverage analysis
+- Enricher plugins (lucidshark.enrichers) - Post-processing
+- Reporter plugins (lucidshark.reporters) - Output formatting
 
 Plugins are discovered via Python entry points.
 """
 
-from lucidscan.plugins.discovery import (
+from lucidshark.plugins.discovery import (
     discover_plugins,
     get_plugin,
     list_available_plugins,

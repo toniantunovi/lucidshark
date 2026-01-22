@@ -1,4 +1,4 @@
-"""Exit codes for lucidscan CLI.
+"""Exit codes for lucidshark CLI.
 
 Exit codes follow Section 14 of the specification:
 - 0: Success (no issues found or below threshold)

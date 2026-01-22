@@ -11,8 +11,8 @@ import re
 from pathlib import Path
 from typing import Dict, List
 
-from lucidscan.core.logging import get_logger
-from lucidscan.detection import ProjectContext
+from lucidshark.core.logging import get_logger
+from lucidshark.detection import ProjectContext
 
 LOGGER = get_logger(__name__)
 

@@ -1,64 +1,64 @@
-# LucidScan
+# LucidShark
 
 <p align="center">
   <img src="docs/lucidshark.png" alt="LucidShark" width="400">
 </p>
 
-[![CI](https://github.com/lucidscan/lucidscan/actions/workflows/ci.yml/badge.svg)](https://github.com/lucidscan/lucidscan/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/lucidscan/lucidscan/graph/badge.svg)](https://codecov.io/gh/lucidscan/lucidscan)
-[![PyPI version](https://img.shields.io/pypi/v/lucidscan)](https://pypi.org/project/lucidscan/)
-[![Python](https://img.shields.io/pypi/pyversions/lucidscan)](https://pypi.org/project/lucidscan/)
-[![License](https://img.shields.io/github/license/lucidscan/lucidscan)](https://github.com/lucidscan/lucidscan/blob/main/LICENSE)
+[![CI](https://github.com/lucidshark-code/lucidshark/actions/workflows/ci.yml/badge.svg)](https://github.com/lucidshark-code/lucidshark/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/lucidshark-code/lucidshark/graph/badge.svg)](https://codecov.io/gh/lucidshark-code/lucidshark)
+[![PyPI version](https://img.shields.io/pypi/v/lucidshark)](https://pypi.org/project/lucidshark/)
+[![Python](https://img.shields.io/pypi/pyversions/lucidshark)](https://pypi.org/project/lucidshark/)
+[![License](https://img.shields.io/github/license/lucidshark-code/lucidshark)](https://github.com/lucidshark-code/lucidshark/blob/main/LICENSE)
 
 **The trust layer for AI-assisted development.**
 
-LucidScan unifies linting, type checking, security scanning, testing, and coverage into a single pipeline that auto-configures for any project and integrates with AI coding tools like Claude Code and Cursor.
+LucidShark unifies linting, type checking, security scanning, testing, and coverage into a single pipeline that auto-configures for any project and integrates with AI coding tools like Claude Code and Cursor.
 
 ```
-AI writes code → LucidScan checks → AI fixes → repeat
+AI writes code → LucidShark checks → AI fixes → repeat
 ```
 
 ## Quick Start
 
 ```bash
-# 1. Install LucidScan
-pip install lucidscan
+# 1. Install LucidShark
+pip install lucidshark
 
 # 2. Set up your AI tools (Claude Code and/or Cursor)
-lucidscan init --all
+lucidshark init --all
 
 # 3. Restart your AI tool, then ask it:
-#    "Autoconfigure LucidScan for this project"
+#    "Autoconfigure LucidShark for this project"
 ```
 
-That's it! Your AI assistant will analyze your codebase, ask you a few questions, and generate the `lucidscan.yml` configuration.
+That's it! Your AI assistant will analyze your codebase, ask you a few questions, and generate the `lucidshark.yml` configuration.
 
 ### Alternative: CLI Configuration
 
 If you prefer to configure without AI:
 
 ```bash
-lucidscan autoconfigure
+lucidshark autoconfigure
 ```
 
 ### Running Scans
 
 ```bash
 # Run the full quality pipeline
-lucidscan scan --all
+lucidshark scan --all
 
 # Run specific checks
-lucidscan scan --linting           # Linting (Ruff, ESLint, Biome)
-lucidscan scan --type-checking     # Type checking (mypy, pyright, tsc)
-lucidscan scan --sast              # Security code analysis (OpenGrep)
-lucidscan scan --sca               # Dependency vulnerabilities (Trivy)
-lucidscan scan --iac               # Infrastructure-as-Code (Checkov)
-lucidscan scan --container         # Container image scanning (Trivy)
-lucidscan scan --testing           # Run tests (pytest, Jest)
-lucidscan scan --coverage          # Coverage analysis
+lucidshark scan --linting           # Linting (Ruff, ESLint, Biome)
+lucidshark scan --type-checking     # Type checking (mypy, pyright, tsc)
+lucidshark scan --sast              # Security code analysis (OpenGrep)
+lucidshark scan --sca               # Dependency vulnerabilities (Trivy)
+lucidshark scan --iac               # Infrastructure-as-Code (Checkov)
+lucidshark scan --container         # Container image scanning (Trivy)
+lucidshark scan --testing           # Run tests (pytest, Jest)
+lucidshark scan --coverage          # Coverage analysis
 
 # Auto-fix linting issues
-lucidscan scan --linting --fix
+lucidshark scan --linting --fix
 ```
 
 ### AI Tool Setup
@@ -66,11 +66,11 @@ lucidscan scan --linting --fix
 #### Claude Code
 
 ```bash
-lucidscan init --claude-code
+lucidshark init --claude-code
 ```
 
 This:
-- Adds LucidScan to your Claude Code MCP configuration (`.mcp.json`)
+- Adds LucidShark to your Claude Code MCP configuration (`.mcp.json`)
 - Creates `.claude/CLAUDE.md` with scan workflow instructions
 
 Restart Claude Code to activate.
@@ -78,17 +78,17 @@ Restart Claude Code to activate.
 #### Cursor
 
 ```bash
-lucidscan init --cursor
+lucidshark init --cursor
 ```
 
 This:
-- Adds LucidScan to Cursor's MCP configuration (`~/.cursor/mcp.json`)
-- Creates `.cursor/rules/lucidscan.mdc` with auto-scan rules
+- Adds LucidShark to Cursor's MCP configuration (`~/.cursor/mcp.json`)
+- Creates `.cursor/rules/lucidshark.mdc` with auto-scan rules
 
 #### All AI Tools
 
 ```bash
-lucidscan init --all
+lucidshark init --all
 ```
 
 Configures both Claude Code and Cursor.
@@ -110,7 +110,7 @@ All results are normalized to a common format.
 
 ## Configuration
 
-LucidScan auto-detects your project. For custom settings, create `lucidscan.yml`:
+LucidShark auto-detects your project. For custom settings, create `lucidshark.yml`:
 
 ```yaml
 version: 1
@@ -156,24 +156,24 @@ ignore:
 
 ```bash
 # Configure AI tools (Claude Code, Cursor)
-lucidscan init --claude-code             # Configure Claude Code
-lucidscan init --cursor                  # Configure Cursor
-lucidscan init --all                     # Configure all AI tools
+lucidshark init --claude-code             # Configure Claude Code
+lucidshark init --cursor                  # Configure Cursor
+lucidshark init --all                     # Configure all AI tools
 
-# Auto-configure project (detect languages, generate lucidscan.yml)
-lucidscan autoconfigure [--ci github|gitlab|bitbucket] [--non-interactive]
+# Auto-configure project (detect languages, generate lucidshark.yml)
+lucidshark autoconfigure [--ci github|gitlab|bitbucket] [--non-interactive]
 
 # Run quality pipeline
-lucidscan scan [--linting] [--type-checking] [--sca] [--sast] [--iac] [--container] [--testing] [--coverage] [--all]
-lucidscan scan [--fix] [--stream] [--format table|json|sarif|summary]
-lucidscan scan [--fail-on critical|high|medium|low]
+lucidshark scan [--linting] [--type-checking] [--sca] [--sast] [--iac] [--container] [--testing] [--coverage] [--all]
+lucidshark scan [--fix] [--stream] [--format table|json|sarif|summary]
+lucidshark scan [--fail-on critical|high|medium|low]
 
 # Server mode
-lucidscan serve --mcp                    # Run MCP server
-lucidscan serve --watch                  # Watch mode with auto-checking
+lucidshark serve --mcp                    # Run MCP server
+lucidshark serve --watch                  # Watch mode with auto-checking
 
 # Show status
-lucidscan status [--tools]
+lucidshark status [--tools]
 ```
 
 ## Exit Codes
@@ -188,8 +188,8 @@ lucidscan status [--tools]
 ## Development
 
 ```bash
-git clone https://github.com/lucidscan/lucidscan.git
-cd lucidscan
+git clone https://github.com/lucidshark-code/lucidshark.git
+cd lucidshark
 pip install -e ".[dev]"
 pytest tests/
 ```

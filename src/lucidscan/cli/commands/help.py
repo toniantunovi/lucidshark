@@ -7,10 +7,10 @@ from importlib.resources import files  # nosemgrep: python37-compatibility-impor
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from lucidscan.config.models import LucidScanConfig
+    from lucidshark.config.models import LucidSharkConfig
 
-from lucidscan.cli.commands import Command
-from lucidscan.cli.exit_codes import EXIT_SUCCESS
+from lucidshark.cli.commands import Command
+from lucidshark.cli.exit_codes import EXIT_SUCCESS
 
 
 def get_help_content() -> str:
@@ -21,7 +21,7 @@ def get_help_content() -> str:
     """
     # Try to load from package resources first (installed package)
     try:
-        docs = files("lucidscan").joinpath("../../../docs/help.md")
+        docs = files("lucidshark").joinpath("../../../docs/help.md")
         return docs.read_text(encoding="utf-8")
     except (FileNotFoundError, TypeError):
         pass
@@ -33,17 +33,17 @@ def get_help_content() -> str:
     if docs_path.exists():
         return docs_path.read_text(encoding="utf-8")
 
-    return "Help documentation not found. Visit https://github.com/lucidscan/lucidscan"
+    return "Help documentation not found. Visit https://github.com/lucidshark/lucidshark"
 
 
 class HelpCommand(Command):
-    """Shows LucidScan documentation."""
+    """Shows LucidShark documentation."""
 
     def __init__(self, version: str):
         """Initialize HelpCommand.
 
         Args:
-            version: Current lucidscan version string.
+            version: Current lucidshark version string.
         """
         self._version = version
 
@@ -52,14 +52,14 @@ class HelpCommand(Command):
         """Command identifier."""
         return "help"
 
-    def execute(self, args: Namespace, config: "LucidScanConfig | None" = None) -> int:
+    def execute(self, args: Namespace, config: "LucidSharkConfig | None" = None) -> int:
         """Execute the help command.
 
-        Displays LucidScan documentation.
+        Displays LucidShark documentation.
 
         Args:
             args: Parsed command-line arguments.
-            config: Optional LucidScan configuration (unused).
+            config: Optional LucidShark configuration (unused).
 
         Returns:
             Exit code (always 0 for help).

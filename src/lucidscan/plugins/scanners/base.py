@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import List, Optional
 
-from lucidscan.core.models import ScanContext, ScanDomain, UnifiedIssue
+from lucidshark.core.models import ScanContext, ScanDomain, UnifiedIssue
 
 
 class ScannerPlugin(ABC):

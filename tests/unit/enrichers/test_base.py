@@ -7,8 +7,8 @@ from typing import List
 
 import pytest
 
-from lucidscan.core.models import ScanContext, ScanDomain, Severity, UnifiedIssue
-from lucidscan.plugins.enrichers.base import EnricherPlugin
+from lucidshark.core.models import ScanContext, ScanDomain, Severity, UnifiedIssue
+from lucidshark.plugins.enrichers.base import EnricherPlugin
 
 
 class ConcreteEnricher(EnricherPlugin):

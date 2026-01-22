@@ -1,11 +1,11 @@
-"""Linter plugins for lucidscan.
+"""Linter plugins for lucidshark.
 
 This module provides linter integrations for the quality pipeline.
-Linters are discovered via the lucidscan.linters entry point group.
+Linters are discovered via the lucidshark.linters entry point group.
 """
 
-from lucidscan.plugins.linters.base import LinterPlugin
-from lucidscan.plugins.discovery import (
+from lucidshark.plugins.linters.base import LinterPlugin
+from lucidshark.plugins.discovery import (
     discover_plugins,
     LINTER_ENTRY_POINT_GROUP,
 )

@@ -1,10 +1,10 @@
-"""Path management for lucidscan plugin binary cache.
+"""Path management for lucidshark plugin binary cache.
 
-Handles the .lucidscan directory structure and path resolution.
-Each scanner plugin manages its own binary under .lucidscan/bin/{tool}/{version}/.
+Handles the .lucidshark directory structure and path resolution.
+Each scanner plugin manages its own binary under .lucidshark/bin/{tool}/{version}/.
 
-By default, tools are stored in the project root under .lucidscan/.
-The LUCIDSCAN_HOME environment variable can override this for global installations.
+By default, tools are stored in the project root under .lucidshark/.
+The LUCIDSHARK_HOME environment variable can override this for global installations.
 """
 
 from __future__ import annotations
@@ -15,29 +15,29 @@ from pathlib import Path
 from typing import ClassVar, Optional
 
 # Default directory name
-DEFAULT_HOME_DIR_NAME = ".lucidscan"
+DEFAULT_HOME_DIR_NAME = ".lucidshark"
 
 # Environment variable to override home directory (for global installations)
-LUCIDSCAN_HOME_ENV = "LUCIDSCAN_HOME"
+LUCIDSHARK_HOME_ENV = "LUCIDSHARK_HOME"
 
 
-def get_lucidscan_home(project_root: Optional[Path] = None) -> Path:
-    """Get the lucidscan home directory path.
+def get_lucidshark_home(project_root: Optional[Path] = None) -> Path:
+    """Get the lucidshark home directory path.
 
     Resolution order:
-    1. LUCIDSCAN_HOME environment variable (if set) - for global installations
-    2. {project_root}/.lucidscan (if project_root provided)
-    3. {cwd}/.lucidscan (default)
+    1. LUCIDSHARK_HOME environment variable (if set) - for global installations
+    2. {project_root}/.lucidshark (if project_root provided)
+    3. {cwd}/.lucidshark (default)
 
     Args:
         project_root: Optional project root directory. If not provided,
                      uses current working directory.
 
     Returns:
-        Path to the lucidscan home directory.
+        Path to the lucidshark home directory.
     """
     # Global override takes precedence
-    env_home = os.environ.get(LUCIDSCAN_HOME_ENV)
+    env_home = os.environ.get(LUCIDSHARK_HOME_ENV)
     if env_home:
         return Path(env_home)
 
@@ -49,11 +49,11 @@ def get_lucidscan_home(project_root: Optional[Path] = None) -> Path:
 
 
 @dataclass
-class LucidscanPaths:
-    """Manages paths within the lucidscan home directory.
+class LucidsharkPaths:
+    """Manages paths within the lucidshark home directory.
 
     Directory structure (plugin-based):
-        {project}/.lucidscan/
+        {project}/.lucidshark/
             bin/
                 trivy/{version}/trivy       - Trivy binary
                 opengrep/{version}/opengrep - OpenGrep binary
@@ -74,21 +74,21 @@ class LucidscanPaths:
     _LOGS_DIR: ClassVar[str] = "logs"
 
     @classmethod
-    def default(cls) -> "LucidscanPaths":
-        """Create paths from the default lucidscan home (cwd/.lucidscan)."""
-        return cls(get_lucidscan_home())
+    def default(cls) -> "LucidsharkPaths":
+        """Create paths from the default lucidshark home (cwd/.lucidshark)."""
+        return cls(get_lucidshark_home())
 
     @classmethod
-    def for_project(cls, project_root: Path) -> "LucidscanPaths":
+    def for_project(cls, project_root: Path) -> "LucidsharkPaths":
         """Create paths for a specific project.
 
         Args:
             project_root: Project root directory.
 
         Returns:
-            LucidscanPaths configured for the project.
+            LucidsharkPaths configured for the project.
         """
-        return cls(get_lucidscan_home(project_root))
+        return cls(get_lucidshark_home(project_root))
 
     @property
     def bin_dir(self) -> Path:

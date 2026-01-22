@@ -1,9 +1,9 @@
 """Plugin discovery via Python entry points.
 
 Supports discovering different plugin types:
-- Scanner plugins: lucidscan.scanners
-- Enricher plugins: lucidscan.enrichers (future)
-- Reporter plugins: lucidscan.reporters (future)
+- Scanner plugins: lucidshark.scanners
+- Enricher plugins: lucidshark.enrichers (future)
+- Reporter plugins: lucidshark.reporters (future)
 """
 
 from __future__ import annotations
@@ -11,20 +11,20 @@ from __future__ import annotations
 from importlib.metadata import entry_points
 from typing import Dict, List, Type, TypeVar
 
-from lucidscan.core.logging import get_logger
+from lucidshark.core.logging import get_logger
 
 LOGGER = get_logger(__name__)
 
 # Entry point group names for different plugin types
-SCANNER_ENTRY_POINT_GROUP = "lucidscan.scanners"
-ENRICHER_ENTRY_POINT_GROUP = "lucidscan.enrichers"
-REPORTER_ENTRY_POINT_GROUP = "lucidscan.reporters"
+SCANNER_ENTRY_POINT_GROUP = "lucidshark.scanners"
+ENRICHER_ENTRY_POINT_GROUP = "lucidshark.enrichers"
+REPORTER_ENTRY_POINT_GROUP = "lucidshark.reporters"
 
 # New plugin groups for v0.2+ quality pipeline
-LINTER_ENTRY_POINT_GROUP = "lucidscan.linters"
-TYPE_CHECKER_ENTRY_POINT_GROUP = "lucidscan.type_checkers"
-TEST_RUNNER_ENTRY_POINT_GROUP = "lucidscan.test_runners"
-COVERAGE_ENTRY_POINT_GROUP = "lucidscan.coverage"
+LINTER_ENTRY_POINT_GROUP = "lucidshark.linters"
+TYPE_CHECKER_ENTRY_POINT_GROUP = "lucidshark.type_checkers"
+TEST_RUNNER_ENTRY_POINT_GROUP = "lucidshark.test_runners"
+COVERAGE_ENTRY_POINT_GROUP = "lucidshark.coverage"
 
 T = TypeVar("T")
 
@@ -34,11 +34,11 @@ def discover_plugins(group: str, base_class: Type[T] | None = None) -> Dict[str,
 
     Plugins register themselves in their pyproject.toml:
 
-        [project.entry-points."lucidscan.scanners"]
-        trivy = "lucidscan.scanners.trivy:TrivyScanner"
+        [project.entry-points."lucidshark.scanners"]
+        trivy = "lucidshark.scanners.trivy:TrivyScanner"
 
     Args:
-        group: Entry point group name (e.g., 'lucidscan.scanners').
+        group: Entry point group name (e.g., 'lucidshark.scanners').
         base_class: Optional base class to validate plugins against.
 
     Returns:

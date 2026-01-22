@@ -9,8 +9,8 @@ from unittest.mock import patch
 
 import pytest
 
-from lucidscan.core.models import ScanContext, ScanDomain, Severity, UnifiedIssue
-from lucidscan.pipeline.parallel import (
+from lucidshark.core.models import ScanContext, ScanDomain, Severity, UnifiedIssue
+from lucidshark.pipeline.parallel import (
     DEFAULT_MAX_WORKERS,
     ParallelScannerExecutor,
     ScannerResult,
@@ -127,7 +127,7 @@ class TestParallelScannerExecutor:
     ) -> None:
         """Test that parallel execution aggregates all scanner results."""
         with patch(
-            "lucidscan.pipeline.parallel.get_scanner_plugin"
+            "lucidshark.pipeline.parallel.get_scanner_plugin"
         ) as mock_get:
             mock_get.side_effect = lambda name, **kwargs: MockScanner(name, issues=2)
 
@@ -155,7 +155,7 @@ class TestParallelScannerExecutor:
             return scanner
 
         with patch(
-            "lucidscan.pipeline.parallel.get_scanner_plugin",
+            "lucidshark.pipeline.parallel.get_scanner_plugin",
             side_effect=mock_scanner,
         ):
             executor = ParallelScannerExecutor(sequential=True)
@@ -166,7 +166,7 @@ class TestParallelScannerExecutor:
     def test_handles_scanner_not_found(self, context: ScanContext) -> None:
         """Test handling of missing scanner plugin."""
         with patch(
-            "lucidscan.pipeline.parallel.get_scanner_plugin", return_value=None
+            "lucidshark.pipeline.parallel.get_scanner_plugin", return_value=None
         ):
             executor = ParallelScannerExecutor()
             issues, results = executor.execute(["missing"], context)
@@ -179,7 +179,7 @@ class TestParallelScannerExecutor:
     def test_handles_scanner_exception(self, context: ScanContext) -> None:
         """Test handling of scanner that raises exception."""
         with patch(
-            "lucidscan.pipeline.parallel.get_scanner_plugin"
+            "lucidshark.pipeline.parallel.get_scanner_plugin"
         ) as mock_get:
             mock_get.return_value = MockScanner("failing", should_fail=True)
 
@@ -195,7 +195,7 @@ class TestParallelScannerExecutor:
     ) -> None:
         """Test that scanner results include version info."""
         with patch(
-            "lucidscan.pipeline.parallel.get_scanner_plugin"
+            "lucidshark.pipeline.parallel.get_scanner_plugin"
         ) as mock_get:
             mock_get.return_value = MockScanner("test")
 
@@ -210,7 +210,7 @@ class TestParallelScannerExecutor:
     ) -> None:
         """Test that scanner results include domain info."""
         with patch(
-            "lucidscan.pipeline.parallel.get_scanner_plugin"
+            "lucidshark.pipeline.parallel.get_scanner_plugin"
         ) as mock_get:
             mock_get.return_value = MockScanner("test")
 

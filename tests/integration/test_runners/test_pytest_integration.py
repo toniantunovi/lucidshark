@@ -6,8 +6,8 @@ import tempfile
 from pathlib import Path
 
 
-from lucidscan.core.models import ScanContext, ToolDomain
-from lucidscan.plugins.test_runners.pytest import PytestRunner
+from lucidshark.core.models import ScanContext, ToolDomain
+from lucidshark.plugins.test_runners.pytest import PytestRunner
 
 from tests.integration.conftest import pytest_runner_available
 

@@ -1,6 +1,6 @@
 """Integration tests for Python project scanning.
 
-These tests run the LucidScan CLI against a realistic Python project
+These tests run the LucidShark CLI against a realistic Python project
 with intentional issues and verify expected results.
 
 Run with: pytest tests/integration/projects -v
@@ -13,7 +13,7 @@ from pathlib import Path
 import pytest
 
 from tests.integration.projects.conftest import (
-    run_lucidscan,
+    run_lucidshark,
     ruff_available,
 )
 
@@ -25,12 +25,12 @@ pytestmark = pytest.mark.integration
 class TestPythonLinting:
     """Test Python linting against the test project.
 
-    Note: Ruff is auto-downloaded by LucidScan, so no fixture setup needed.
+    Note: Ruff is auto-downloaded by LucidShark, so no fixture setup needed.
     """
 
     def test_ruff_finds_unused_imports(self, python_project: Path) -> None:
         """Test that Ruff finds unused imports (F401)."""
-        result = run_lucidscan(python_project, domains=["linting"])
+        result = run_lucidshark(python_project, domains=["linting"])
 
         # Should find issues (exit code depends on fail threshold settings)
         assert result.exit_code in (0, 1)
@@ -42,7 +42,7 @@ class TestPythonLinting:
 
     def test_ruff_finds_formatting_issues(self, python_project: Path) -> None:
         """Test that Ruff finds formatting issues."""
-        result = run_lucidscan(python_project, domains=["linting"])
+        result = run_lucidshark(python_project, domains=["linting"])
 
         assert result.issue_count >= 1
         # Should have linting domain issues
@@ -51,7 +51,7 @@ class TestPythonLinting:
 
     def test_linting_json_output_format(self, python_project: Path) -> None:
         """Test that JSON output has expected structure."""
-        result = run_lucidscan(python_project, domains=["linting"])
+        result = run_lucidshark(python_project, domains=["linting"])
 
         # Should have issues with required fields
         if result.issues:
@@ -72,7 +72,7 @@ class TestPythonTypeChecking:
         self, python_project_with_deps: Path
     ) -> None:
         """Test that type checking scan completes without errors."""
-        result = run_lucidscan(python_project_with_deps, domains=["type_checking"])
+        result = run_lucidshark(python_project_with_deps, domains=["type_checking"])
 
         # Scan should complete (exit 0 or 1), not crash (exit 2+)
         assert result.exit_code in (0, 1)
@@ -89,7 +89,7 @@ class TestPythonTypeChecking:
         self, python_project_with_deps: Path
     ) -> None:
         """Test that type errors are detected."""
-        result = run_lucidscan(python_project_with_deps, domains=["type_checking"])
+        result = run_lucidshark(python_project_with_deps, domains=["type_checking"])
 
         # models.py has intentional type errors
         type_issues = result.issues_by_domain("type_checking")
@@ -112,7 +112,7 @@ class TestPythonCombinedScanning:
         self, python_project_with_deps: Path
     ) -> None:
         """Test running both linting and type checking together."""
-        result = run_lucidscan(
+        result = run_lucidshark(
             python_project_with_deps, domains=["linting", "type_checking"]
         )
 
@@ -126,7 +126,7 @@ class TestPythonCombinedScanning:
     @ruff_available
     def test_scan_completes_successfully(self, python_project: Path) -> None:
         """Test that scan completes and finds issues."""
-        result = run_lucidscan(python_project, domains=["linting"])
+        result = run_lucidshark(python_project, domains=["linting"])
 
         # Scan should complete (exit 0 or 1), not error (exit 2 or 3)
         assert result.exit_code in (0, 1)

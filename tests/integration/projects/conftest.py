@@ -58,7 +58,7 @@ __all__ = [
     "typescript_project",
     "typescript_project_with_deps",
     # Helpers
-    "run_lucidscan",
+    "run_lucidshark",
     "ScanResult",
 ]
 
@@ -70,7 +70,7 @@ __all__ = [
 
 @dataclass
 class ScanResult:
-    """Result of running lucidscan CLI against a project."""
+    """Result of running lucidshark CLI against a project."""
 
     exit_code: int
     stdout: str
@@ -96,13 +96,13 @@ class ScanResult:
         return [i for i in self.issues if i.get("severity") == severity]
 
 
-def run_lucidscan(
+def run_lucidshark(
     project_path: Path,
     domains: list[str] | None = None,
     extra_args: list[str] | None = None,
     timeout: int = 120,
 ) -> ScanResult:
-    """Run lucidscan CLI against a project and return parsed results.
+    """Run lucidshark CLI against a project and return parsed results.
 
     Args:
         project_path: Path to the project to scan
@@ -115,13 +115,13 @@ def run_lucidscan(
     """
     import json
 
-    # Find lucidscan in the same directory as the Python executable
-    lucidscan_bin = Path(sys.executable).parent / "lucidscan"
-    if not lucidscan_bin.exists():
+    # Find lucidshark in the same directory as the Python executable
+    lucidshark_bin = Path(sys.executable).parent / "lucidshark"
+    if not lucidshark_bin.exists():
         # Fall back to PATH
-        lucidscan_bin = Path(shutil.which("lucidscan") or "lucidscan")
+        lucidshark_bin = Path(shutil.which("lucidshark") or "lucidshark")
 
-    cmd = [str(lucidscan_bin), "scan", "--format", "json"]
+    cmd = [str(lucidshark_bin), "scan", "--format", "json"]
 
     if domains:
         for domain in domains:

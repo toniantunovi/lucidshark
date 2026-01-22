@@ -36,7 +36,7 @@ ignore:
   - "**/node_modules/**"
   - "**/dist/**"
   - "**/.git/**"
-  - "**/.lucidscan/**"
+  - "**/.lucidshark/**"
   - "**/.ruff_cache/**"
   - "**/*.yml"
   - "**/*.yaml"

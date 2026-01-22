@@ -1,11 +1,11 @@
-"""Table reporter plugin for lucidscan."""
+"""Table reporter plugin for lucidshark."""
 
 from __future__ import annotations
 
 from typing import IO, List
 
-from lucidscan.core.models import ScanResult, Severity
-from lucidscan.plugins.reporters.base import ReporterPlugin
+from lucidshark.core.models import ScanResult, Severity
+from lucidshark.plugins.reporters.base import ReporterPlugin
 
 
 class TableReporter(ReporterPlugin):

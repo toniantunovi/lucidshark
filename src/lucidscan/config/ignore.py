@@ -1,7 +1,7 @@
 """Gitignore-style pattern parsing and matching.
 
 Handles loading and matching of ignore patterns from:
-- .lucidscanignore file (gitignore syntax)
+- .lucidsharkignore file (gitignore syntax)
 - config.ignore list (gitignore syntax)
 
 Uses pathspec library for full gitignore compliance including:
@@ -17,14 +17,14 @@ from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import pathspec
 
-from lucidscan.core.logging import get_logger
+from lucidshark.core.logging import get_logger
 
 if TYPE_CHECKING:
     pass
 
 LOGGER = get_logger(__name__)
 
-LUCIDSCANIGNORE_NAMES = [".lucidscanignore"]
+LUCIDSHARKIGNORE_NAMES = [".lucidsharkignore"]
 
 
 class IgnorePatterns:
@@ -130,8 +130,8 @@ class IgnorePatterns:
         return cls(all_patterns, source="+".join(sources) if sources else "empty")
 
 
-def find_lucidscanignore(project_root: Path) -> Optional[Path]:
-    """Find .lucidscanignore file in project root.
+def find_lucidsharkignore(project_root: Path) -> Optional[Path]:
+    """Find .lucidsharkignore file in project root.
 
     Args:
         project_root: Project root directory.
@@ -139,7 +139,7 @@ def find_lucidscanignore(project_root: Path) -> Optional[Path]:
     Returns:
         Path to ignore file if found, None otherwise.
     """
-    for name in LUCIDSCANIGNORE_NAMES:
+    for name in LUCIDSHARKIGNORE_NAMES:
         ignore_path = project_root / name
         if ignore_path.exists():
             return ignore_path
@@ -153,8 +153,8 @@ def load_ignore_patterns(
     """Load and merge ignore patterns from all sources.
 
     Loads patterns from:
-    1. .lucidscanignore file (if present)
-    2. config.ignore list from .lucidscan.yml
+    1. .lucidsharkignore file (if present)
+    2. config.ignore list from .lucidshark.yml
 
     Args:
         project_root: Project root directory.
@@ -163,8 +163,8 @@ def load_ignore_patterns(
     Returns:
         Merged IgnorePatterns instance.
     """
-    # Load from .lucidscanignore
-    ignore_file = find_lucidscanignore(project_root)
+    # Load from .lucidsharkignore
+    ignore_file = find_lucidsharkignore(project_root)
     file_patterns = IgnorePatterns.from_file(ignore_file) if ignore_file else None
 
     # Load from config

@@ -1,5 +1,5 @@
 """
-lucidscan package root.
+lucidshark package root.
 
 This module currently only exposes version metadata. Core functionality lives in
 subpackages such as `core`, `schema`, and `scanners`.

@@ -8,8 +8,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lucidscan.core.models import ToolDomain
-from lucidscan.plugins.test_runners.karma import KarmaRunner
+from lucidshark.core.models import ToolDomain
+from lucidshark.plugins.test_runners.karma import KarmaRunner
 
 
 class TestKarmaRunner:

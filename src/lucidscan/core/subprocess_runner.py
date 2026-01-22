@@ -11,7 +11,7 @@ import threading
 from pathlib import Path
 from typing import List, Optional, Union
 
-from lucidscan.core.streaming import (
+from lucidshark.core.streaming import (
     NullStreamHandler,
     StreamEvent,
     StreamHandler,

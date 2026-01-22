@@ -1,6 +1,6 @@
-"""MCP tool executor for LucidScan operations.
+"""MCP tool executor for LucidShark operations.
 
-Executes LucidScan scan operations and formats results for AI agents.
+Executes LucidShark scan operations and formats results for AI agents.
 """
 
 from __future__ import annotations
@@ -11,14 +11,14 @@ import sys
 from pathlib import Path
 from typing import Any, Callable, Coroutine, Dict, List, Optional
 
-from lucidscan.config import LucidScanConfig
-from lucidscan.core.domain_runner import (
+from lucidshark.config import LucidSharkConfig
+from lucidshark.core.domain_runner import (
     DomainRunner,
     detect_language,
     get_domains_for_language,
 )
-from lucidscan.core.logging import get_logger
-from lucidscan.core.models import (
+from lucidshark.core.logging import get_logger
+from lucidshark.core.models import (
     DomainType,
     ScanContext,
     ScanDomain,
@@ -26,26 +26,26 @@ from lucidscan.core.models import (
     UnifiedIssue,
     parse_domain,
 )
-from lucidscan.core.streaming import (
+from lucidshark.core.streaming import (
     CLIStreamHandler,
     MCPStreamHandler,
     StreamEvent,
     StreamHandler,
 )
-from lucidscan.mcp.formatter import InstructionFormatter
+from lucidshark.mcp.formatter import InstructionFormatter
 
 LOGGER = get_logger(__name__)
 
 
 class MCPToolExecutor:
-    """Executes LucidScan operations for MCP tools."""
+    """Executes LucidShark operations for MCP tools."""
 
-    def __init__(self, project_root: Path, config: LucidScanConfig):
+    def __init__(self, project_root: Path, config: LucidSharkConfig):
         """Initialize MCPToolExecutor.
 
         Args:
             project_root: Project root directory.
-            config: LucidScan configuration.
+            config: LucidShark configuration.
         """
         self.project_root = project_root
         self.config = config
@@ -67,7 +67,7 @@ class MCPToolExecutor:
         if self._tools_bootstrapped:
             return
 
-        from lucidscan.plugins.scanners import get_scanner_plugin
+        from lucidshark.plugins.scanners import get_scanner_plugin
 
         # Get unique scanners needed based on requested security domains only
         scanners_to_bootstrap: set[str] = set()
@@ -121,7 +121,7 @@ class MCPToolExecutor:
         if security_domains and not self._tools_bootstrapped:
             if on_progress:
                 await on_progress({
-                    "tool": "lucidscan",
+                    "tool": "lucidshark",
                     "content": "Downloading security tools...",
                     "progress": 0,
                     "total": None,
@@ -200,7 +200,7 @@ class MCPToolExecutor:
             if on_progress and total_domains > 0:
                 domain_names = [name for name, _ in tasks_with_names]
                 await on_progress({
-                    "tool": "lucidscan",
+                    "tool": "lucidshark",
                     "content": f"Scanning {total_domains} domain(s): {', '.join(domain_names)}",
                     "progress": 0,
                     "total": total_domains,
@@ -352,12 +352,12 @@ class MCPToolExecutor:
             return {"error": f"Failed to apply fix: {e}"}
 
     async def get_status(self) -> Dict[str, Any]:
-        """Get current LucidScan status and configuration.
+        """Get current LucidShark status and configuration.
 
         Returns:
             Status information.
         """
-        from lucidscan.plugins.discovery import get_all_available_tools
+        from lucidshark.plugins.discovery import get_all_available_tools
 
         return {
             "project_root": str(self.project_root),
@@ -367,12 +367,12 @@ class MCPToolExecutor:
         }
 
     async def get_help(self) -> Dict[str, Any]:
-        """Get LucidScan documentation.
+        """Get LucidShark documentation.
 
         Returns:
             Documentation content in markdown format.
         """
-        from lucidscan.cli.commands.help import get_help_content
+        from lucidshark.cli.commands.help import get_help_content
 
         content = get_help_content()
         return {
@@ -385,12 +385,12 @@ class MCPToolExecutor:
 
         Args:
             config_path: Optional path to config file (relative to project root).
-                If not provided, searches for lucidscan.yml in project root.
+                If not provided, searches for lucidshark.yml in project root.
 
         Returns:
             Structured validation result with valid flag, errors, and warnings.
         """
-        from lucidscan.config.validation import validate_config_at_path
+        from lucidshark.config.validation import validate_config_at_path
 
         result = validate_config_at_path(self.project_root, config_path)
 
@@ -403,10 +403,10 @@ class MCPToolExecutor:
             }
             if result.config_path is None:
                 response["searched_for"] = [
-                    ".lucidscan.yml",
-                    ".lucidscan.yaml",
-                    "lucidscan.yml",
-                    "lucidscan.yaml",
+                    ".lucidshark.yml",
+                    ".lucidshark.yaml",
+                    "lucidshark.yml",
+                    "lucidshark.yaml",
                 ]
             return response
 
@@ -418,11 +418,11 @@ class MCPToolExecutor:
         }
 
     async def autoconfigure(self) -> Dict[str, Any]:
-        """Get instructions for auto-configuring LucidScan.
+        """Get instructions for auto-configuring LucidShark.
 
         Returns guidance for AI to analyze the codebase, ask the user
         important configuration questions, and generate an appropriate
-        lucidscan.yml configuration file.
+        lucidshark.yml configuration file.
 
         Returns:
             Instructions and guidance for configuration generation.
@@ -430,7 +430,7 @@ class MCPToolExecutor:
         return {
             "instructions": (
                 "Analyze the codebase, ask 1-2 quick questions if needed, "
-                "then generate lucidscan.yml with smart defaults."
+                "then generate lucidshark.yml with smart defaults."
             ),
             "analysis_steps": [
                 {
@@ -510,18 +510,18 @@ class MCPToolExecutor:
                 },
                 {
                     "step": 5,
-                    "action": "Read LucidScan documentation",
+                    "action": "Read LucidShark documentation",
                     "tool_to_call": "get_help()",
                     "what_to_extract": (
-                        "Read the 'Configuration Reference (lucidscan.yml)' section "
+                        "Read the 'Configuration Reference (lucidshark.yml)' section "
                         "to understand the full configuration format, available tools, "
                         "and valid options for each domain."
                     ),
                 },
                 {
                     "step": 6,
-                    "action": "Generate lucidscan.yml",
-                    "output_file": "lucidscan.yml",
+                    "action": "Generate lucidshark.yml",
+                    "output_file": "lucidshark.yml",
                     "template_guidance": (
                         "Based on detected languages/tools AND user answers, create a configuration "
                         "that enables appropriate domains. Include: version, project metadata, "
@@ -534,12 +534,12 @@ class MCPToolExecutor:
                     "action": "Validate the generated configuration",
                     "tool_to_call": "validate_config()",
                     "what_to_do": (
-                        "After writing lucidscan.yml, call validate_config() to verify "
+                        "After writing lucidshark.yml, call validate_config() to verify "
                         "the configuration is valid. If there are errors, fix them before "
                         "proceeding. Warnings can be addressed but are not blocking."
                     ),
                     "on_error": (
-                        "If validation returns errors, edit lucidscan.yml to fix the issues "
+                        "If validation returns errors, edit lucidshark.yml to fix the issues "
                         "and call validate_config() again until it passes."
                     ),
                 },
@@ -549,8 +549,8 @@ class MCPToolExecutor:
                     "guidance": (
                         "After generating the config, tell the user: "
                         "1) Which tools need to be installed (security tools are auto-downloaded), "
-                        "2) Run 'lucidscan init --claude-code' or '--cursor' for AI integration, "
-                        "3) Run 'lucidscan scan --all' to verify the configuration works, "
+                        "2) Run 'lucidshark init --claude-code' or '--cursor' for AI integration, "
+                        "3) Run 'lucidshark scan --all' to verify the configuration works, "
                         "4) IMPORTANT: Restart Claude Code or Cursor for the configuration to take effect."
                     ),
                 },
@@ -569,7 +569,7 @@ class MCPToolExecutor:
                     },
                     {
                         "id": "strictness",
-                        "ask_when": "Large existing codebase with no lucidscan.yml",
+                        "ask_when": "Large existing codebase with no lucidshark.yml",
                         "question": "Strict mode (fail on issues) or gradual adoption (report only)?",
                         "options": {
                             "strict": "fail_on errors - recommended for new/clean projects",
@@ -747,9 +747,9 @@ ignore:
 """,
             },
             "post_config_steps": [
-                "Run 'lucidscan init --claude-code' or 'lucidscan init --cursor' to set up AI tool integration",
+                "Run 'lucidshark init --claude-code' or 'lucidshark init --cursor' to set up AI tool integration",
                 "Install required linting/testing tools via package manager (security tools auto-download)",
-                "Run 'lucidscan scan --all' to test the configuration and see initial results",
+                "Run 'lucidshark scan --all' to test the configuration and see initial results",
                 "If many issues appear, consider starting with relaxed thresholds (see gradual_adoption example)",
                 "IMPORTANT: Restart Claude Code or Cursor for the new configuration to take effect",
             ],
@@ -759,7 +759,7 @@ ignore:
         """Parse domain strings to domain enums.
 
         When "all" is specified, returns domains based on what's configured
-        in lucidscan.yml. If no config exists, uses sensible defaults.
+        in lucidshark.yml. If no config exists, uses sensible defaults.
 
         Args:
             domains: List of domain names.

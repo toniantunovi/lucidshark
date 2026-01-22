@@ -8,11 +8,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lucidscan.config.models import LucidScanConfig, PipelineConfig
-from lucidscan.core.models import ScanContext, ScanDomain, Severity, UnifiedIssue
-from lucidscan.pipeline.executor import PipelineConfig as ExecutorPipelineConfig
-from lucidscan.pipeline.executor import PipelineExecutor
-from lucidscan.pipeline.parallel import ScannerResult
+from lucidshark.config.models import LucidSharkConfig, PipelineConfig
+from lucidshark.core.models import ScanContext, ScanDomain, Severity, UnifiedIssue
+from lucidshark.pipeline.executor import PipelineConfig as ExecutorPipelineConfig
+from lucidshark.pipeline.executor import PipelineExecutor
+from lucidshark.pipeline.parallel import ScannerResult
 
 
 class TestPipelineConfig:
@@ -41,12 +41,12 @@ class TestPipelineExecutor:
     """Tests for PipelineExecutor."""
 
     @pytest.fixture
-    def config(self) -> LucidScanConfig:
+    def config(self) -> LucidSharkConfig:
         """Create a test config."""
-        return LucidScanConfig()
+        return LucidSharkConfig()
 
     @pytest.fixture
-    def context(self, tmp_path: Path, config: LucidScanConfig) -> ScanContext:
+    def context(self, tmp_path: Path, config: LucidSharkConfig) -> ScanContext:
         """Create a test scan context."""
         return ScanContext(
             project_root=tmp_path,
@@ -56,7 +56,7 @@ class TestPipelineExecutor:
         )
 
     def test_execute_returns_scan_result(
-        self, config: LucidScanConfig, context: ScanContext
+        self, config: LucidSharkConfig, context: ScanContext
     ) -> None:
         """Test that execute returns a ScanResult."""
         with patch.object(
@@ -64,7 +64,7 @@ class TestPipelineExecutor:
         ) as mock_scan:
             mock_scan.return_value = ([], [])
 
-            executor = PipelineExecutor(config, lucidscan_version="1.0.0")
+            executor = PipelineExecutor(config, lucidshark_version="1.0.0")
             result = executor.execute([], context)
 
             assert result is not None
@@ -72,7 +72,7 @@ class TestPipelineExecutor:
             assert result.summary is not None
 
     def test_execute_includes_metadata(
-        self, config: LucidScanConfig, context: ScanContext
+        self, config: LucidSharkConfig, context: ScanContext
     ) -> None:
         """Test that execute includes proper metadata."""
         with patch.object(
@@ -80,16 +80,16 @@ class TestPipelineExecutor:
         ) as mock_scan:
             mock_scan.return_value = ([], [])
 
-            executor = PipelineExecutor(config, lucidscan_version="1.0.0")
+            executor = PipelineExecutor(config, lucidshark_version="1.0.0")
             result = executor.execute([], context)
 
             assert result.metadata is not None
-            assert result.metadata.lucidscan_version == "1.0.0"
+            assert result.metadata.lucidshark_version == "1.0.0"
             assert result.metadata.project_root == str(context.project_root)
             assert result.metadata.duration_ms >= 0
 
     def test_execute_computes_summary(
-        self, config: LucidScanConfig, context: ScanContext
+        self, config: LucidSharkConfig, context: ScanContext
     ) -> None:
         """Test that execute computes a summary."""
         mock_issue = UnifiedIssue(
@@ -118,7 +118,7 @@ class TestPipelineExecutor:
         self, tmp_path: Path
     ) -> None:
         """Test that enrichers execute in configured order."""
-        config = LucidScanConfig(
+        config = LucidSharkConfig(
             pipeline=PipelineConfig(enrichers=["first", "second"]),
         )
         context = ScanContext(
@@ -146,7 +146,7 @@ class TestPipelineExecutor:
         with patch.object(
             PipelineExecutor, "_execute_scanners"
         ) as mock_scan, patch(
-            "lucidscan.plugins.enrichers.get_enricher_plugin",
+            "lucidshark.plugins.enrichers.get_enricher_plugin",
             side_effect=mock_enricher,
         ):
             mock_scan.return_value = ([], [])
@@ -157,7 +157,7 @@ class TestPipelineExecutor:
             assert call_order == ["first", "second"]
 
     def test_missing_enricher_skipped(
-        self, config: LucidScanConfig, context: ScanContext
+        self, config: LucidSharkConfig, context: ScanContext
     ) -> None:
         """Test that missing enricher is skipped with warning."""
         pipeline_config = ExecutorPipelineConfig(
@@ -167,7 +167,7 @@ class TestPipelineExecutor:
         with patch.object(
             PipelineExecutor, "_execute_scanners"
         ) as mock_scan, patch(
-            "lucidscan.plugins.enrichers.get_enricher_plugin",
+            "lucidshark.plugins.enrichers.get_enricher_plugin",
             return_value=None,
         ):
             mock_scan.return_value = ([], [])
@@ -179,7 +179,7 @@ class TestPipelineExecutor:
             assert result is not None
 
     def test_enricher_exception_continues_pipeline(
-        self, config: LucidScanConfig, context: ScanContext
+        self, config: LucidSharkConfig, context: ScanContext
     ) -> None:
         """Test that enricher exception doesn't stop the pipeline."""
         pipeline_config = ExecutorPipelineConfig(enricher_order=["failing"])
@@ -191,7 +191,7 @@ class TestPipelineExecutor:
         with patch.object(
             PipelineExecutor, "_execute_scanners"
         ) as mock_scan, patch(
-            "lucidscan.plugins.enrichers.get_enricher_plugin",
+            "lucidshark.plugins.enrichers.get_enricher_plugin",
             return_value=failing_enricher,
         ):
             mock_scan.return_value = ([], [])
@@ -203,7 +203,7 @@ class TestPipelineExecutor:
             assert result is not None
 
     def test_scanner_results_in_metadata(
-        self, config: LucidScanConfig, context: ScanContext
+        self, config: LucidSharkConfig, context: ScanContext
     ) -> None:
         """Test that scanner results are included in metadata."""
         scanner_result = ScannerResult(

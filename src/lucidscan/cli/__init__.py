@@ -1,15 +1,15 @@
-"""LucidScan CLI package.
+"""LucidShark CLI package.
 
-This package provides the command-line interface for lucidscan.
+This package provides the command-line interface for lucidshark.
 """
 
 from __future__ import annotations
 
 from typing import Iterable, Optional
 
-from lucidscan.cli.runner import CLIRunner, get_version
-from lucidscan.cli.arguments import build_parser
-from lucidscan.cli.exit_codes import (
+from lucidshark.cli.runner import CLIRunner, get_version
+from lucidshark.cli.arguments import build_parser
+from lucidshark.cli.exit_codes import (
     EXIT_SUCCESS,
     EXIT_ISSUES_FOUND,
     EXIT_SCANNER_ERROR,

@@ -10,12 +10,12 @@ import venv
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from lucidscan.plugins.scanners.base import ScannerPlugin
-from lucidscan.core.models import ScanContext, ScanDomain, Severity, UnifiedIssue
-from lucidscan.bootstrap.paths import LucidscanPaths
-from lucidscan.bootstrap.versions import get_tool_version
-from lucidscan.core.logging import get_logger
-from lucidscan.core.subprocess_runner import run_with_streaming
+from lucidshark.plugins.scanners.base import ScannerPlugin
+from lucidshark.core.models import ScanContext, ScanDomain, Severity, UnifiedIssue
+from lucidshark.bootstrap.paths import LucidsharkPaths
+from lucidshark.bootstrap.versions import get_tool_version
+from lucidshark.core.logging import get_logger
+from lucidshark.core.subprocess_runner import run_with_streaming
 
 LOGGER = get_logger(__name__)
 
@@ -61,7 +61,7 @@ def _glob_to_regex(pattern: str) -> str:
 
     return result
 
-# Default version from pyproject.toml [tool.lucidscan.tools]
+# Default version from pyproject.toml [tool.lucidshark.tools]
 DEFAULT_VERSION = get_tool_version("checkov")
 
 # Checkov severity mapping to unified severity
@@ -84,7 +84,7 @@ class CheckovScanner(ScannerPlugin):
 
     Binary management:
     - Installs via pip into a virtual environment
-    - Caches at {project}/.lucidscan/bin/checkov/{version}/venv/
+    - Caches at {project}/.lucidshark/bin/checkov/{version}/venv/
     """
 
     def __init__(
@@ -94,9 +94,9 @@ class CheckovScanner(ScannerPlugin):
     ) -> None:
         self._version = version
         if project_root:
-            self._paths = LucidscanPaths.for_project(project_root)
+            self._paths = LucidsharkPaths.for_project(project_root)
         else:
-            self._paths = LucidscanPaths.default()
+            self._paths = LucidsharkPaths.default()
 
     @property
     def name(self) -> str:
@@ -256,7 +256,7 @@ class CheckovScanner(ScannerPlugin):
         if skip_checks:
             cmd.extend(["--skip-check", ",".join(skip_checks)])
 
-        # Apply ignore patterns from .lucidscanignore and config
+        # Apply ignore patterns from .lucidsharkignore and config
         # Convert glob patterns to regex since Checkov's Bicep runner
         # (and possibly others) treats --skip-path as regex
         exclude_patterns = context.get_exclude_patterns()

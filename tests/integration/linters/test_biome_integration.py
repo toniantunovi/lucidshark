@@ -13,8 +13,8 @@ import tempfile
 from pathlib import Path
 
 
-from lucidscan.core.models import ScanContext
-from lucidscan.plugins.linters.biome import BiomeLinter
+from lucidshark.core.models import ScanContext
+from lucidshark.plugins.linters.biome import BiomeLinter
 from tests.integration.conftest import biome_available
 
 

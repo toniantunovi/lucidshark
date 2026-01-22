@@ -10,7 +10,7 @@ from argparse import Namespace
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from lucidscan.config.models import LucidScanConfig
+    from lucidshark.config.models import LucidSharkConfig
 
 
 class Command(ABC):
@@ -30,12 +30,12 @@ class Command(ABC):
         """
 
     @abstractmethod
-    def execute(self, args: Namespace, config: "LucidScanConfig | None" = None) -> int:
+    def execute(self, args: Namespace, config: "LucidSharkConfig | None" = None) -> int:
         """Execute the command.
 
         Args:
             args: Parsed command-line arguments.
-            config: Optional LucidScan configuration.
+            config: Optional LucidShark configuration.
 
         Returns:
             Exit code (0 for success, non-zero for error).
@@ -44,13 +44,13 @@ class Command(ABC):
 
 # Import command implementations for convenience
 # ruff: noqa: E402
-from lucidscan.cli.commands.status import StatusCommand
-from lucidscan.cli.commands.list_scanners import ListScannersCommand
-from lucidscan.cli.commands.scan import ScanCommand
-from lucidscan.cli.commands.init import InitCommand
-from lucidscan.cli.commands.autoconfigure import AutoconfigureCommand
-from lucidscan.cli.commands.serve import ServeCommand
-from lucidscan.cli.commands.validate import ValidateCommand
+from lucidshark.cli.commands.status import StatusCommand
+from lucidshark.cli.commands.list_scanners import ListScannersCommand
+from lucidshark.cli.commands.scan import ScanCommand
+from lucidshark.cli.commands.init import InitCommand
+from lucidshark.cli.commands.autoconfigure import AutoconfigureCommand
+from lucidshark.cli.commands.serve import ServeCommand
+from lucidshark.cli.commands.validate import ValidateCommand
 
 __all__ = [
     "Command",

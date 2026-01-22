@@ -6,11 +6,11 @@ from argparse import Namespace
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from lucidscan.config.models import LucidScanConfig
+    from lucidshark.config.models import LucidSharkConfig
 
-from lucidscan.cli.commands import Command
-from lucidscan.cli.exit_codes import EXIT_SUCCESS
-from lucidscan.plugins.scanners import discover_scanner_plugins
+from lucidshark.cli.commands import Command
+from lucidshark.cli.exit_codes import EXIT_SUCCESS
+from lucidshark.plugins.scanners import discover_scanner_plugins
 
 
 class ListScannersCommand(Command):
@@ -21,14 +21,14 @@ class ListScannersCommand(Command):
         """Command identifier."""
         return "list_scanners"
 
-    def execute(self, args: Namespace, config: "LucidScanConfig | None" = None) -> int:
+    def execute(self, args: Namespace, config: "LucidSharkConfig | None" = None) -> int:
         """Execute the list-scanners command.
 
         Displays all available scanner plugins with their domains and versions.
 
         Args:
             args: Parsed command-line arguments.
-            config: Optional LucidScan configuration (unused).
+            config: Optional LucidShark configuration (unused).
 
         Returns:
             Exit code (always 0 for list-scanners).
@@ -54,6 +54,6 @@ class ListScannersCommand(Command):
         else:
             print("  No plugins discovered.")
             print()
-            print("Install plugins via pip, e.g.: pip install lucidscan-snyk")
+            print("Install plugins via pip, e.g.: pip install lucidshark-snyk")
 
         return EXIT_SUCCESS

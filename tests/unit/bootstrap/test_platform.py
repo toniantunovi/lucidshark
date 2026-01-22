@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import pytest
 
-from lucidscan.bootstrap.platform import (
+from lucidshark.bootstrap.platform import (
     get_platform_info,
     PlatformInfo,
     detect_os,

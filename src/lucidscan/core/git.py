@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional
 
-from lucidscan.core.logging import get_logger
+from lucidshark.core.logging import get_logger
 
 LOGGER = get_logger(__name__)
 

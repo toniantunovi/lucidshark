@@ -15,21 +15,21 @@ import zipfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from lucidscan.bootstrap.paths import LucidscanPaths
-from lucidscan.bootstrap.versions import get_tool_version
-from lucidscan.core.logging import get_logger
-from lucidscan.core.models import (
+from lucidshark.bootstrap.paths import LucidsharkPaths
+from lucidshark.bootstrap.versions import get_tool_version
+from lucidshark.core.logging import get_logger
+from lucidshark.core.models import (
     ScanContext,
     Severity,
     ToolDomain,
     UnifiedIssue,
 )
-from lucidscan.core.subprocess_runner import run_with_streaming
-from lucidscan.plugins.linters.base import LinterPlugin, FixResult
+from lucidshark.core.subprocess_runner import run_with_streaming
+from lucidshark.plugins.linters.base import LinterPlugin, FixResult
 
 LOGGER = get_logger(__name__)
 
-# Default version from pyproject.toml [tool.lucidscan.tools]
+# Default version from pyproject.toml [tool.lucidshark.tools]
 DEFAULT_VERSION = get_tool_version("ruff")
 
 # Python file extensions that Ruff supports
@@ -113,9 +113,9 @@ class RuffLinter(LinterPlugin):
         """
         self._version = version
         if project_root:
-            self._paths = LucidscanPaths.for_project(project_root)
+            self._paths = LucidsharkPaths.for_project(project_root)
         else:
-            self._paths = LucidscanPaths.default()
+            self._paths = LucidsharkPaths.default()
 
     @property
     def name(self) -> str:

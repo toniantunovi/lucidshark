@@ -14,9 +14,9 @@ import subprocess
 from pathlib import Path
 
 
-from lucidscan.config.models import LucidScanConfig, ScannerDomainConfig
-from lucidscan.core.models import ScanContext, ScanDomain, Severity
-from lucidscan.plugins.scanners.opengrep import OpenGrepScanner
+from lucidshark.config.models import LucidSharkConfig, ScannerDomainConfig
+from lucidshark.core.models import ScanContext, ScanDomain, Severity
+from lucidshark.plugins.scanners.opengrep import OpenGrepScanner
 from tests.integration.conftest import opengrep_available
 
 
@@ -57,7 +57,7 @@ class TestOpenGrepSASTScanning:
         opengrep_scanner: OpenGrepScanner,
         project_root: Path,
     ) -> None:
-        """Test scanning the lucidscan project root for SAST findings."""
+        """Test scanning the lucidshark project root for SAST findings."""
         context = ScanContext(
             project_root=project_root,
             paths=[project_root],
@@ -183,7 +183,7 @@ const API_SECRET = "hardcoded_secret_key_12345";
         py_file = tmp_path / "test.py"
         py_file.write_text('print("Hello, World!")\n')
 
-        config = LucidScanConfig(
+        config = LucidSharkConfig(
             scanners={
                 "sast": ScannerDomainConfig(
                     enabled=True,
@@ -289,7 +289,7 @@ class TestOpenGrepCLIIntegration:
 
     def test_cli_sast_scan_json_output(self, project_root: Path) -> None:
         """Test CLI SAST scan with JSON output."""
-        import lucidscan.cli as cli
+        import lucidshark.cli as cli
 
         # Capture stdout
         import io
@@ -320,7 +320,7 @@ class TestOpenGrepCLIIntegration:
 
     def test_cli_sast_scan_table_output(self, project_root: Path) -> None:
         """Test CLI SAST scan with table output."""
-        import lucidscan.cli as cli
+        import lucidshark.cli as cli
         import io
         import sys
 
@@ -345,7 +345,7 @@ class TestOpenGrepCLIIntegration:
 
     def test_cli_sast_scan_summary_output(self, project_root: Path) -> None:
         """Test CLI SAST scan with summary output."""
-        import lucidscan.cli as cli
+        import lucidshark.cli as cli
         import io
         import sys
 
@@ -369,7 +369,7 @@ class TestOpenGrepCLIIntegration:
 
     def test_cli_combined_sca_and_sast(self, tmp_path: Path) -> None:
         """Test CLI with both SCA and SAST enabled."""
-        import lucidscan.cli as cli
+        import lucidshark.cli as cli
         import io
         import sys
 
@@ -406,7 +406,7 @@ class TestOpenGrepCLIIntegration:
 
     def test_cli_fail_on_with_sast(self, tmp_path: Path) -> None:
         """Test CLI --fail-on flag with SAST findings."""
-        import lucidscan.cli as cli
+        import lucidshark.cli as cli
         import io
         import sys
 

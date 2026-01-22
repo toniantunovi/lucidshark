@@ -6,13 +6,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence, Union
 
 if TYPE_CHECKING:
-    from lucidscan.config.ignore import IgnorePatterns
-    from lucidscan.config.models import LucidScanConfig
-    from lucidscan.core.streaming import StreamHandler
+    from lucidshark.config.ignore import IgnorePatterns
+    from lucidshark.config.models import LucidSharkConfig
+    from lucidshark.core.streaming import StreamHandler
 
 
 class ScanDomain(str, Enum):
-    """Scanning domains supported by lucidscan (security-focused)."""
+    """Scanning domains supported by lucidshark (security-focused)."""
 
     SCA = "sca"
     CONTAINER = "container"
@@ -21,7 +21,7 @@ class ScanDomain(str, Enum):
 
 
 class ToolDomain(str, Enum):
-    """All tool domains supported by lucidscan pipeline.
+    """All tool domains supported by lucidshark pipeline.
 
     This enum covers all types of tools in the quality pipeline:
     linting, type checking, security scanning, testing, and coverage.
@@ -75,7 +75,7 @@ def parse_domains(names: List[str]) -> List[DomainType]:
     Returns:
         List of DomainType enum values.
     """
-    from lucidscan.core.logging import get_logger
+    from lucidshark.core.logging import get_logger
 
     logger = get_logger(__name__)
     result: List[DomainType] = []
@@ -156,7 +156,7 @@ class ScanContext:
     project_root: Path
     paths: List[Path]
     enabled_domains: Sequence[DomainType]
-    config: "LucidScanConfig" = None  # type: ignore[assignment]
+    config: "LucidSharkConfig" = None  # type: ignore[assignment]
     ignore_patterns: Optional["IgnorePatterns"] = None
     stream_handler: Optional["StreamHandler"] = None
     # Coverage result populated after coverage analysis (for MCP/CLI access)
@@ -192,7 +192,7 @@ class ScanContext:
     def create(
         cls,
         project_root: Path,
-        config: "LucidScanConfig",
+        config: "LucidSharkConfig",
         enabled_domains: Sequence[DomainType],
         files: Optional[List[str]] = None,
         all_files: bool = False,
@@ -207,7 +207,7 @@ class ScanContext:
 
         Args:
             project_root: Project root directory.
-            config: LucidScan configuration.
+            config: LucidShark configuration.
             enabled_domains: List of domains to scan.
             files: Optional list of specific files to scan (relative or absolute).
             all_files: If True, scan entire project.
@@ -216,8 +216,8 @@ class ScanContext:
         Returns:
             Configured ScanContext instance.
         """
-        from lucidscan.config.ignore import filter_paths_with_ignore
-        from lucidscan.core.paths import determine_scan_paths
+        from lucidshark.config.ignore import filter_paths_with_ignore
+        from lucidshark.core.paths import determine_scan_paths
 
         paths = determine_scan_paths(project_root, files, all_files)
         paths, ignore_patterns = filter_paths_with_ignore(
@@ -238,7 +238,7 @@ class ScanContext:
 class ScanMetadata:
     """Metadata about the scan execution."""
 
-    lucidscan_version: str
+    lucidshark_version: str
     scan_started_at: str
     scan_finished_at: str
     duration_ms: int

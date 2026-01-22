@@ -38,7 +38,7 @@ ignore:
   - "**/.venv/**"
   - "**/__pycache__/**"
   - "**/.git/**"
-  - "**/.lucidscan/**"
+  - "**/.lucidshark/**"
   - "**/.mypy_cache/**"
   - "**/.ruff_cache/**"
   - "**/*.yml"

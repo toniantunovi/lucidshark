@@ -1,1 +1,1 @@
-"""Tests for lucidscan.config module."""
+"""Tests for lucidshark.config module."""

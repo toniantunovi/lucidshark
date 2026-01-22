@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from lucidscan.config import LucidScanConfig
-from lucidscan.mcp.server import LucidScanMCPServer
-from lucidscan.mcp.tools import MCPToolExecutor
-from lucidscan.mcp.watcher import LucidScanFileWatcher
+from lucidshark.config import LucidSharkConfig
+from lucidshark.mcp.server import LucidSharkMCPServer
+from lucidshark.mcp.tools import MCPToolExecutor
+from lucidshark.mcp.watcher import LucidSharkFileWatcher
 
 
 class TestMCPServerIntegration:
@@ -26,15 +26,15 @@ class TestMCPServerIntegration:
         return tmp_path
 
     @pytest.fixture
-    def config(self) -> LucidScanConfig:
+    def config(self) -> LucidSharkConfig:
         """Create test configuration."""
-        return LucidScanConfig()
+        return LucidSharkConfig()
 
     def test_mcp_server_initialization(
-        self, project_root: Path, config: LucidScanConfig
+        self, project_root: Path, config: LucidSharkConfig
     ) -> None:
         """Test MCP server initialization."""
-        server = LucidScanMCPServer(project_root, config)
+        server = LucidSharkMCPServer(project_root, config)
 
         assert server.project_root == project_root
         assert server.config == config
@@ -42,7 +42,7 @@ class TestMCPServerIntegration:
         assert server.server is not None
 
     def test_mcp_tool_executor_integration(
-        self, project_root: Path, config: LucidScanConfig
+        self, project_root: Path, config: LucidSharkConfig
     ) -> None:
         """Test tool executor with real project structure."""
         executor = MCPToolExecutor(project_root, config)
@@ -58,7 +58,7 @@ class TestMCPServerIntegration:
 
     @pytest.mark.asyncio
     async def test_check_file_with_real_file(
-        self, project_root: Path, config: LucidScanConfig
+        self, project_root: Path, config: LucidSharkConfig
     ) -> None:
         """Test checking a real file."""
         executor = MCPToolExecutor(project_root, config)
@@ -73,7 +73,7 @@ class TestMCPServerIntegration:
 
     @pytest.mark.asyncio
     async def test_scan_empty_project(
-        self, project_root: Path, config: LucidScanConfig
+        self, project_root: Path, config: LucidSharkConfig
     ) -> None:
         """Test scanning a project with minimal files."""
         executor = MCPToolExecutor(project_root, config)
@@ -101,15 +101,15 @@ class TestFileWatcherIntegration:
         return tmp_path
 
     @pytest.fixture
-    def config(self) -> LucidScanConfig:
+    def config(self) -> LucidSharkConfig:
         """Create test configuration."""
-        return LucidScanConfig()
+        return LucidSharkConfig()
 
     def test_watcher_initialization_with_real_project(
-        self, project_root: Path, config: LucidScanConfig
+        self, project_root: Path, config: LucidSharkConfig
     ) -> None:
         """Test watcher initialization with real project."""
-        watcher = LucidScanFileWatcher(
+        watcher = LucidSharkFileWatcher(
             project_root, config, debounce_ms=100
         )
 
@@ -117,10 +117,10 @@ class TestFileWatcherIntegration:
         assert watcher.debounce_ms == 100
 
     def test_watcher_ignore_patterns(
-        self, project_root: Path, config: LucidScanConfig
+        self, project_root: Path, config: LucidSharkConfig
     ) -> None:
         """Test watcher correctly ignores patterns."""
-        watcher = LucidScanFileWatcher(project_root, config)
+        watcher = LucidSharkFileWatcher(project_root, config)
 
         # Create directories that should be ignored
         git_dir = project_root / ".git"
@@ -139,10 +139,10 @@ class TestFileWatcherIntegration:
         assert watcher._should_ignore(project_root / "src" / "main.py") is False
 
     def test_watcher_callback_registration(
-        self, project_root: Path, config: LucidScanConfig
+        self, project_root: Path, config: LucidSharkConfig
     ) -> None:
         """Test callback registration."""
-        watcher = LucidScanFileWatcher(project_root, config)
+        watcher = LucidSharkFileWatcher(project_root, config)
 
         results = []
         def callback(result):
@@ -173,13 +173,13 @@ unused_var = 42
         return tmp_path
 
     @pytest.fixture
-    def config(self) -> LucidScanConfig:
+    def config(self) -> LucidSharkConfig:
         """Create test configuration."""
-        return LucidScanConfig()
+        return LucidSharkConfig()
 
     @pytest.mark.asyncio
     async def test_scan_and_format_workflow(
-        self, project_with_issues: Path, config: LucidScanConfig
+        self, project_with_issues: Path, config: LucidSharkConfig
     ) -> None:
         """Test complete scan and format workflow."""
         executor = MCPToolExecutor(project_with_issues, config)
@@ -203,7 +203,7 @@ unused_var = 42
 
     @pytest.mark.asyncio
     async def test_check_specific_file(
-        self, project_with_issues: Path, config: LucidScanConfig
+        self, project_with_issues: Path, config: LucidSharkConfig
     ) -> None:
         """Test checking a specific file."""
         executor = MCPToolExecutor(project_with_issues, config)
@@ -216,7 +216,7 @@ unused_var = 42
 
     @pytest.mark.asyncio
     async def test_issue_caching_and_retrieval(
-        self, project_with_issues: Path, config: LucidScanConfig
+        self, project_with_issues: Path, config: LucidSharkConfig
     ) -> None:
         """Test that issues are cached and can be retrieved."""
         executor = MCPToolExecutor(project_with_issues, config)

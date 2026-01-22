@@ -15,15 +15,15 @@ import tempfile
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from lucidscan.core.logging import get_logger
-from lucidscan.core.models import (
+from lucidshark.core.logging import get_logger
+from lucidshark.core.models import (
     ScanContext,
     Severity,
     ToolDomain,
     UnifiedIssue,
 )
-from lucidscan.core.subprocess_runner import run_with_streaming
-from lucidscan.plugins.coverage.base import (
+from lucidshark.core.subprocess_runner import run_with_streaming
+from lucidshark.plugins.coverage.base import (
     CoveragePlugin,
     CoverageResult,
     FileCoverage,

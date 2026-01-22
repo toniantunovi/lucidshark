@@ -16,9 +16,9 @@ import sys
 from pathlib import Path
 
 
-from lucidscan.config.models import LucidScanConfig, ScannerDomainConfig
-from lucidscan.core.models import ScanContext, ScanDomain, Severity
-from lucidscan.plugins.scanners.trivy import TrivyScanner
+from lucidshark.config.models import LucidSharkConfig, ScannerDomainConfig
+from lucidshark.core.models import ScanContext, ScanDomain, Severity
+from lucidshark.plugins.scanners.trivy import TrivyScanner
 from tests.integration.conftest import trivy_available, docker_available
 
 
@@ -57,7 +57,7 @@ class TestTrivySCAScanning:
         trivy_scanner: TrivyScanner,
         project_root: Path,
     ) -> None:
-        """Test scanning the lucidscan project root for SCA vulnerabilities."""
+        """Test scanning the lucidshark project root for SCA vulnerabilities."""
         context = ScanContext(
             project_root=project_root,
             paths=[project_root],
@@ -201,7 +201,7 @@ class TestTrivyContainerScanning:
             timeout=120,
         )
 
-        config = LucidScanConfig(
+        config = LucidSharkConfig(
             scanners={
                 "container": ScannerDomainConfig(
                     enabled=True,
@@ -238,7 +238,7 @@ class TestTrivyContainerScanning:
             timeout=180,
         )
 
-        config = LucidScanConfig(
+        config = LucidSharkConfig(
             scanners={
                 "container": ScannerDomainConfig(
                     enabled=True,
@@ -274,7 +274,7 @@ class TestTrivyContainerScanning:
                 timeout=120,
             )
 
-        config = LucidScanConfig(
+        config = LucidSharkConfig(
             scanners={
                 "container": ScannerDomainConfig(
                     enabled=True,
@@ -307,7 +307,7 @@ class TestTrivyContainerScanning:
             timeout=120,
         )
 
-        config = LucidScanConfig(
+        config = LucidSharkConfig(
             scanners={
                 "container": ScannerDomainConfig(
                     enabled=True,
@@ -398,7 +398,7 @@ class TestTrivyCLIIntegration:
 
     def test_cli_sca_scan_json_output(self, project_root: Path) -> None:
         """Test CLI SCA scan with JSON output."""
-        import lucidscan.cli as cli
+        import lucidshark.cli as cli
 
         # Capture stdout
         import io
@@ -429,7 +429,7 @@ class TestTrivyCLIIntegration:
 
     def test_cli_sca_scan_table_output(self, project_root: Path) -> None:
         """Test CLI SCA scan with table output."""
-        import lucidscan.cli as cli
+        import lucidshark.cli as cli
         import io
         import sys
 
@@ -454,7 +454,7 @@ class TestTrivyCLIIntegration:
 
     def test_cli_sca_scan_summary_output(self, project_root: Path) -> None:
         """Test CLI SCA scan with summary output."""
-        import lucidscan.cli as cli
+        import lucidshark.cli as cli
         import io
         import sys
 
@@ -478,7 +478,7 @@ class TestTrivyCLIIntegration:
 
     def test_cli_fail_on_high(self, tmp_path: Path) -> None:
         """Test CLI --fail-on flag with high severity threshold."""
-        import lucidscan.cli as cli
+        import lucidshark.cli as cli
         import io
         import sys
 

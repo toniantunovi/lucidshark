@@ -13,14 +13,14 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional
 
-from lucidscan.core.logging import get_logger
-from lucidscan.core.models import (
+from lucidshark.core.logging import get_logger
+from lucidshark.core.models import (
     ScanContext,
     Severity,
     ToolDomain,
     UnifiedIssue,
 )
-from lucidscan.plugins.type_checkers.base import TypeCheckerPlugin
+from lucidshark.plugins.type_checkers.base import TypeCheckerPlugin
 
 LOGGER = get_logger(__name__)
 

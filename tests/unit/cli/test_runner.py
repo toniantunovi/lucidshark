@@ -5,8 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch, MagicMock, PropertyMock
 
-from lucidscan.cli.runner import CLIRunner, get_version
-from lucidscan.cli.exit_codes import (
+from lucidshark.cli.runner import CLIRunner, get_version
+from lucidshark.cli.exit_codes import (
     EXIT_SUCCESS,
     EXIT_INVALID_USAGE,
     EXIT_SCANNER_ERROR,
@@ -18,7 +18,7 @@ class TestGetVersion:
 
     def test_get_version_from_metadata(self) -> None:
         """Test version retrieval from package metadata."""
-        with patch("lucidscan.cli.runner.version", return_value="1.2.3"):
+        with patch("lucidshark.cli.runner.version", return_value="1.2.3"):
             result = get_version()
             assert result == "1.2.3"
 
@@ -27,7 +27,7 @@ class TestGetVersion:
         from importlib.metadata import PackageNotFoundError
 
         with patch(
-            "lucidscan.cli.runner.version",
+            "lucidshark.cli.runner.version",
             side_effect=PackageNotFoundError("not found"),
         ):
             result = get_version()
@@ -83,11 +83,11 @@ class TestCLIRunner:
 
     def test_run_status_command(self, tmp_path: Path) -> None:
         """Test run status command."""
-        home = tmp_path / ".lucidscan"
+        home = tmp_path / ".lucidshark"
         home.mkdir(parents=True)
 
         with patch(
-            "lucidscan.cli.commands.status.get_lucidscan_home",
+            "lucidshark.cli.commands.status.get_lucidshark_home",
             return_value=home,
         ):
             runner = CLIRunner()
@@ -129,7 +129,7 @@ class TestCLIRunner:
         runner._init_cmd = None
 
         with patch(
-            "lucidscan.cli.commands.init.InitCommand",
+            "lucidshark.cli.commands.init.InitCommand",
             side_effect=ImportError("not available"),
         ):
             runner._init_cmd = None
@@ -142,7 +142,7 @@ class TestCLIRunner:
         runner = CLIRunner()
 
         with patch(
-            "lucidscan.cli.runner.load_config",
+            "lucidshark.cli.runner.load_config",
         ) as mock_load:
             mock_config = MagicMock()
             mock_config.get_enabled_domains.return_value = []
@@ -157,12 +157,12 @@ class TestCLIRunner:
 
     def test_handle_scan_config_error(self, tmp_path: Path) -> None:
         """Test scan command with config error."""
-        from lucidscan.config.loader import ConfigError
+        from lucidshark.config.loader import ConfigError
 
         runner = CLIRunner()
 
         with patch(
-            "lucidscan.cli.runner.load_config",
+            "lucidshark.cli.runner.load_config",
             side_effect=ConfigError("Invalid config"),
         ):
             result = runner.run(["scan", str(tmp_path)])
@@ -172,7 +172,7 @@ class TestCLIRunner:
         """Test scan command with file not found error."""
         runner = CLIRunner()
 
-        with patch("lucidscan.cli.runner.load_config") as mock_load:
+        with patch("lucidshark.cli.runner.load_config") as mock_load:
             mock_config = MagicMock()
             mock_config.get_enabled_domains.return_value = []
             mock_load.return_value = mock_config
@@ -189,7 +189,7 @@ class TestCLIRunner:
         """Test scan command with generic error."""
         runner = CLIRunner()
 
-        with patch("lucidscan.cli.runner.load_config") as mock_load:
+        with patch("lucidshark.cli.runner.load_config") as mock_load:
             mock_config = MagicMock()
             mock_config.get_enabled_domains.return_value = []
             mock_load.return_value = mock_config
@@ -206,7 +206,7 @@ class TestCLIRunner:
         """Test scan command with generic error and debug flag."""
         runner = CLIRunner()
 
-        with patch("lucidscan.cli.runner.load_config") as mock_load:
+        with patch("lucidshark.cli.runner.load_config") as mock_load:
             mock_config = MagicMock()
             mock_config.get_enabled_domains.return_value = []
             mock_load.return_value = mock_config
@@ -227,12 +227,12 @@ class TestCLIRunner:
         """Test serve command."""
         runner = CLIRunner()
 
-        with patch("lucidscan.cli.runner.load_config") as mock_load:
+        with patch("lucidshark.cli.runner.load_config") as mock_load:
             mock_config = MagicMock()
             mock_load.return_value = mock_config
 
             with patch(
-                "lucidscan.cli.commands.serve.ServeCommand"
+                "lucidshark.cli.commands.serve.ServeCommand"
             ) as mock_serve_class:
                 mock_serve = MagicMock()
                 mock_serve.execute.return_value = EXIT_SUCCESS
@@ -244,12 +244,12 @@ class TestCLIRunner:
 
     def test_handle_serve_config_error(self, tmp_path: Path) -> None:
         """Test serve command with config error."""
-        from lucidscan.config.loader import ConfigError
+        from lucidshark.config.loader import ConfigError
 
         runner = CLIRunner()
 
         with patch(
-            "lucidscan.cli.runner.load_config",
+            "lucidshark.cli.runner.load_config",
             side_effect=ConfigError("Invalid config"),
         ):
             result = runner.run(["serve", str(tmp_path)])
@@ -259,12 +259,12 @@ class TestCLIRunner:
         """Test serve command with import error."""
         runner = CLIRunner()
 
-        with patch("lucidscan.cli.runner.load_config") as mock_load:
+        with patch("lucidshark.cli.runner.load_config") as mock_load:
             mock_config = MagicMock()
             mock_load.return_value = mock_config
 
             with patch(
-                "lucidscan.cli.commands.serve.ServeCommand",
+                "lucidshark.cli.commands.serve.ServeCommand",
                 side_effect=ImportError("serve not available"),
             ):
                 result = runner.run(["serve", str(tmp_path)])

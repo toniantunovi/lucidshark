@@ -8,7 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass, asdict, field
 from typing import Any, Dict, List, Optional
 
-from lucidscan.core.models import ScanDomain, Severity, ToolDomain, UnifiedIssue
+from lucidshark.core.models import ScanDomain, Severity, ToolDomain, UnifiedIssue
 
 
 @dataclass
@@ -390,7 +390,7 @@ class InstructionFormatter:
         if domain == ToolDomain.LINTING:
             return [
                 f"Fix the linting issue at {file_ref}",
-                "Consider running 'lucidscan scan --linting --fix' for auto-fix",
+                "Consider running 'lucidshark scan --linting --fix' for auto-fix",
             ]
 
         if domain == ToolDomain.TYPE_CHECKING:

@@ -6,17 +6,17 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from lucidscan.core.logging import get_logger
-from lucidscan.core.models import (
+from lucidshark.core.logging import get_logger
+from lucidshark.core.models import (
     ScanContext,
     ScanMetadata,
     ScanResult,
     UnifiedIssue,
 )
-from lucidscan.pipeline.parallel import ParallelScannerExecutor, ScannerResult
+from lucidshark.pipeline.parallel import ParallelScannerExecutor, ScannerResult
 
 if TYPE_CHECKING:
-    from lucidscan.config.models import LucidScanConfig
+    from lucidshark.config.models import LucidSharkConfig
 
 LOGGER = get_logger(__name__)
 
@@ -43,20 +43,20 @@ class PipelineExecutor:
 
     def __init__(
         self,
-        config: "LucidScanConfig",
+        config: "LucidSharkConfig",
         pipeline_config: Optional[PipelineConfig] = None,
-        lucidscan_version: str = "unknown",
+        lucidshark_version: str = "unknown",
     ) -> None:
         """Initialize the pipeline executor.
 
         Args:
-            config: LucidScan configuration.
+            config: LucidShark configuration.
             pipeline_config: Optional pipeline-specific configuration.
-            lucidscan_version: Version string for metadata.
+            lucidshark_version: Version string for metadata.
         """
         self._config = config
         self._pipeline_config = pipeline_config or PipelineConfig()
-        self._lucidscan_version = lucidscan_version
+        self._lucidshark_version = lucidshark_version
 
     def execute(
         self,
@@ -86,7 +86,7 @@ class PipelineExecutor:
 
         result = ScanResult(issues=enriched_issues)
         result.metadata = ScanMetadata(
-            lucidscan_version=self._lucidscan_version,
+            lucidshark_version=self._lucidshark_version,
             scan_started_at=start_time.isoformat(),
             scan_finished_at=end_time.isoformat(),
             duration_ms=duration_ms,
@@ -120,7 +120,7 @@ class PipelineExecutor:
         of the previous enricher.
         """
         # Import here to avoid circular imports
-        from lucidscan.plugins.enrichers import get_enricher_plugin
+        from lucidshark.plugins.enrichers import get_enricher_plugin
 
         enriched = issues
 

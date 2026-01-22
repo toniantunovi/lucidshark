@@ -9,8 +9,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lucidscan.core.models import Severity, ToolDomain
-from lucidscan.plugins.coverage.istanbul import IstanbulPlugin
+from lucidshark.core.models import Severity, ToolDomain
+from lucidshark.plugins.coverage.istanbul import IstanbulPlugin
 
 
 class TestIstanbulPlugin:

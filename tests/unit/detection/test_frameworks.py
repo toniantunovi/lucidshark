@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 
 
-from lucidscan.detection.frameworks import (
+from lucidshark.detection.frameworks import (
     detect_frameworks,
     _get_python_dependencies,
     _get_js_dependencies,

@@ -10,15 +10,15 @@ import tempfile
 from pathlib import Path
 
 
-from lucidscan import cli
-from lucidscan.cli.exit_codes import EXIT_SUCCESS, EXIT_INVALID_USAGE
+from lucidshark import cli
+from lucidshark.cli.exit_codes import EXIT_SUCCESS, EXIT_INVALID_USAGE
 
 
 class TestAutoconfigureCommandBasic:
     """Basic integration tests for autoconfigure command."""
 
     def test_autoconfigure_creates_config_file(self) -> None:
-        """Test that autoconfigurecreates lucidscan.yml config file."""
+        """Test that autoconfigurecreates lucidshark.yml config file."""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)
 
@@ -35,7 +35,7 @@ class TestAutoconfigureCommandBasic:
             assert exit_code == EXIT_SUCCESS
 
             # Config file should be created
-            config_path = tmpdir_path / "lucidscan.yml"
+            config_path = tmpdir_path / "lucidshark.yml"
             assert config_path.exists()
 
     def test_autoconfigure_detects_python_project(self) -> None:
@@ -66,7 +66,7 @@ class TestAutoconfigureCommandBasic:
             assert exit_code == EXIT_SUCCESS
 
             # Config should include Python tools
-            config_path = tmpdir_path / "lucidscan.yml"
+            config_path = tmpdir_path / "lucidshark.yml"
             assert config_path.exists()
             config_content = config_path.read_text()
             # Should contain ruff or mypy (Python tools)
@@ -99,7 +99,7 @@ class TestAutoconfigureCommandBasic:
             assert exit_code == EXIT_SUCCESS
 
             # Config should include JavaScript tools
-            config_path = tmpdir_path / "lucidscan.yml"
+            config_path = tmpdir_path / "lucidshark.yml"
             assert config_path.exists()
             config_content = config_path.read_text()
             # Should contain eslint or typescript (JS tools)
@@ -125,7 +125,7 @@ class TestAutoconfigureCommandNonInteractive:
             ])
 
             assert exit_code == EXIT_SUCCESS
-            config_path = tmpdir_path / "lucidscan.yml"
+            config_path = tmpdir_path / "lucidshark.yml"
             assert config_path.exists()
 
     def test_autoconfigure_non_interactive_short_flag(self) -> None:
@@ -143,7 +143,7 @@ class TestAutoconfigureCommandNonInteractive:
             ])
 
             assert exit_code == EXIT_SUCCESS
-            config_path = tmpdir_path / "lucidscan.yml"
+            config_path = tmpdir_path / "lucidshark.yml"
             assert config_path.exists()
 
 
@@ -151,12 +151,12 @@ class TestAutoconfigureCommandForce:
     """Tests for autoconfigure command force/overwrite behavior."""
 
     def test_autoconfigure_force_overwrites_existing(self) -> None:
-        """Test that --force overwrites existing lucidscan.yml."""
+        """Test that --force overwrites existing lucidshark.yml."""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)
 
             # Create existing config
-            config_path = tmpdir_path / "lucidscan.yml"
+            config_path = tmpdir_path / "lucidshark.yml"
             config_path.write_text("# Old config\n")
 
             test_file = tmpdir_path / "main.py"
@@ -180,7 +180,7 @@ class TestAutoconfigureCommandForce:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)
 
-            config_path = tmpdir_path / "lucidscan.yml"
+            config_path = tmpdir_path / "lucidshark.yml"
             config_path.write_text("# Old config\n")
 
             test_file = tmpdir_path / "main.py"
@@ -201,7 +201,7 @@ class TestAutoconfigureCommandForce:
             tmpdir_path = Path(tmpdir)
 
             # Create existing config
-            config_path = tmpdir_path / "lucidscan.yml"
+            config_path = tmpdir_path / "lucidshark.yml"
             config_path.write_text("# Old config\n")
 
             test_file = tmpdir_path / "main.py"
@@ -278,7 +278,7 @@ class TestAutoconfigureCommandDetectsExistingTools:
             assert exit_code == EXIT_SUCCESS
 
             # Should use ruff (detected)
-            config_path = tmpdir_path / "lucidscan.yml"
+            config_path = tmpdir_path / "lucidshark.yml"
             config_content = config_path.read_text()
             assert "ruff" in config_content
 
@@ -306,7 +306,7 @@ class TestAutoconfigureCommandDetectsExistingTools:
             assert exit_code == EXIT_SUCCESS
 
             # Should use mypy (detected)
-            config_path = tmpdir_path / "lucidscan.yml"
+            config_path = tmpdir_path / "lucidshark.yml"
             config_content = config_path.read_text()
             assert "mypy" in config_content
 
@@ -335,6 +335,6 @@ class TestAutoconfigureCommandDetectsExistingTools:
             assert exit_code == EXIT_SUCCESS
 
             # Should use eslint (detected)
-            config_path = tmpdir_path / "lucidscan.yml"
+            config_path = tmpdir_path / "lucidshark.yml"
             config_content = config_path.read_text()
             assert "eslint" in config_content
