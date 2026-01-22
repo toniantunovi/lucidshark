@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lucidshark"
-version = "0.5.14"
+version = "0.5.15"
 description = "LucidShark - The trust layer for AI-assisted development"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -80,6 +80,32 @@ ruff = "lucidshark.plugins.linters.ruff:RuffLinter"
 eslint = "lucidshark.plugins.linters.eslint:ESLintLinter"
 biome = "lucidshark.plugins.linters.biome:BiomeLinter"
 checkstyle = "lucidshark.plugins.linters.checkstyle:CheckstyleLinter"
+
+[project.entry-points."lucidshark.scanners"]
+trivy = "lucidshark.plugins.scanners.trivy:TrivyScanner"
+opengrep = "lucidshark.plugins.scanners.opengrep:OpenGrepScanner"
+checkov = "lucidshark.plugins.scanners.checkov:CheckovScanner"
+
+[project.entry-points."lucidshark.reporters"]
+json = "lucidshark.plugins.reporters.json_reporter:JSONReporter"
+sarif = "lucidshark.plugins.reporters.sarif_reporter:SARIFReporter"
+summary = "lucidshark.plugins.reporters.summary_reporter:SummaryReporter"
+table = "lucidshark.plugins.reporters.table_reporter:TableReporter"
+
+[project.entry-points."lucidshark.type_checkers"]
+mypy = "lucidshark.plugins.type_checkers.mypy:MypyChecker"
+pyright = "lucidshark.plugins.type_checkers.pyright:PyrightChecker"
+typescript = "lucidshark.plugins.type_checkers.typescript:TypeScriptChecker"
+
+[project.entry-points."lucidshark.test_runners"]
+pytest = "lucidshark.plugins.test_runners.pytest:PytestRunner"
+jest = "lucidshark.plugins.test_runners.jest:JestRunner"
+karma = "lucidshark.plugins.test_runners.karma:KarmaRunner"
+playwright = "lucidshark.plugins.test_runners.playwright:PlaywrightRunner"
+
+[project.entry-points."lucidshark.coverage"]
+coverage_py = "lucidshark.plugins.coverage.coverage_py:CoveragePyPlugin"
+istanbul = "lucidshark.plugins.coverage.istanbul:IstanbulPlugin"
 
 # Pytest configuration
 [tool.pytest.ini_options]
