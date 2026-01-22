@@ -1,5 +1,9 @@
 # LucidScan
 
+<p align="center">
+  <img src="docs/lucidshark.png" alt="LucidShark" width="400">
+</p>
+
 [![CI](https://github.com/lucidscan/lucidscan/actions/workflows/ci.yml/badge.svg)](https://github.com/lucidscan/lucidscan/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/lucidscan/lucidscan/graph/badge.svg)](https://codecov.io/gh/lucidscan/lucidscan)
 [![PyPI version](https://img.shields.io/pypi/v/lucidscan)](https://pypi.org/project/lucidscan/)
