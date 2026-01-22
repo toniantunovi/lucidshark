@@ -18,15 +18,15 @@ AI writes code → LucidShark checks → AI fixes → repeat
 
 ## Why LucidShark
 
-- **Local-first** — No server, no SaaS account. Runs on your machine and in CI with the same results.
+- **Local-first** - No server, no SaaS account. Runs on your machine and in CI with the same results.
 
-- **Configuration-as-code** — `lucidshark.yml` lives in your repo. Same rules for everyone, changes go through code review.
+- **Configuration-as-code** - `lucidshark.yml` lives in your repo. Same rules for everyone, changes go through code review.
 
-- **AI-native** — MCP integration with Claude Code and Cursor. Structured feedback that AI agents can act on directly.
+- **AI-native** - MCP integration with Claude Code and Cursor. Structured feedback that AI agents can act on directly.
 
-- **Unified pipeline** — Linting, type checking, security (SAST/SCA/IaC), tests, and coverage in one tool. Stop configuring 5+ separate tools.
+- **Unified pipeline** - Linting, type checking, security (SAST/SCA/IaC), tests, and coverage in one tool. Stop configuring 5+ separate tools.
 
-- **Open source & extensible** — Apache 2.0 licensed. Add your own tools via the plugin system.
+- **Open source & extensible** - Apache 2.0 licensed. Add your own tools via the plugin system.
 
 ## Quick Start
 

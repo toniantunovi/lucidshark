@@ -28,7 +28,7 @@ What developers need is a **trust layer** that:
 2. **Unifies** linting, security, testing, and coverage in one pipeline
 3. **Feeds back to AI agents** in real-time, instructing them to fix issues automatically
 
-This trust layer doesn't replace existing tools — it orchestrates them and bridges the gap between deterministic analysis and AI-assisted development.
+This trust layer doesn't replace existing tools - it orchestrates them and bridges the gap between deterministic analysis and AI-assisted development.
 
 ### 1.2 Vision: Guardrails for AI Coding
 
@@ -309,7 +309,7 @@ LucidShark scans only changed files (uncommitted changes) by default. Use `--all
 | **Coverage** | ⚠️ Partial | Run full tests, filter output |
 
 **Default workflow (partial scans):**
-- After modifying files — scans changed files automatically
+- After modifying files - scans changed files automatically
 - During iterative development
 - When fixing specific issues
 
@@ -541,7 +541,7 @@ Running pipeline...
 
 Installation uses:
 - pip for Python tools (ruff, mypy, coverage)
-- npm for JS tools (eslint, typescript) — only if package.json exists
+- npm for JS tools (eslint, typescript) - only if package.json exists
 - Direct binary download for standalone tools (trivy, opengrep)
 
 #### 5.5.2 Version Pinning
@@ -1086,7 +1086,7 @@ All linting tools support partial scanning via the `files` parameter.
 | Pyright | Python | pip / npm / binary | ✅ Yes |
 | TypeScript (tsc) | TypeScript | npm | ❌ No |
 
-**Note:** TypeScript (tsc) does not support file-level CLI arguments — it uses `tsconfig.json` to determine what to check.
+**Note:** TypeScript (tsc) does not support file-level CLI arguments - it uses `tsconfig.json` to determine what to check.
 
 ### 9.3 Security
 
@@ -1096,7 +1096,7 @@ All linting tools support partial scanning via the `files` parameter.
 | OpenGrep | SAST | binary | ✅ Yes |
 | Checkov | IaC | pip / binary | ❌ No |
 
-**Note:** OpenGrep (SAST) supports partial scanning and scans only changed files by default. Trivy (SCA) always scans the entire project — dependency analysis requires full project context. Checkov (IaC) also scans project-wide.
+**Note:** OpenGrep (SAST) supports partial scanning and scans only changed files by default. Trivy (SCA) always scans the entire project - dependency analysis requires full project context. Checkov (IaC) also scans project-wide.
 
 ### 9.4 Testing
 

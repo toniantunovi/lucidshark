@@ -277,7 +277,7 @@ Some tools have their own ignore files that LucidShark respects:
 | Checkov | `.checkov.yml` |
 | pytest | `pytest.ini`, `pyproject.toml` |
 
-LucidShark doesn't override these — they work alongside `.lucidsharkignore`.
+LucidShark doesn't override these - they work alongside `.lucidsharkignore`.
 
 ## Best Practices
 
@@ -291,17 +291,17 @@ LucidShark doesn't override these — they work alongside `.lucidsharkignore`.
 
 ### Don't Ignore
 
-- **Your application code** — fix issues instead of ignoring
-- **Configuration files** — security issues here are real
-- **Test files** — keep `tests/` scanned for security issues
-- **CI/CD files** — `.github/`, `.gitlab-ci.yml` should be checked
+- **Your application code** - fix issues instead of ignoring
+- **Configuration files** - security issues here are real
+- **Test files** - keep `tests/` scanned for security issues
+- **CI/CD files** - `.github/`, `.gitlab-ci.yml` should be checked
 
 ### Inline Ignore Guidelines
 
 1. **Always document the reason** when using inline ignores
 2. **Prefer specific rule IDs** over blanket ignores
-3. **Review inline ignores periodically** — they may no longer be needed
-4. **Use inline ignores sparingly** — they're exceptions, not the norm
+3. **Review inline ignores periodically** - they may no longer be needed
+4. **Use inline ignores sparingly** - they're exceptions, not the norm
 
 ## Examples
 
@@ -394,7 +394,7 @@ node_modules/
 
 ### Pattern Not Working
 
-1. Check the pattern syntax — use `**` for recursive matching
+1. Check the pattern syntax - use `**` for recursive matching
 2. Verify the path is relative to project root
 3. Run with `--debug` to see which files are being scanned
 4. Check if the tool has its own ignore file overriding

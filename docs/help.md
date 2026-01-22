@@ -831,7 +831,7 @@ LucidShark scans only changed files (uncommitted changes) by default. This is th
 
 | Scenario | Approach | Example |
 |----------|----------|---------|
-| After editing files | Default scan | `scan(domains=["linting", "type_checking"])` — scans changed files automatically |
+| After editing files | Default scan | `scan(domains=["linting", "type_checking"])` - scans changed files automatically |
 | Quick single-file check | Use check_file | `check_file(file_path="src/main.py")` |
 | Scan specific files | Use files param | `scan(domains=["linting"], files=["src/a.py", "src/b.py"])` |
 | Before commit | Full scan | `scan(domains=["all"], all_files=true)` |
@@ -859,7 +859,7 @@ LucidShark scans only changed files (uncommitted changes) by default. This is th
 
 ### Performance Tips
 
-- **Default is fast**: Just call `scan()` — it automatically scans only changed files
+- **Default is fast**: Just call `scan()` - it automatically scans only changed files
 - **Use `check_file()`**: For single-file checks, this is the fastest option
 - **Reserve full scans for commits**: Use `all_files=true` only before committing
 - **SCA is always full**: Dependency scanning requires full project context
@@ -888,7 +888,7 @@ All linting tools support the `files` parameter for partial scanning.
 | pyright | Python | ✅ Yes |
 | TypeScript (tsc) | TypeScript | ❌ No (project-wide only) |
 
-**Note:** TypeScript (tsc) does not support file-level scanning — it always analyzes the full project based on `tsconfig.json`.
+**Note:** TypeScript (tsc) does not support file-level scanning - it always analyzes the full project based on `tsconfig.json`.
 
 ### Security Scanning
 
@@ -898,7 +898,7 @@ All linting tools support the `files` parameter for partial scanning.
 | OpenGrep | SAST (code patterns) | ✅ Yes |
 | Checkov | IaC (Terraform, K8s, CloudFormation) | ❌ No (project-wide) |
 
-**Note:** OpenGrep (SAST) supports partial scanning and will scan only changed files by default. Trivy (SCA) and Checkov (IaC) always scan the entire project — dependency analysis requires full project context.
+**Note:** OpenGrep (SAST) supports partial scanning and will scan only changed files by default. Trivy (SCA) and Checkov (IaC) always scan the entire project - dependency analysis requires full project context.
 
 ### Testing
 

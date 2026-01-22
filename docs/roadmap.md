@@ -49,7 +49,7 @@ All foundational work is complete. LucidShark is a fully functional code quality
 |----------|---------|---------------|---------|----------|
 | Python | Ruff | mypy, pyright | pytest | coverage.py |
 | JavaScript/TypeScript | ESLint, Biome | TypeScript | Jest | Istanbul |
-| Java | Checkstyle | — | — | — |
+| Java | Checkstyle | - | - | - |
 
 ### Commands Available Today
 
@@ -67,7 +67,7 @@ lucidshark status                     # Show tool status
 
 ---
 
-## Next Priority — Partial Scans (Git-Aware Scanning)
+## Next Priority - Partial Scans (Git-Aware Scanning)
 
 **Goal**: Make scanning smarter by defaulting to only changed files
 
@@ -129,7 +129,7 @@ scan(domains=["linting"], files=["src/foo.py"])
 
 ### Domain-Specific Behavior
 
-Not all domains can be partial — some must run in full to be meaningful:
+Not all domains can be partial - some must run in full to be meaningful:
 
 | Domain | Partial Scan Behavior |
 |--------|----------------------|
@@ -141,7 +141,7 @@ Not all domains can be partial — some must run in full to be meaningful:
 | **Testing** | **Always run full test suite** (to catch regressions) |
 | **Coverage** | Run full tests, but **only report coverage for changed files** |
 
-The key insight: tests must run in full because a change in `foo.py` might break tests in `test_bar.py`. But coverage reporting focuses on the changed files — developers care about coverage of code they just wrote, not the entire codebase.
+The key insight: tests must run in full because a change in `foo.py` might break tests in `test_bar.py`. But coverage reporting focuses on the changed files - developers care about coverage of code they just wrote, not the entire codebase.
 
 ### Tool-Level Partial Scan Support
 
@@ -162,7 +162,7 @@ Not all tools support file-level scanning. Here's the detailed breakdown:
 |------|-------------------|----------------|-------|
 | **mypy** | ✅ Yes | `mypy [files...]` | Full support, supports `--exclude` patterns |
 | **Pyright** | ✅ Yes | `pyright [files...]` | Full support, config via pyrightconfig.json |
-| **TypeScript (tsc)** | ❌ No | `tsc --noEmit` | **No CLI file args** — uses tsconfig.json only |
+| **TypeScript (tsc)** | ❌ No | `tsc --noEmit` | **No CLI file args** - uses tsconfig.json only |
 
 #### Security Tools
 
@@ -223,7 +223,7 @@ Given tool limitations, here's how partial scans will work:
 
 ---
 
-## v0.6 - v0.8 — Language Expansion
+## v0.6 - v0.8 - Language Expansion
 
 **Goal**: Support 5 popular languages with 2 tools per domain each
 
@@ -239,7 +239,7 @@ Given tool limitations, here's how partial scans will work:
 
 ### Implementation by Version
 
-#### v0.6 — Complete Python & JS/TS
+#### v0.6 - Complete Python & JS/TS
 
 | Task | Status |
 |------|--------|
@@ -248,7 +248,7 @@ Given tool limitations, here's how partial scans will work:
 | Vitest test runner plugin | Planned |
 | c8 coverage plugin | Planned |
 
-#### v0.7 — Complete Java & Add Go
+#### v0.7 - Complete Java & Add Go
 
 | Task | Status |
 |------|--------|
@@ -263,7 +263,7 @@ Given tool limitations, here's how partial scans will work:
 | go test integration | Planned |
 | go cover integration | Planned |
 
-#### v0.8 — Add C#
+#### v0.8 - Add C#
 
 | Task | Status |
 |------|--------|
@@ -285,7 +285,7 @@ Security scanning remains the same across all languages:
 
 ---
 
-## v0.9 — CI Integration
+## v0.9 - CI Integration
 
 **Goal**: Native CI/CD pipeline support for automated quality gates
 
@@ -335,7 +335,7 @@ jobs:
 
 ---
 
-## v1.0 — Production Ready
+## v1.0 - Production Ready
 
 **Goal**: Polish, stability, and comprehensive documentation
 
@@ -369,7 +369,7 @@ Beyond v1.0, potential directions include:
 | **Custom rules** | User-defined linting and security rules |
 | **Cloud service** | Optional SaaS for team management |
 
-These are not committed — they depend on user feedback and adoption.
+These are not committed - they depend on user feedback and adoption.
 
 ---
 
