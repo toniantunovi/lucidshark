@@ -45,8 +45,8 @@ fail_on:
   type_checking: error
   security: high
   testing: any
-  coverage: any
-  duplication: any
+  coverage: below_threshold
+  duplication: above_threshold
 
 ignore:
   - "**/.venv/**"

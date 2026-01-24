@@ -276,8 +276,8 @@ fail_on:
   type_checking: error
   security: high
   testing: any
-  coverage: any
-  duplication: "5%"  # Fail if > 5% duplication
+  coverage: below_threshold  # Fail if coverage below pipeline.coverage.threshold
+  duplication: above_threshold  # Fail if duplication exceeds pipeline.duplication.threshold
 
 ignore:
   - "**/__pycache__/**"
@@ -507,8 +507,8 @@ fail_on:
   type_checking: error | none
   security: critical | high | medium | low | info | none
   testing: any | none
-  coverage: any | none
-  duplication: any | none | percentage (e.g., "5%")
+  coverage: below_threshold | any | none
+  duplication: above_threshold | any | none | percentage (e.g., "5%")
 
 ignore:
   - string  # Glob patterns

@@ -362,6 +362,24 @@ class ScanCommand(Command):
                 elif threshold == "none":
                     # Never fail
                     continue
+                elif threshold == "above_threshold":
+                    # For duplication: fail if duplication exceeds configured threshold
+                    if domain_name == "duplication" and result.duplication_summary:
+                        if not result.duplication_summary.passed:
+                            LOGGER.debug(
+                                f"Domain {domain_name}: {result.duplication_summary.duplication_percent:.1f}% "
+                                f"exceeds configured threshold of {result.duplication_summary.threshold}%"
+                            )
+                            return True
+                elif threshold == "below_threshold":
+                    # For coverage: fail if coverage is below configured threshold
+                    if domain_name == "coverage" and result.coverage_summary:
+                        if not result.coverage_summary.passed:
+                            LOGGER.debug(
+                                f"Domain {domain_name}: {result.coverage_summary.coverage_percentage:.1f}% "
+                                f"is below configured threshold of {result.coverage_summary.threshold}%"
+                            )
+                            return True
                 elif threshold.endswith("%"):
                     # Percentage threshold (used for duplication)
                     try:

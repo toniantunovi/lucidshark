@@ -585,11 +585,12 @@ pipeline:
 
 # Failure thresholds (per-domain)
 fail_on:
-  linting: error      # error, none
-  type_checking: error
-  security: high      # critical, high, medium, low, info, none
-  testing: any        # any, none
-  coverage: any       # any, none
+  linting: error           # error, none
+  type_checking: error     # error, none
+  security: high           # critical, high, medium, low, info, none
+  testing: any             # any, none
+  coverage: below_threshold  # below_threshold, any, none
+  duplication: above_threshold  # above_threshold, any, none, or percentage (e.g., "5%")
 
 # Alternative: single threshold for all security
 # fail_on: high
@@ -660,8 +661,12 @@ Per-domain failure thresholds:
 | `type_checking` | `error`, `none` |
 | `security` | `critical`, `high`, `medium`, `low`, `info`, `none` |
 | `testing` | `any`, `none` |
-| `coverage` | `any`, `none` |
-| `duplication` | `any`, `none`, or percentage threshold (e.g., `5%`) |
+| `coverage` | `below_threshold`, `any`, `none` |
+| `duplication` | `above_threshold`, `any`, `none`, or percentage (e.g., `5%`) |
+
+**Threshold-based values:**
+- `below_threshold` (coverage): Fail if coverage percentage is below `pipeline.coverage.threshold`
+- `above_threshold` (duplication): Fail if duplication percentage exceeds `pipeline.duplication.threshold`
 
 #### `ignore`
 

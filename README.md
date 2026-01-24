@@ -66,6 +66,7 @@ lucidshark scan --iac               # Infrastructure-as-Code (Checkov)
 lucidshark scan --container         # Container image scanning (Trivy)
 lucidshark scan --testing           # Run tests (pytest, Jest)
 lucidshark scan --coverage          # Coverage analysis
+lucidshark scan --duplication       # Code duplication detection
 
 # Auto-fix linting issues
 lucidshark scan --linting --fix
@@ -115,6 +116,7 @@ Configures both Claude Code and Cursor.
 | **Security (Container)** | Trivy | Container image vulnerabilities |
 | **Testing** | pytest, Jest, Karma (Angular), Playwright (E2E) | Test failures |
 | **Coverage** | coverage.py, Istanbul | Coverage gaps |
+| **Duplication** | Duplo | Code clones, duplicate blocks |
 
 All results are normalized to a common format.
 
@@ -152,10 +154,16 @@ pipeline:
     enabled: true
     threshold: 80
 
+  duplication:
+    enabled: true
+    threshold: 10.0  # Max allowed duplication percentage
+
 fail_on:
   linting: error
   security: high
   testing: any
+  coverage: below_threshold
+  duplication: above_threshold
 
 ignore:
   - "**/node_modules/**"

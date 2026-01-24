@@ -25,7 +25,7 @@ VALID_SEVERITIES = {"critical", "high", "medium", "low", "info"}
 VALID_FAIL_ON_DOMAINS = {"linting", "type_checking", "security", "testing", "coverage", "duplication"}
 
 # Special fail_on values (not severities)
-SPECIAL_FAIL_ON_VALUES = {"error", "any", "none"}
+SPECIAL_FAIL_ON_VALUES = {"error", "any", "none", "below_threshold", "above_threshold"}
 
 
 @dataclass

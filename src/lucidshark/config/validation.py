@@ -159,7 +159,7 @@ VALID_FAIL_ON_VALUES: Dict[str, Set[str]] = {
     "security": {"critical", "high", "medium", "low", "info", "none"},
     "testing": {"any", "none"},
     "coverage": {"any", "none", "below_threshold"},
-    "duplication": {"any", "none"},  # Can also be a percentage like "5%" - validated separately
+    "duplication": {"any", "none", "above_threshold"},  # Can also be a percentage like "5%" - validated separately
 }
 
 # Valid keys under ai section

@@ -241,7 +241,7 @@ class ConfigGenerator:
             "coverage": "below_threshold" if choices.coverage_enabled else "none",
         }
         if choices.duplication_enabled:
-            fail_on["duplication"] = "any"
+            fail_on["duplication"] = "above_threshold"
         return fail_on
 
     def _build_ignore_patterns(self, context: ProjectContext) -> list:
