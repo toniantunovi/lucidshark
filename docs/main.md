@@ -263,6 +263,7 @@ pipeline:
     threshold: 80
     tools:
       - name: coverage_py
+    # extra_args: ["-DskipITs", "-Ddocker.skip=true"]  # For Java: skip integration tests
 
   duplication:
     enabled: true
@@ -491,7 +492,8 @@ pipeline:
     enabled: boolean
     threshold: number  # Default: 80
     tools:
-      - name: string  # coverage_py for Python, istanbul for JS/TS
+      - name: string  # coverage_py for Python, istanbul for JS/TS, jacoco for Java
+    extra_args: [string]  # Extra arguments for Maven/Gradle (Java only)
 
   duplication:
     enabled: boolean
