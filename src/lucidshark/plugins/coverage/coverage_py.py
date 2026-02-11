@@ -130,7 +130,7 @@ class CoveragePyPlugin(CoveragePlugin):
             binary = self.ensure_binary()
         except FileNotFoundError as e:
             LOGGER.warning(str(e))
-            return CoverageResult(threshold=threshold)
+            return CoverageResult(threshold=threshold, tool="coverage_py")
 
         test_stats: Optional[TestStatistics] = None
 
@@ -140,13 +140,56 @@ class CoveragePyPlugin(CoveragePlugin):
             success, test_stats = self._run_tests_with_coverage(binary, context)
             if not success:
                 LOGGER.warning("Failed to run tests with coverage")
-                return CoverageResult(threshold=threshold)
+                return CoverageResult(threshold=threshold, tool="coverage_py")
 
         # Generate JSON report from coverage data
         result = self._generate_and_parse_report(binary, context, threshold)
         result.test_stats = test_stats
 
         return result
+
+    def _detect_source_directory(self, project_root: Path) -> Optional[str]:
+        """Detect the source directory for coverage measurement.
+
+        Args:
+            project_root: Project root directory.
+
+        Returns:
+            Source directory path relative to project root, or None.
+        """
+        # Check common source directory patterns
+        src_dir = project_root / "src"
+        if src_dir.exists() and src_dir.is_dir():
+            # Look for a package inside src/
+            for child in src_dir.iterdir():
+                if child.is_dir() and (child / "__init__.py").exists():
+                    return str(child.relative_to(project_root))
+            # Fallback to src/ itself
+            return "src"
+
+        # Check for package at root level (same name as project directory)
+        project_name = project_root.name.replace("-", "_")
+        package_dir = project_root / project_name
+        if package_dir.exists() and (package_dir / "__init__.py").exists():
+            return project_name
+
+        # Check pyproject.toml for package configuration
+        pyproject = project_root / "pyproject.toml"
+        if pyproject.exists():
+            try:
+                import tomllib
+                with open(pyproject, "rb") as f:
+                    data = tomllib.load(f)
+                # Check [tool.setuptools.packages.find] or [project]
+                packages = data.get("tool", {}).get("setuptools", {}).get("packages", {})
+                if isinstance(packages, dict) and "where" in packages:
+                    where = packages["where"]
+                    if isinstance(where, list) and where:
+                        return where[0]
+            except Exception:
+                pass
+
+        return None
 
     def _run_tests_with_coverage(
         self,
@@ -179,17 +222,28 @@ class CoveragePyPlugin(CoveragePlugin):
             LOGGER.warning("pytest not found, cannot run tests for coverage")
             return False, None
 
+        # Detect source directory for accurate coverage measurement
+        source_dir = self._detect_source_directory(context.project_root)
+
         # Build command to run coverage with pytest
         # Always run full test suite - coverage needs complete test runs to be meaningful
         # (unlike linting which can work on individual changed files)
         cmd = [
             str(binary),
             "run",
+        ]
+
+        # Add --source to measure only the project's source code, not tests/libraries
+        if source_dir:
+            cmd.extend(["--source", source_dir])
+            LOGGER.debug(f"Measuring coverage for source: {source_dir}")
+
+        cmd.extend([
             "-m",
             "pytest",
             "--tb=no",
             "-q",
-        ]
+        ])
 
         LOGGER.debug(f"Running: {' '.join(cmd)}")
 
@@ -296,18 +350,18 @@ class CoveragePyPlugin(CoveragePlugin):
 
                 if result.returncode != 0:
                     LOGGER.warning(f"Coverage json failed: {result.stderr}")
-                    return CoverageResult(threshold=threshold)
+                    return CoverageResult(threshold=threshold, tool="coverage_py")
 
             except Exception as e:
                 LOGGER.error(f"Failed to generate coverage report: {e}")
-                return CoverageResult(threshold=threshold)
+                return CoverageResult(threshold=threshold, tool="coverage_py")
 
             # Parse JSON report
             if report_file.exists():
                 return self._parse_json_report(report_file, context.project_root, threshold)
             else:
                 LOGGER.warning("Coverage JSON report not generated")
-                return CoverageResult(threshold=threshold)
+                return CoverageResult(threshold=threshold, tool="coverage_py")
 
     def _parse_json_report(
         self,
@@ -330,7 +384,7 @@ class CoveragePyPlugin(CoveragePlugin):
                 report = json.load(f)
         except Exception as e:
             LOGGER.error(f"Failed to parse coverage JSON report: {e}")
-            return CoverageResult(threshold=threshold)
+            return CoverageResult(threshold=threshold, tool="coverage_py")
 
         totals = report.get("totals", {})
         files_data = report.get("files", {})
@@ -348,6 +402,7 @@ class CoveragePyPlugin(CoveragePlugin):
             missing_lines=missing_lines,
             excluded_lines=excluded_lines,
             threshold=threshold,
+            tool="coverage_py",
         )
 
         # Parse per-file coverage

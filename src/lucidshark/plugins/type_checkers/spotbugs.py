@@ -12,7 +12,7 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional
 
-import defusedxml.ElementTree as ET
+import defusedxml.ElementTree as ET  # type: ignore[import-untyped]
 
 from lucidshark.bootstrap.paths import LucidsharkPaths
 from lucidshark.bootstrap.versions import get_tool_version
@@ -163,14 +163,19 @@ class SpotBugsChecker(TypeCheckerPlugin):
                 urllib.request.urlretrieve(url, tmp.name)  # nosec B310 nosemgrep
                 tmp_path = Path(tmp.name)
 
-            # Extract tarball
+            # Extract tarball safely
             with tarfile.open(tmp_path, "r:gz") as tar:
-                # Security: validate members before extraction
+                # Security: validate and extract members individually
                 for member in tar.getmembers():
                     # Prevent path traversal attacks
                     if member.name.startswith("/") or ".." in member.name:
                         raise ValueError(f"Invalid path in tarball: {member.name}")
-                tar.extractall(install_dir)  # nosec B202
+                    # Ensure extraction stays within install_dir
+                    member_path = (install_dir / member.name).resolve()
+                    if not str(member_path).startswith(str(install_dir.resolve())):
+                        raise ValueError(f"Path traversal attempt: {member.name}")
+                    # Extract individual member safely
+                    tar.extract(member, path=install_dir)
 
             tmp_path.unlink()
         except Exception as e:
@@ -336,7 +341,7 @@ class SpotBugsChecker(TypeCheckerPlugin):
         Returns:
             Classpath string or None.
         """
-        jars = []
+        jars: List[Path] = []
 
         # Maven dependencies
         m2_repo = project_root / "target" / "dependency"

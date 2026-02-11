@@ -12,7 +12,7 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-import defusedxml.ElementTree as ET
+import defusedxml.ElementTree as ET  # type: ignore[import-untyped]
 
 from lucidshark.core.logging import get_logger
 from lucidshark.core.models import (
@@ -136,7 +136,7 @@ class JaCoCoPlugin(CoveragePlugin):
             binary, build_system = self._detect_build_system()
         except FileNotFoundError as e:
             LOGGER.warning(str(e))
-            return CoverageResult(threshold=threshold)
+            return CoverageResult(threshold=threshold, tool="jacoco")
 
         test_stats: Optional[TestStatistics] = None
 
@@ -152,7 +152,7 @@ class JaCoCoPlugin(CoveragePlugin):
 
             if not success:
                 LOGGER.warning("Failed to run tests with JaCoCo")
-                return CoverageResult(threshold=threshold)
+                return CoverageResult(threshold=threshold, tool="jacoco")
         elif report_exists:
             LOGGER.info("Using existing JaCoCo report...")
 
@@ -447,7 +447,7 @@ class JaCoCoPlugin(CoveragePlugin):
             LOGGER.warning(
                 "JaCoCo report not found. Ensure JaCoCo plugin is configured in your build."
             )
-            return CoverageResult(threshold=threshold)
+            return CoverageResult(threshold=threshold, tool="jacoco")
 
         return self._parse_xml_report(report_file, project_root, threshold)
 
@@ -472,7 +472,7 @@ class JaCoCoPlugin(CoveragePlugin):
             root = tree.getroot()
         except Exception as e:
             LOGGER.error(f"Failed to parse JaCoCo XML report: {e}")
-            return CoverageResult(threshold=threshold)
+            return CoverageResult(threshold=threshold, tool="jacoco")
 
         # Parse overall counters
         total_lines = 0
@@ -492,6 +492,7 @@ class JaCoCoPlugin(CoveragePlugin):
             covered_lines=covered_lines,
             missing_lines=missed_lines,
             threshold=threshold,
+            tool="jacoco",
         )
 
         # Parse per-package/class coverage

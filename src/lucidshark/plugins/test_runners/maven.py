@@ -15,7 +15,7 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-import defusedxml.ElementTree as ET
+import defusedxml.ElementTree as ET  # type: ignore[import-untyped]
 
 from lucidshark.core.logging import get_logger
 from lucidshark.core.models import (
@@ -160,7 +160,7 @@ class MavenTestRunner(TestRunnerPlugin):
             binary, build_system = self._detect_build_system()
         except FileNotFoundError as e:
             LOGGER.warning(str(e))
-            return TestResult()
+            return TestResult(tool="maven")
 
         if build_system == "maven":
             return self._run_maven_tests(binary, context, with_coverage)
@@ -201,7 +201,7 @@ class MavenTestRunner(TestRunnerPlugin):
             )
         except subprocess.TimeoutExpired:
             LOGGER.warning("Maven test timed out after 600 seconds")
-            return TestResult()
+            return TestResult(tool="maven")
         except Exception as e:
             # Maven returns non-zero exit code on test failures
             # We still want to parse the results
@@ -243,7 +243,7 @@ class MavenTestRunner(TestRunnerPlugin):
             )
         except subprocess.TimeoutExpired:
             LOGGER.warning("Gradle test timed out after 600 seconds")
-            return TestResult()
+            return TestResult(tool="maven")
         except Exception as e:
             # Gradle returns non-zero exit code on test failures
             LOGGER.debug(f"Gradle test completed with: {e}")
@@ -260,7 +260,7 @@ class MavenTestRunner(TestRunnerPlugin):
         Returns:
             TestResult with parsed data.
         """
-        result = TestResult()
+        result = TestResult(tool="maven")
         reports_dir = project_root / "target" / "surefire-reports"
 
         if not reports_dir.exists():
@@ -283,7 +283,7 @@ class MavenTestRunner(TestRunnerPlugin):
         Returns:
             TestResult with parsed data.
         """
-        result = TestResult()
+        result = TestResult(tool="maven")
 
         # Standard Gradle test report locations
         report_dirs = [
@@ -318,7 +318,7 @@ class MavenTestRunner(TestRunnerPlugin):
         Returns:
             TestResult with parsed data.
         """
-        result = TestResult()
+        result = TestResult(tool="maven")
 
         for xml_file in reports_dir.glob("TEST-*.xml"):
             try:
@@ -344,12 +344,12 @@ class MavenTestRunner(TestRunnerPlugin):
             root = tree.getroot()
         except Exception as e:
             LOGGER.warning(f"Failed to parse JUnit XML {xml_file}: {e}")
-            return TestResult()
+            return TestResult(tool="maven")
 
         # Get testsuite element
         testsuite = root if root.tag == "testsuite" else root.find("testsuite")
         if testsuite is None:
-            return TestResult()
+            return TestResult(tool="maven")
 
         # Parse summary from attributes
         tests_total = int(testsuite.get("tests", 0))
@@ -365,6 +365,7 @@ class MavenTestRunner(TestRunnerPlugin):
             skipped=skipped,
             errors=errors,
             duration_ms=duration_ms,
+            tool="maven",
         )
 
         # Parse individual test cases for failures
@@ -504,6 +505,7 @@ class MavenTestRunner(TestRunnerPlugin):
             errors=result1.errors + result2.errors,
             duration_ms=result1.duration_ms + result2.duration_ms,
             issues=result1.issues + result2.issues,
+            tool="maven",
         )
 
     def _generate_issue_id(self, test_id: str, message: str) -> str:
