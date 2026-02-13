@@ -266,74 +266,106 @@ class DoctorCommand(Command):
             List of check results.
         """
         results: List[CheckResult] = []
+        project_root = Path.cwd()
 
-        # Check Claude Code MCP config
-        claude_config = Path.home() / ".claude" / "claude_desktop_config.json"
-        if claude_config.exists():
-            try:
-                import json
-                with open(claude_config) as f:
-                    config_data = json.load(f)
-                mcp_servers = config_data.get("mcpServers", {})
-                if "lucidshark" in mcp_servers:
-                    results.append(CheckResult(
-                        "claude_code_mcp",
-                        True,
-                        "Claude Code MCP configured",
-                    ))
-                else:
-                    results.append(CheckResult(
-                        "claude_code_mcp",
-                        False,
-                        "Claude Code MCP not configured",
-                        "Run 'lucidshark init --claude-code'",
-                    ))
-            except Exception:
-                results.append(CheckResult(
-                    "claude_code_mcp",
-                    False,
-                    "Could not read Claude Code config",
-                    "Run 'lucidshark init --claude-code'",
-                ))
-        else:
-            results.append(CheckResult(
-                "claude_code_mcp",
-                False,
-                "Claude Code not installed or not configured",
-                "Install Claude Code, then run 'lucidshark init --claude-code'",
-            ))
+        # Check Claude Code MCP config (global and project-level)
+        claude_result = self._check_mcp_config(
+            name="claude_code_mcp",
+            display_name="Claude Code",
+            global_config=Path.home() / ".claude" / "mcp_servers.json",
+            project_config=project_root / ".claude" / "mcp_servers.json",
+            init_command="lucidshark init --claude-code",
+            report_if_missing=True,
+        )
+        if claude_result is not None:
+            results.append(claude_result)
 
-        # Check Cursor MCP config
-        cursor_config = Path.home() / ".cursor" / "mcp.json"
-        if cursor_config.exists():
-            try:
-                import json
-                with open(cursor_config) as f:
-                    config_data = json.load(f)
-                mcp_servers = config_data.get("mcpServers", {})
-                if "lucidshark" in mcp_servers:
-                    results.append(CheckResult(
-                        "cursor_mcp",
-                        True,
-                        "Cursor MCP configured",
-                    ))
-                else:
-                    results.append(CheckResult(
-                        "cursor_mcp",
-                        False,
-                        "Cursor MCP not configured",
-                        "Run 'lucidshark init --cursor'",
-                    ))
-            except Exception:
-                results.append(CheckResult(
-                    "cursor_mcp",
-                    False,
-                    "Could not read Cursor config",
-                    "Run 'lucidshark init --cursor'",
-                ))
-        # Don't report Cursor as missing if not installed
+        # Check Cursor MCP config (global and project-level)
+        cursor_result = self._check_mcp_config(
+            name="cursor_mcp",
+            display_name="Cursor",
+            global_config=Path.home() / ".cursor" / "mcp.json",
+            project_config=project_root / ".cursor" / "mcp.json",
+            init_command="lucidshark init --cursor",
+            report_if_missing=False,  # Don't report Cursor as missing if not installed
+        )
+        if cursor_result is not None:
+            results.append(cursor_result)
 
         return results
+
+    def _check_mcp_config(
+        self,
+        name: str,
+        display_name: str,
+        global_config: Path,
+        project_config: Path,
+        init_command: str,
+        report_if_missing: bool = True,
+    ) -> CheckResult | None:
+        """Check MCP configuration for an AI tool.
+
+        Checks both global and project-level configurations.
+
+        Args:
+            name: Check result name identifier.
+            display_name: Human-readable tool name.
+            global_config: Path to global MCP config file.
+            project_config: Path to project-level MCP config file.
+            init_command: Command to run for initialization.
+            report_if_missing: Whether to report if tool is not installed.
+
+        Returns:
+            CheckResult or None if tool not installed and report_if_missing is False.
+        """
+        import json
+
+        configs_to_check = [
+            (project_config, "project"),
+            (global_config, "global"),
+        ]
+
+        for config_path, level in configs_to_check:
+            if config_path.exists():
+                try:
+                    with open(config_path) as f:
+                        config_data = json.load(f)
+                    mcp_servers = config_data.get("mcpServers", {})
+                    if "lucidshark" in mcp_servers:
+                        return CheckResult(
+                            name,
+                            True,
+                            f"{display_name} MCP configured ({level})",
+                        )
+                except Exception:
+                    return CheckResult(
+                        name,
+                        False,
+                        f"Could not read {display_name} config ({level})",
+                        f"Run '{init_command}'",
+                    )
+
+        # Check if any config file exists (tool is installed but not configured)
+        any_config_exists = global_config.exists() or project_config.exists()
+
+        if any_config_exists:
+            return CheckResult(
+                name,
+                False,
+                f"{display_name} MCP not configured",
+                f"Run '{init_command}'",
+            )
+
+        # Tool not installed
+        if report_if_missing:
+            return CheckResult(
+                name,
+                False,
+                f"{display_name} not installed or not configured",
+                f"Install {display_name}, then run '{init_command}'",
+            )
+
+        return None
 
     def _print_results(self, results: List[CheckResult]) -> None:
         """Print check results grouped by category.
