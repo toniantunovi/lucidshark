@@ -26,6 +26,7 @@ from lucidshark.plugins.utils import (
     ensure_python_binary,
     get_cli_version,
     create_coverage_threshold_issue,
+    detect_source_directory,
 )
 
 LOGGER = get_logger(__name__)
@@ -117,45 +118,15 @@ class CoveragePyPlugin(CoveragePlugin):
     def _detect_source_directory(self, project_root: Path) -> Optional[str]:
         """Detect the source directory for coverage measurement.
 
+        Delegates to :func:`lucidshark.plugins.utils.detect_source_directory`.
+
         Args:
             project_root: Project root directory.
 
         Returns:
             Source directory path relative to project root, or None.
         """
-        # Check common source directory patterns
-        src_dir = project_root / "src"
-        if src_dir.exists() and src_dir.is_dir():
-            # Look for a package inside src/
-            for child in src_dir.iterdir():
-                if child.is_dir() and (child / "__init__.py").exists():
-                    return str(child.relative_to(project_root))
-            # Fallback to src/ itself
-            return "src"
-
-        # Check for package at root level (same name as project directory)
-        project_name = project_root.name.replace("-", "_")
-        package_dir = project_root / project_name
-        if package_dir.exists() and (package_dir / "__init__.py").exists():
-            return project_name
-
-        # Check pyproject.toml for package configuration
-        pyproject = project_root / "pyproject.toml"
-        if pyproject.exists():
-            try:
-                import tomllib
-                with open(pyproject, "rb") as f:
-                    data = tomllib.load(f)
-                # Check [tool.setuptools.packages.find] or [project]
-                packages = data.get("tool", {}).get("setuptools", {}).get("packages", {})
-                if isinstance(packages, dict) and "where" in packages:
-                    where = packages["where"]
-                    if isinstance(where, list) and where:
-                        return where[0]
-            except Exception:
-                pass
-
-        return None
+        return detect_source_directory(project_root)
 
     def _run_tests_with_coverage(
         self,
