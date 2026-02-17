@@ -254,3 +254,125 @@ class TestPytestIssueIdGeneration:
 
         assert issue_id.startswith("pytest-")
         assert len(issue_id) == len("pytest-") + 12  # 12 char hash
+
+
+class TestBuildBaseCmd:
+    """Tests for _build_base_cmd to verify coverage wrapping behavior."""
+
+    def test_without_coverage_returns_plain_pytest(self) -> None:
+        """Without coverage_binary, _build_base_cmd returns just the pytest binary."""
+        runner = PytestRunner()
+        binary = Path("/usr/bin/pytest")
+
+        cmd = runner._build_base_cmd(binary)
+
+        assert cmd == ["/usr/bin/pytest"]
+
+    def test_with_coverage_wraps_with_coverage_run(self) -> None:
+        """With coverage_binary, _build_base_cmd wraps pytest with 'coverage run -m pytest'."""
+        runner = PytestRunner()
+        binary = Path("/usr/bin/pytest")
+        coverage_binary = Path("/usr/bin/coverage")
+
+        cmd = runner._build_base_cmd(binary, coverage_binary)
+
+        assert cmd[0] == "/usr/bin/coverage"
+        assert "run" in cmd
+        assert "-m" in cmd
+        assert "pytest" in cmd
+
+    def test_with_coverage_command_structure(self) -> None:
+        """Verify the exact command structure: coverage run [-m] pytest."""
+        runner = PytestRunner()
+        binary = Path("/path/to/pytest")
+        coverage_binary = Path("/path/to/coverage")
+
+        cmd = runner._build_base_cmd(binary, coverage_binary)
+
+        # Should be: [coverage_path, "run", "-m", "pytest"]
+        # or: [coverage_path, "run", "--source", <dir>, "-m", "pytest"]
+        # The key requirement is that "run" comes after coverage binary,
+        # and "-m" "pytest" appears for module-based execution
+        assert cmd[0] == str(coverage_binary)
+        assert cmd[1] == "run"
+        # -m pytest must appear (possibly after --source <dir>)
+        m_idx = cmd.index("-m")
+        assert cmd[m_idx + 1] == "pytest"
+
+    def test_with_coverage_adds_source_for_src_layout(self) -> None:
+        """Test that --source is added when project has src/<pkg> layout."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            pkg = project_root / "src" / "mypackage"
+            pkg.mkdir(parents=True)
+            (pkg / "__init__.py").touch()
+
+            runner = PytestRunner()
+            binary = Path("/usr/bin/pytest")
+            cov = Path("/usr/bin/coverage")
+
+            cmd = runner._build_base_cmd(
+                binary, coverage_binary=cov, project_root=project_root
+            )
+
+            assert cmd == [
+                "/usr/bin/coverage",
+                "run",
+                "--source",
+                "src/mypackage",
+                "-m",
+                "pytest",
+            ]
+
+    def test_with_coverage_skips_source_when_already_configured(self) -> None:
+        """Test that --source is NOT added when project has existing coverage config."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            pkg = project_root / "src" / "mypackage"
+            pkg.mkdir(parents=True)
+            (pkg / "__init__.py").touch()
+            # Add existing coverage source config
+            pyproject = project_root / "pyproject.toml"
+            pyproject.write_text(
+                '[tool.coverage.run]\nsource = ["src/mypackage"]\n'
+            )
+
+            runner = PytestRunner()
+            binary = Path("/usr/bin/pytest")
+            cov = Path("/usr/bin/coverage")
+
+            cmd = runner._build_base_cmd(
+                binary, coverage_binary=cov, project_root=project_root
+            )
+
+            # Should NOT include --source since user already configured it
+            assert "--source" not in cmd
+            assert cmd == ["/usr/bin/coverage", "run", "-m", "pytest"]
+
+    def test_with_coverage_no_project_root_skips_source(self) -> None:
+        """Test that --source is skipped when project_root is None."""
+        runner = PytestRunner()
+        binary = Path("/usr/bin/pytest")
+        cov = Path("/usr/bin/coverage")
+
+        cmd = runner._build_base_cmd(binary, coverage_binary=cov)
+
+        assert "--source" not in cmd
+        assert cmd == ["/usr/bin/coverage", "run", "-m", "pytest"]
+
+    def test_with_coverage_no_source_detected(self) -> None:
+        """Test that --source is omitted when source dir cannot be detected."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            # Empty project - no src/, no package dir
+
+            runner = PytestRunner()
+            binary = Path("/usr/bin/pytest")
+            cov = Path("/usr/bin/coverage")
+
+            cmd = runner._build_base_cmd(
+                binary, coverage_binary=cov, project_root=project_root
+            )
+
+            assert "--source" not in cmd
+            assert cmd == ["/usr/bin/coverage", "run", "-m", "pytest"]

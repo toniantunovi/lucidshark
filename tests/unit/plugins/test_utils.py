@@ -9,6 +9,8 @@ from unittest.mock import patch, MagicMock
 
 
 from lucidshark.plugins.utils import (
+    coverage_has_source_config,
+    detect_source_directory,
     get_cli_version,
     resolve_src_paths,
 )
@@ -168,3 +170,141 @@ class TestResolveSrcPaths:
 
             # Empty list is falsy, so should fall back
             assert result == ["."] or result[0].endswith("src")
+
+
+class TestDetectSourceDirectory:
+    """Tests for detect_source_directory function."""
+
+    def test_src_package_layout(self) -> None:
+        """Test detection of src/<package>/ layout."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            pkg = project_root / "src" / "mypackage"
+            pkg.mkdir(parents=True)
+            (pkg / "__init__.py").touch()
+
+            result = detect_source_directory(project_root)
+
+            assert result == "src/mypackage"
+
+    def test_src_dir_without_package(self) -> None:
+        """Test fallback to src/ when no package with __init__.py inside."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            (project_root / "src").mkdir()
+
+            result = detect_source_directory(project_root)
+
+            assert result == "src"
+
+    def test_flat_package_layout(self) -> None:
+        """Test detection of flat <project_name>/ layout at root."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Name the project root so the heuristic can derive package name
+            project_root = Path(tmpdir) / "my-project"
+            project_root.mkdir()
+            pkg = project_root / "my_project"
+            pkg.mkdir()
+            (pkg / "__init__.py").touch()
+
+            result = detect_source_directory(project_root)
+
+            assert result == "my_project"
+
+    def test_pyproject_toml_packages_where(self) -> None:
+        """Test reading [tool.setuptools.packages.find] where from pyproject.toml."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            pyproject = project_root / "pyproject.toml"
+            pyproject.write_text(
+                '[tool.setuptools.packages.find]\nwhere = ["lib"]\n'
+            )
+
+            result = detect_source_directory(project_root)
+
+            assert result == "lib"
+
+    def test_returns_none_when_nothing_detected(self) -> None:
+        """Test returns None when no source directory can be found."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+
+            result = detect_source_directory(project_root)
+
+            assert result is None
+
+    def test_src_layout_preferred_over_flat(self) -> None:
+        """Test that src/ layout is checked before flat layout."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir) / "my-project"
+            project_root.mkdir()
+            # Create both layouts
+            src_pkg = project_root / "src" / "my_project"
+            src_pkg.mkdir(parents=True)
+            (src_pkg / "__init__.py").touch()
+            flat_pkg = project_root / "my_project"
+            flat_pkg.mkdir()
+            (flat_pkg / "__init__.py").touch()
+
+            result = detect_source_directory(project_root)
+
+            # src/ layout should win
+            assert result == "src/my_project"
+
+
+class TestCoverageHasSourceConfig:
+    """Tests for coverage_has_source_config function."""
+
+    def test_pyproject_toml_with_source(self) -> None:
+        """Test detection of [tool.coverage.run] source in pyproject.toml."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            pyproject = project_root / "pyproject.toml"
+            pyproject.write_text(
+                '[tool.coverage.run]\nsource = ["src/mypackage"]\n'
+            )
+
+            assert coverage_has_source_config(project_root) is True
+
+    def test_pyproject_toml_without_coverage_section(self) -> None:
+        """Test returns False when no coverage config in pyproject.toml."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            pyproject = project_root / "pyproject.toml"
+            pyproject.write_text("[project]\nname = 'foo'\n")
+
+            assert coverage_has_source_config(project_root) is False
+
+    def test_coveragerc_with_source(self) -> None:
+        """Test detection of source in .coveragerc."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            coveragerc = project_root / ".coveragerc"
+            coveragerc.write_text("[run]\nsource = src/mypackage\n")
+
+            assert coverage_has_source_config(project_root) is True
+
+    def test_setup_cfg_with_coverage_source(self) -> None:
+        """Test detection of source in setup.cfg [coverage:run]."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            setup_cfg = project_root / "setup.cfg"
+            setup_cfg.write_text("[coverage:run]\nsource = src/mypackage\n")
+
+            assert coverage_has_source_config(project_root) is True
+
+    def test_no_config_files(self) -> None:
+        """Test returns False when no config files exist."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+
+            assert coverage_has_source_config(project_root) is False
+
+    def test_pyproject_toml_empty_source(self) -> None:
+        """Test returns False when source is an empty list."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            pyproject = project_root / "pyproject.toml"
+            pyproject.write_text("[tool.coverage.run]\nsource = []\n")
+
+            assert coverage_has_source_config(project_root) is False

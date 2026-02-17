@@ -196,6 +196,127 @@ def find_java_build_tool(project_root: Path) -> Tuple[Path, str]:
     )
 
 
+def detect_source_directory(project_root: Path) -> Optional[str]:
+    """Detect the Python source directory for coverage measurement.
+
+    Checks (in order):
+    1. ``src/<package>/`` layout (with ``__init__.py``)
+    2. Flat ``<project_name>/`` layout at project root
+    3. ``[tool.setuptools.packages.find] where = [...]`` in pyproject.toml
+
+    Args:
+        project_root: Project root directory.
+
+    Returns:
+        Source directory path relative to project root, or None if it
+        cannot be determined.
+    """
+    # Check common src/ layout
+    src_dir = project_root / "src"
+    if src_dir.exists() and src_dir.is_dir():
+        # Look for a package inside src/
+        for child in src_dir.iterdir():
+            if child.is_dir() and (child / "__init__.py").exists():
+                return str(child.relative_to(project_root))
+        # Fallback to src/ itself
+        return "src"
+
+    # Check for package at root level (same name as project directory)
+    project_name = project_root.name.replace("-", "_")
+    package_dir = project_root / project_name
+    if package_dir.exists() and (package_dir / "__init__.py").exists():
+        return project_name
+
+    # Check pyproject.toml for package configuration
+    pyproject = project_root / "pyproject.toml"
+    if pyproject.exists():
+        try:
+            import tomllib
+
+            with open(pyproject, "rb") as f:
+                data = tomllib.load(f)
+            # Check [tool.setuptools.packages.find] where = [...]
+            packages = (
+                data.get("tool", {}).get("setuptools", {}).get("packages", {})
+            )
+            if isinstance(packages, dict):
+                # Handle nested: [tool.setuptools.packages.find] where = [...]
+                find = packages.get("find", {})
+                if isinstance(find, dict) and "where" in find:
+                    where = find["where"]
+                    if isinstance(where, list) and where:
+                        return where[0]
+                # Handle flat: [tool.setuptools.packages] where = [...]
+                if "where" in packages:
+                    where = packages["where"]
+                    if isinstance(where, list) and where:
+                        return where[0]
+        except Exception:
+            pass
+
+    return None
+
+
+def coverage_has_source_config(project_root: Path) -> bool:
+    """Check whether the project already configures coverage source directories.
+
+    Looks for ``source`` in ``[tool.coverage.run]`` inside pyproject.toml,
+    or in a ``.coveragerc`` / ``setup.cfg`` ``[coverage:run]`` section.
+
+    Args:
+        project_root: Project root directory.
+
+    Returns:
+        True if an explicit source configuration was found.
+    """
+    # Check pyproject.toml [tool.coverage.run] source
+    pyproject = project_root / "pyproject.toml"
+    if pyproject.exists():
+        try:
+            import tomllib
+
+            with open(pyproject, "rb") as f:
+                data = tomllib.load(f)
+            source = (
+                data.get("tool", {})
+                .get("coverage", {})
+                .get("run", {})
+                .get("source")
+            )
+            if source:
+                return True
+        except Exception:
+            pass
+
+    # Check .coveragerc
+    coveragerc = project_root / ".coveragerc"
+    if coveragerc.exists():
+        try:
+            import configparser
+
+            cfg = configparser.ConfigParser()
+            cfg.read(str(coveragerc))
+            if cfg.has_option("run", "source"):
+                return True
+        except Exception:
+            pass
+
+    # Check setup.cfg [coverage:run]
+    setup_cfg = project_root / "setup.cfg"
+    if setup_cfg.exists():
+        try:
+            import configparser
+
+            cfg = configparser.ConfigParser()
+            cfg.read(str(setup_cfg))
+            if cfg.has_option("coverage:run", "source"):
+                return True
+        except Exception:
+            pass
+
+    return False
+
+
 def create_coverage_threshold_issue(
     source_tool: str,
     percentage: float,

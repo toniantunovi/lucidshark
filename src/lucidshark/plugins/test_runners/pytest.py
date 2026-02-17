@@ -24,7 +24,12 @@ from lucidshark.core.models import (
 )
 from lucidshark.core.subprocess_runner import run_with_streaming
 from lucidshark.plugins.test_runners.base import TestRunnerPlugin, TestResult
-from lucidshark.plugins.utils import ensure_python_binary, get_cli_version
+from lucidshark.plugins.utils import (
+    ensure_python_binary,
+    get_cli_version,
+    coverage_has_source_config,
+    detect_source_directory,
+)
 
 LOGGER = get_logger(__name__)
 
@@ -162,10 +167,29 @@ class PytestRunner(TestRunnerPlugin):
         self,
         binary: Path,
         coverage_binary: Optional[Path] = None,
+        project_root: Optional[Path] = None,
     ) -> List[str]:
-        """Build base pytest command, optionally wrapped with coverage."""
+        """Build base pytest command, optionally wrapped with coverage.
+
+        When ``coverage_binary`` is provided, the command is wrapped as
+        ``coverage run [--source <dir>] -m pytest``.  The ``--source``
+        flag is added automatically unless the project already has an
+        explicit coverage source configuration (pyproject.toml, .coveragerc,
+        or setup.cfg).
+        """
         if coverage_binary:
-            return [str(coverage_binary), "run", "-m", "pytest"]
+            cmd = [str(coverage_binary), "run"]
+            # Add --source so coverage only measures project code, not
+            # third-party libraries or test files.
+            if project_root and not coverage_has_source_config(project_root):
+                source_dir = detect_source_directory(project_root)
+                if source_dir:
+                    cmd.extend(["--source", source_dir])
+                    LOGGER.debug(
+                        "Coverage --source set to: %s", source_dir
+                    )
+            cmd.extend(["-m", "pytest"])
+            return cmd
         return [str(binary)]
 
     def _execute_pytest(
@@ -216,7 +240,7 @@ class PytestRunner(TestRunnerPlugin):
         with tempfile.TemporaryDirectory() as tmpdir:
             report_file = Path(tmpdir) / "report.json"
 
-            cmd = self._build_base_cmd(binary, coverage_binary)
+            cmd = self._build_base_cmd(binary, coverage_binary, context.project_root)
             cmd.extend([
                 "--tb=short", "-v",
                 "--json-report", f"--json-report-file={report_file}",
@@ -240,7 +264,7 @@ class PytestRunner(TestRunnerPlugin):
         with tempfile.TemporaryDirectory() as tmpdir:
             report_file = Path(tmpdir) / "junit.xml"
 
-            cmd = self._build_base_cmd(binary, coverage_binary)
+            cmd = self._build_base_cmd(binary, coverage_binary, context.project_root)
             cmd.extend(["--tb=short", "-v", f"--junit-xml={report_file}"])
 
             if not self._execute_pytest(cmd, context):
