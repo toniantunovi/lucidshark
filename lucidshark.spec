@@ -19,7 +19,7 @@ a = Analysis(
     ['src/lucidshark/cli/__init__.py'],
     pathex=[str(src_path)],
     binaries=[],
-    datas=[],
+    datas=[('src/lucidshark/data/help.md', 'lucidshark/data')],
     hiddenimports=[
         # Core modules
         'lucidshark',

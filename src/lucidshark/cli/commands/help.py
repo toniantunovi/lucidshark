@@ -19,14 +19,14 @@ def get_help_content() -> str:
     Returns:
         Help documentation as markdown string.
     """
-    # Try to load from package resources first (installed package)
+    # Try to load from bundled package data (works for pip install and PyInstaller)
     try:
-        docs = files("lucidshark").joinpath("../../../docs/help.md")
-        return docs.read_text(encoding="utf-8")
+        data_dir = files("lucidshark").joinpath("data/help.md")
+        return data_dir.read_text(encoding="utf-8")
     except (FileNotFoundError, TypeError):
         pass
 
-    # Fall back to relative path (development)
+    # Fall back to docs/ in project root (development without install)
     from pathlib import Path
 
     docs_path = Path(__file__).parent.parent.parent.parent.parent / "docs" / "help.md"
