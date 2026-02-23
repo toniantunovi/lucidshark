@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lucidshark"
-version = "0.5.31"
+version = "0.5.32"
 description = "LucidShark - The trust layer for AI-assisted development"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -120,6 +120,9 @@ tarpaulin = "lucidshark.plugins.coverage.tarpaulin:TarpaulinPlugin"
 
 [project.entry-points."lucidshark.duplication"]
 duplo = "lucidshark.plugins.duplication.duplo:DuploPlugin"
+
+[tool.setuptools.package-data]
+lucidshark = ["data/*.md"]
 
 # Pytest configuration
 [tool.pytest.ini_options]
