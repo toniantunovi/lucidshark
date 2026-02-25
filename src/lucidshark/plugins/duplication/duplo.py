@@ -21,6 +21,7 @@ from lucidshark.bootstrap.download import secure_urlopen
 from lucidshark.bootstrap.paths import LucidsharkPaths
 from lucidshark.bootstrap.platform import get_platform_info
 from lucidshark.bootstrap.versions import get_tool_version
+from lucidshark.core.git import is_git_repo
 from lucidshark.core.logging import get_logger
 from lucidshark.core.models import (
     ScanContext,
@@ -143,6 +144,22 @@ class DuploPlugin(DuplicationPlugin):
 
         return binary_path
 
+    def _get_baseline_path(self) -> Path:
+        """Get the path for the duplo baseline file.
+
+        Returns:
+            Path to the baseline JSON file.
+        """
+        return self._paths.plugin_cache_dir("duplo") / "baseline.json"
+
+    def _get_cache_dir(self) -> Path:
+        """Get the cache directory for duplo file processing.
+
+        Returns:
+            Path to the file cache directory.
+        """
+        return self._paths.plugin_cache_dir("duplo") / "file-cache"
+
     def detect_duplication(
         self,
         context: ScanContext,
@@ -150,6 +167,9 @@ class DuploPlugin(DuplicationPlugin):
         min_lines: int = 4,
         min_chars: int = 3,
         exclude_patterns: Optional[List[str]] = None,
+        use_baseline: bool = True,
+        use_cache: bool = True,
+        use_git: bool = True,
     ) -> DuplicationResult:
         """Run duplication detection on the entire project.
 
@@ -162,41 +182,75 @@ class DuploPlugin(DuplicationPlugin):
             min_lines: Minimum lines for a duplicate block.
             min_chars: Minimum characters per line.
             exclude_patterns: Additional patterns to exclude from duplication scan.
+            use_baseline: If True, track known duplicates and only report new ones.
+            use_cache: If True, cache processed files for faster re-runs.
+            use_git: If True, use git ls-files for file discovery when in a git repo.
 
         Returns:
             DuplicationResult with statistics and issues.
         """
         binary = self.ensure_binary()
 
-        # Collect all source files in project (always full scan)
-        source_files = self._collect_source_files(context, exclude_patterns)
+        # Determine if we can use git mode
+        in_git_repo = use_git and is_git_repo(context.project_root)
 
-        if not source_files:
-            LOGGER.debug("No source files found for duplication detection")
-            return DuplicationResult(threshold=threshold)
+        file_list_path: Optional[Path] = None
 
-        # Write file list to temp file
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".txt", delete=False, encoding="utf-8"
-        ) as f:
-            for file_path in source_files:
-                f.write(f"{file_path}\n")
-            file_list_path = Path(f.name)
+        if in_git_repo:
+            LOGGER.debug("Using git mode for file discovery")
+        else:
+            # Collect all source files in project (always full scan)
+            source_files = self._collect_source_files(context, exclude_patterns)
+
+            if not source_files:
+                LOGGER.debug("No source files found for duplication detection")
+                return DuplicationResult(threshold=threshold)
+
+            # Write file list to temp file
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".txt", delete=False, encoding="utf-8"
+            ) as f:
+                for file_path in source_files:
+                    f.write(f"{file_path}\n")
+                file_list_path = Path(f.name)
 
         try:
             # Build command
-            # lucidshark-duplo <files> <output> [options]
+            # lucidshark-duplo <files|--git> <output> [options]
             # Using "-" as output means stdout
-            cmd = [
-                str(binary),
-                str(file_list_path),
+            cmd = [str(binary)]
+
+            if in_git_repo:
+                cmd.append("--git")
+            else:
+                assert file_list_path is not None
+                cmd.append(str(file_list_path))
+
+            cmd.extend([
                 "-",  # Output to stdout
                 "--json",
                 "--min-lines",
                 str(min_lines),
                 "--min-chars",
                 str(min_chars),
-            ]
+            ])
+
+            # Append cache flags
+            if use_cache:
+                cache_dir = self._get_cache_dir()
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                cmd.extend(["--cache", "--cache-dir", str(cache_dir)])
+
+            # Append baseline flags
+            if use_baseline:
+                baseline_path = self._get_baseline_path()
+                baseline_path.parent.mkdir(parents=True, exist_ok=True)
+                if baseline_path.exists():
+                    LOGGER.info("Comparing against baseline for known duplicates")
+                    cmd.extend(["--baseline", str(baseline_path)])
+                else:
+                    LOGGER.info("No baseline found, establishing baseline on first run")
+                cmd.extend(["--save-baseline", str(baseline_path)])
 
             LOGGER.debug(f"Running: {' '.join(cmd)}")
 
@@ -224,7 +278,8 @@ class DuploPlugin(DuplicationPlugin):
 
         finally:
             # Clean up temp file
-            file_list_path.unlink(missing_ok=True)
+            if file_list_path is not None:
+                file_list_path.unlink(missing_ok=True)
 
     def _collect_source_files(
         self,

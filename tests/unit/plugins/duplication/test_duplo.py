@@ -577,9 +577,10 @@ class TestDuploDetectDuplication:
             )
 
             with patch.object(plugin, "ensure_binary", return_value=Path("/usr/bin/duplo")):
-                result = plugin.detect_duplication(context)
-                assert isinstance(result, DuplicationResult)
-                assert result.duplicate_blocks == 0
+                with patch("lucidshark.plugins.duplication.duplo.is_git_repo", return_value=False):
+                    result = plugin.detect_duplication(context, use_baseline=False, use_cache=False, use_git=False)
+                    assert isinstance(result, DuplicationResult)
+                    assert result.duplicate_blocks == 0
 
     def test_detect_successful_run(self) -> None:
         """Test successful duplication detection."""
@@ -610,9 +611,10 @@ class TestDuploDetectDuplication:
             mock_result = make_completed_process(0, duplo_output)
 
             with patch.object(plugin, "ensure_binary", return_value=Path("/usr/bin/duplo")):
-                with patch("lucidshark.plugins.duplication.duplo.run_with_streaming", return_value=mock_result):
-                    result = plugin.detect_duplication(context)
-                    assert result.files_analyzed == 1
+                with patch("lucidshark.plugins.duplication.duplo.is_git_repo", return_value=False):
+                    with patch("lucidshark.plugins.duplication.duplo.run_with_streaming", return_value=mock_result):
+                        result = plugin.detect_duplication(context, use_baseline=False, use_cache=False, use_git=False)
+                        assert result.files_analyzed == 1
 
     def test_detect_timeout(self) -> None:
         """Test detect_duplication handles timeout."""
@@ -630,13 +632,14 @@ class TestDuploDetectDuplication:
             )
 
             with patch.object(plugin, "ensure_binary", return_value=Path("/usr/bin/duplo")):
-                with patch(
-                    "lucidshark.plugins.duplication.duplo.run_with_streaming",
-                    side_effect=subprocess.TimeoutExpired("duplo", 300),
-                ):
-                    result = plugin.detect_duplication(context)
-                    assert isinstance(result, DuplicationResult)
-                    assert result.duplicate_blocks == 0
+                with patch("lucidshark.plugins.duplication.duplo.is_git_repo", return_value=False):
+                    with patch(
+                        "lucidshark.plugins.duplication.duplo.run_with_streaming",
+                        side_effect=subprocess.TimeoutExpired("duplo", 300),
+                    ):
+                        result = plugin.detect_duplication(context, use_baseline=False, use_cache=False, use_git=False)
+                        assert isinstance(result, DuplicationResult)
+                        assert result.duplicate_blocks == 0
 
     def test_detect_subprocess_error(self) -> None:
         """Test detect_duplication handles subprocess errors."""
@@ -654,13 +657,14 @@ class TestDuploDetectDuplication:
             )
 
             with patch.object(plugin, "ensure_binary", return_value=Path("/usr/bin/duplo")):
-                with patch(
-                    "lucidshark.plugins.duplication.duplo.run_with_streaming",
-                    side_effect=OSError("command failed"),
-                ):
-                    result = plugin.detect_duplication(context)
-                    assert isinstance(result, DuplicationResult)
-                    assert result.duplicate_blocks == 0
+                with patch("lucidshark.plugins.duplication.duplo.is_git_repo", return_value=False):
+                    with patch(
+                        "lucidshark.plugins.duplication.duplo.run_with_streaming",
+                        side_effect=OSError("command failed"),
+                    ):
+                        result = plugin.detect_duplication(context, use_baseline=False, use_cache=False, use_git=False)
+                        assert isinstance(result, DuplicationResult)
+                        assert result.duplicate_blocks == 0
 
 
 class TestDuploDownloadBinary:
@@ -740,3 +744,282 @@ class TestDuplicationResult:
         assert d["duplicate_blocks"] == 3
         assert d["passed"] is True
         assert d["duplication_percent"] == 10.0
+
+
+class TestDuploGitMode:
+    """Tests for git mode file discovery."""
+
+    def test_git_flag_used_when_in_git_repo(self) -> None:
+        """Test that --git flag is used when in a git repo and use_git=True."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            plugin = DuploPlugin(project_root=project_root)
+
+            context = ScanContext(
+                project_root=project_root,
+                paths=[project_root],
+                enabled_domains=[],
+            )
+
+            duplo_output = json.dumps({
+                "summary": {"files_analyzed": 0, "total_lines": 0, "duplicate_blocks": 0, "duplicate_lines": 0},
+                "duplicates": [],
+            })
+            mock_result = make_completed_process(0, duplo_output)
+
+            with patch.object(plugin, "ensure_binary", return_value=Path("/usr/bin/duplo")):
+                with patch("lucidshark.plugins.duplication.duplo.is_git_repo", return_value=True):
+                    with patch("lucidshark.plugins.duplication.duplo.run_with_streaming", return_value=mock_result) as mock_run:
+                        plugin.detect_duplication(context, use_git=True, use_baseline=False, use_cache=False)
+                        cmd = mock_run.call_args[1]["cmd"] if "cmd" in mock_run.call_args[1] else mock_run.call_args[0][0]
+                        assert "--git" in cmd
+
+    def test_fallback_to_file_list_when_not_git_repo(self) -> None:
+        """Test fallback to file list when not in a git repo."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            py_file = project_root / "main.py"
+            py_file.write_text("code")
+
+            plugin = DuploPlugin(project_root=project_root)
+
+            context = ScanContext(
+                project_root=project_root,
+                paths=[project_root],
+                enabled_domains=[],
+            )
+
+            duplo_output = json.dumps({
+                "summary": {"files_analyzed": 1, "total_lines": 1, "duplicate_blocks": 0, "duplicate_lines": 0},
+                "duplicates": [],
+            })
+            mock_result = make_completed_process(0, duplo_output)
+
+            with patch.object(plugin, "ensure_binary", return_value=Path("/usr/bin/duplo")):
+                with patch("lucidshark.plugins.duplication.duplo.is_git_repo", return_value=False):
+                    with patch("lucidshark.plugins.duplication.duplo.run_with_streaming", return_value=mock_result) as mock_run:
+                        plugin.detect_duplication(context, use_git=True, use_baseline=False, use_cache=False)
+                        cmd = mock_run.call_args[1]["cmd"] if "cmd" in mock_run.call_args[1] else mock_run.call_args[0][0]
+                        assert "--git" not in cmd
+
+    def test_git_disabled_when_use_git_false(self) -> None:
+        """Test that git mode is not used when use_git=False."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            py_file = project_root / "main.py"
+            py_file.write_text("code")
+
+            plugin = DuploPlugin(project_root=project_root)
+
+            context = ScanContext(
+                project_root=project_root,
+                paths=[project_root],
+                enabled_domains=[],
+            )
+
+            duplo_output = json.dumps({
+                "summary": {"files_analyzed": 1, "total_lines": 1, "duplicate_blocks": 0, "duplicate_lines": 0},
+                "duplicates": [],
+            })
+            mock_result = make_completed_process(0, duplo_output)
+
+            with patch.object(plugin, "ensure_binary", return_value=Path("/usr/bin/duplo")):
+                with patch("lucidshark.plugins.duplication.duplo.is_git_repo", return_value=True):
+                    with patch("lucidshark.plugins.duplication.duplo.run_with_streaming", return_value=mock_result) as mock_run:
+                        plugin.detect_duplication(context, use_git=False, use_baseline=False, use_cache=False)
+                        cmd = mock_run.call_args[1]["cmd"] if "cmd" in mock_run.call_args[1] else mock_run.call_args[0][0]
+                        assert "--git" not in cmd
+
+
+class TestDuploCacheMode:
+    """Tests for cache flag handling."""
+
+    def test_cache_flags_added_when_enabled(self) -> None:
+        """Test that --cache and --cache-dir flags are added when use_cache=True."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            plugin = DuploPlugin(project_root=project_root)
+
+            context = ScanContext(
+                project_root=project_root,
+                paths=[project_root],
+                enabled_domains=[],
+            )
+
+            duplo_output = json.dumps({
+                "summary": {"files_analyzed": 0, "total_lines": 0, "duplicate_blocks": 0, "duplicate_lines": 0},
+                "duplicates": [],
+            })
+            mock_result = make_completed_process(0, duplo_output)
+
+            with patch.object(plugin, "ensure_binary", return_value=Path("/usr/bin/duplo")):
+                with patch("lucidshark.plugins.duplication.duplo.is_git_repo", return_value=True):
+                    with patch("lucidshark.plugins.duplication.duplo.run_with_streaming", return_value=mock_result) as mock_run:
+                        plugin.detect_duplication(context, use_git=True, use_cache=True, use_baseline=False)
+                        cmd = mock_run.call_args[1]["cmd"] if "cmd" in mock_run.call_args[1] else mock_run.call_args[0][0]
+                        assert "--cache" in cmd
+                        assert "--cache-dir" in cmd
+
+    def test_cache_flags_omitted_when_disabled(self) -> None:
+        """Test that cache flags are not added when use_cache=False."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            plugin = DuploPlugin(project_root=project_root)
+
+            context = ScanContext(
+                project_root=project_root,
+                paths=[project_root],
+                enabled_domains=[],
+            )
+
+            duplo_output = json.dumps({
+                "summary": {"files_analyzed": 0, "total_lines": 0, "duplicate_blocks": 0, "duplicate_lines": 0},
+                "duplicates": [],
+            })
+            mock_result = make_completed_process(0, duplo_output)
+
+            with patch.object(plugin, "ensure_binary", return_value=Path("/usr/bin/duplo")):
+                with patch("lucidshark.plugins.duplication.duplo.is_git_repo", return_value=True):
+                    with patch("lucidshark.plugins.duplication.duplo.run_with_streaming", return_value=mock_result) as mock_run:
+                        plugin.detect_duplication(context, use_git=True, use_cache=False, use_baseline=False)
+                        cmd = mock_run.call_args[1]["cmd"] if "cmd" in mock_run.call_args[1] else mock_run.call_args[0][0]
+                        assert "--cache" not in cmd
+                        assert "--cache-dir" not in cmd
+
+    def test_cache_directory_created(self) -> None:
+        """Test that cache directory is created when cache is enabled."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            plugin = DuploPlugin(project_root=project_root)
+
+            cache_dir = plugin._get_cache_dir()
+            assert not cache_dir.exists()
+
+            context = ScanContext(
+                project_root=project_root,
+                paths=[project_root],
+                enabled_domains=[],
+            )
+
+            duplo_output = json.dumps({
+                "summary": {"files_analyzed": 0, "total_lines": 0, "duplicate_blocks": 0, "duplicate_lines": 0},
+                "duplicates": [],
+            })
+            mock_result = make_completed_process(0, duplo_output)
+
+            with patch.object(plugin, "ensure_binary", return_value=Path("/usr/bin/duplo")):
+                with patch("lucidshark.plugins.duplication.duplo.is_git_repo", return_value=True):
+                    with patch("lucidshark.plugins.duplication.duplo.run_with_streaming", return_value=mock_result):
+                        plugin.detect_duplication(context, use_git=True, use_cache=True, use_baseline=False)
+                        assert cache_dir.exists()
+
+
+class TestDuploBaselineMode:
+    """Tests for baseline flag handling."""
+
+    def test_first_run_saves_baseline_only(self) -> None:
+        """Test that first run (no baseline file) only passes --save-baseline."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            plugin = DuploPlugin(project_root=project_root)
+
+            context = ScanContext(
+                project_root=project_root,
+                paths=[project_root],
+                enabled_domains=[],
+            )
+
+            duplo_output = json.dumps({
+                "summary": {"files_analyzed": 0, "total_lines": 0, "duplicate_blocks": 0, "duplicate_lines": 0},
+                "duplicates": [],
+            })
+            mock_result = make_completed_process(0, duplo_output)
+
+            # Ensure no baseline file exists
+            baseline_path = plugin._get_baseline_path()
+            assert not baseline_path.exists()
+
+            with patch.object(plugin, "ensure_binary", return_value=Path("/usr/bin/duplo")):
+                with patch("lucidshark.plugins.duplication.duplo.is_git_repo", return_value=True):
+                    with patch("lucidshark.plugins.duplication.duplo.run_with_streaming", return_value=mock_result) as mock_run:
+                        plugin.detect_duplication(context, use_git=True, use_baseline=True, use_cache=False)
+                        cmd = mock_run.call_args[1]["cmd"] if "cmd" in mock_run.call_args[1] else mock_run.call_args[0][0]
+                        assert "--save-baseline" in cmd
+                        assert "--baseline" not in cmd
+
+    def test_subsequent_run_reads_and_saves_baseline(self) -> None:
+        """Test that subsequent runs pass both --baseline and --save-baseline."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            plugin = DuploPlugin(project_root=project_root)
+
+            context = ScanContext(
+                project_root=project_root,
+                paths=[project_root],
+                enabled_domains=[],
+            )
+
+            duplo_output = json.dumps({
+                "summary": {"files_analyzed": 0, "total_lines": 0, "duplicate_blocks": 0, "duplicate_lines": 0},
+                "duplicates": [],
+            })
+            mock_result = make_completed_process(0, duplo_output)
+
+            # Create a baseline file to simulate a previous run
+            baseline_path = plugin._get_baseline_path()
+            baseline_path.parent.mkdir(parents=True, exist_ok=True)
+            baseline_path.write_text("{}")
+
+            with patch.object(plugin, "ensure_binary", return_value=Path("/usr/bin/duplo")):
+                with patch("lucidshark.plugins.duplication.duplo.is_git_repo", return_value=True):
+                    with patch("lucidshark.plugins.duplication.duplo.run_with_streaming", return_value=mock_result) as mock_run:
+                        plugin.detect_duplication(context, use_git=True, use_baseline=True, use_cache=False)
+                        cmd = mock_run.call_args[1]["cmd"] if "cmd" in mock_run.call_args[1] else mock_run.call_args[0][0]
+                        assert "--baseline" in cmd
+                        assert "--save-baseline" in cmd
+
+    def test_baseline_disabled_when_use_baseline_false(self) -> None:
+        """Test that baseline flags are not added when use_baseline=False."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            project_root = Path(tmpdir)
+            plugin = DuploPlugin(project_root=project_root)
+
+            context = ScanContext(
+                project_root=project_root,
+                paths=[project_root],
+                enabled_domains=[],
+            )
+
+            duplo_output = json.dumps({
+                "summary": {"files_analyzed": 0, "total_lines": 0, "duplicate_blocks": 0, "duplicate_lines": 0},
+                "duplicates": [],
+            })
+            mock_result = make_completed_process(0, duplo_output)
+
+            with patch.object(plugin, "ensure_binary", return_value=Path("/usr/bin/duplo")):
+                with patch("lucidshark.plugins.duplication.duplo.is_git_repo", return_value=True):
+                    with patch("lucidshark.plugins.duplication.duplo.run_with_streaming", return_value=mock_result) as mock_run:
+                        plugin.detect_duplication(context, use_git=True, use_baseline=False, use_cache=False)
+                        cmd = mock_run.call_args[1]["cmd"] if "cmd" in mock_run.call_args[1] else mock_run.call_args[0][0]
+                        assert "--baseline" not in cmd
+                        assert "--save-baseline" not in cmd
+
+
+class TestDuploHelperMethods:
+    """Tests for _get_baseline_path and _get_cache_dir helper methods."""
+
+    def test_get_baseline_path(self) -> None:
+        """Test baseline path is under plugin cache directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plugin = DuploPlugin(project_root=Path(tmpdir))
+            path = plugin._get_baseline_path()
+            assert path.name == "baseline.json"
+            assert "duplo" in str(path)
+
+    def test_get_cache_dir(self) -> None:
+        """Test cache dir is under plugin cache directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plugin = DuploPlugin(project_root=Path(tmpdir))
+            path = plugin._get_cache_dir()
+            assert path.name == "file-cache"
+            assert "duplo" in str(path)
