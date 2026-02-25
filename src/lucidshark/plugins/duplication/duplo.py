@@ -194,10 +194,39 @@ class DuploPlugin(DuplicationPlugin):
         # Determine if we can use git mode
         in_git_repo = use_git and is_git_repo(context.project_root)
 
+        # Use --git only when there are no duplication-specific exclude
+        # patterns.  Global ignore patterns (context.get_exclude_patterns())
+        # overlap with .gitignore and don't need extra filtering, but
+        # duplication-specific patterns like "tests/**" are tracked by git
+        # yet should be excluded from the duplication scan.
+        has_duplication_excludes = bool(exclude_patterns)
+        use_git_flag = in_git_repo and not has_duplication_excludes
+
         file_list_path: Optional[Path] = None
 
-        if in_git_repo:
+        if use_git_flag:
             LOGGER.debug("Using git mode for file discovery")
+        elif in_git_repo:
+            # In a git repo but we have duplication-specific exclude
+            # patterns — collect via git ls-files and filter so exclusions
+            # are honoured.
+            LOGGER.debug("Using git ls-files with exclude filtering")
+            all_exclude_patterns = list(context.get_exclude_patterns())
+            if exclude_patterns:
+                all_exclude_patterns.extend(exclude_patterns)
+            source_files = self._collect_git_files_filtered(
+                context, all_exclude_patterns,
+            )
+            if not source_files:
+                LOGGER.debug("No source files found for duplication detection")
+                return DuplicationResult(threshold=threshold)
+
+            with tempfile.NamedTemporaryFile(
+                mode="w", suffix=".txt", delete=False, encoding="utf-8"
+            ) as f:
+                for file_path in source_files:
+                    f.write(f"{file_path}\n")
+                file_list_path = Path(f.name)
         else:
             # Collect all source files in project (always full scan)
             source_files = self._collect_source_files(context, exclude_patterns)
@@ -220,7 +249,7 @@ class DuploPlugin(DuplicationPlugin):
             # Using "-" as output means stdout
             cmd = [str(binary)]
 
-            if in_git_repo:
+            if use_git_flag:
                 cmd.append("--git")
             else:
                 assert file_list_path is not None
@@ -280,6 +309,51 @@ class DuploPlugin(DuplicationPlugin):
             # Clean up temp file
             if file_list_path is not None:
                 file_list_path.unlink(missing_ok=True)
+
+    def _collect_git_files_filtered(
+        self,
+        context: ScanContext,
+        exclude_patterns: List[str],
+    ) -> List[Path]:
+        """Collect source files via ``git ls-files``, applying exclude patterns.
+
+        This is used when we're in a git repo but need to honour exclude
+        patterns that the duplo ``--git`` flag cannot apply.
+
+        Args:
+            context: Scan context.
+            exclude_patterns: Combined list of exclude patterns to apply.
+
+        Returns:
+            List of source file paths.
+        """
+        try:
+            result = subprocess.run(
+                ["git", "ls-files", "--cached", "--others", "--exclude-standard"],
+                cwd=context.project_root,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        except Exception:
+            LOGGER.warning("git ls-files failed, falling back to file walk")
+            return self._collect_source_files(context, exclude_patterns)
+
+        source_files = []
+        for line in result.stdout.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            path = context.project_root / line
+            if not path.is_file():
+                continue
+            if self._should_exclude(line, exclude_patterns):
+                continue
+            if path.suffix.lower() in SUPPORTED_EXTENSIONS:
+                source_files.append(path)
+
+        LOGGER.debug(f"Found {len(source_files)} source files via git ls-files (filtered)")
+        return source_files
 
     def _collect_source_files(
         self,
