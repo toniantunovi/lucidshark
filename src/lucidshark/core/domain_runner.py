@@ -6,6 +6,7 @@ across both CLI and MCP interfaces.
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
@@ -357,11 +358,32 @@ class DomainRunner:
 
         return issues
 
+    def _run_shell_command(self, command: str, label: str) -> subprocess.CompletedProcess[str]:
+        """Run a shell command and log its execution.
+
+        Args:
+            command: Shell command to execute.
+            label: Label for logging (e.g., "test_command", "post_test_command").
+
+        Returns:
+            CompletedProcess result.
+        """
+        self._log("info", f"Running {label}: {command}")
+        return subprocess.run(
+            command,
+            shell=True,  # nosemgrep: subprocess-shell-true - command is from project config file, not untrusted input
+            cwd=str(self.project_root),
+            capture_output=True,
+            text=True,
+        )
+
     def run_tests(
         self,
         context: ScanContext,
         with_coverage: bool = False,
         exclude_patterns: Optional[List[str]] = None,
+        test_command: Optional[str] = None,
+        post_test_command: Optional[str] = None,
     ) -> List[UnifiedIssue]:
         """Run test suite.
 
@@ -369,41 +391,88 @@ class DomainRunner:
             context: Scan context.
             with_coverage: If True, run tests with coverage instrumentation.
             exclude_patterns: Domain-specific exclude patterns to merge.
+            test_command: Custom shell command to run tests. Overrides plugin-based runner.
+            post_test_command: Shell command to run after tests complete.
 
         Returns:
             List of test failure issues.
         """
         context = self._context_with_domain_excludes(context, exclude_patterns)
-        from lucidshark.plugins.test_runners import discover_test_runner_plugins
+        from lucidshark.core.models import Severity, ToolDomain
 
         issues: List[UnifiedIssue] = []
+
+        if test_command:
+            # Custom test command overrides plugin-based execution
+            result = self._run_shell_command(test_command, "test_command")
+
+            if result.returncode != 0:
+                # Non-zero exit code means test failures
+                stderr_snippet = result.stderr.strip()[:500] if result.stderr else ""
+                stdout_snippet = result.stdout.strip()[:500] if result.stdout else ""
+                output = stderr_snippet or stdout_snippet or "Test command failed"
+                issues.append(UnifiedIssue(
+                    id="custom-test-failure",
+                    domain=ToolDomain.TESTING,
+                    source_tool="custom",
+                    severity=Severity.HIGH,
+                    rule_id="test-failure",
+                    title="Custom test command failed",
+                    description=f"Command `{test_command}` exited with code {result.returncode}.\n\n{output}",
+                ))
+                self._log("info", f"test_command: FAILED (exit code {result.returncode})")
+            else:
+                self._log("info", "test_command: PASSED")
+
+            # Run post_test_command if provided
+            if post_test_command:
+                post_result = self._run_shell_command(post_test_command, "post_test_command")
+                if post_result.returncode != 0:
+                    LOGGER.warning(
+                        f"post_test_command failed (exit code {post_result.returncode}): "
+                        f"{post_result.stderr.strip()[:200] if post_result.stderr else ''}"
+                    )
+
+            return issues
+
+        # Fall through to existing plugin-based logic
+        from lucidshark.plugins.test_runners import discover_test_runner_plugins
+
         runners = discover_test_runner_plugins()
 
         if not runners:
             LOGGER.warning("No test runner plugins found")
-            return issues
+        else:
+            runners = filter_plugins_by_config(runners, self.config, "testing", self.project_root)
 
-        runners = filter_plugins_by_config(runners, self.config, "testing", self.project_root)
+            for name, plugin_class in runners.items():
+                try:
+                    coverage_msg = " (with coverage)" if with_coverage else ""
+                    self._log("info", f"Running test runner: {name}{coverage_msg}")
+                    plugin = plugin_class(project_root=self.project_root)
+                    result = plugin.run_tests(context, with_coverage=with_coverage)
 
-        for name, plugin_class in runners.items():
-            try:
-                coverage_msg = " (with coverage)" if with_coverage else ""
-                self._log("info", f"Running test runner: {name}{coverage_msg}")
-                plugin = plugin_class(project_root=self.project_root)
-                result = plugin.run_tests(context, with_coverage=with_coverage)
+                    self._log(
+                        "info",
+                        f"{name}: {result.passed} passed, {result.failed} failed, "
+                        f"{result.skipped} skipped, {result.errors} errors"
+                    )
 
-                self._log(
-                    "info",
-                    f"{name}: {result.passed} passed, {result.failed} failed, "
-                    f"{result.skipped} skipped, {result.errors} errors"
+                    issues.extend(result.issues)
+
+                except FileNotFoundError:
+                    LOGGER.debug(f"Test runner {name} not available")
+                except Exception as e:
+                    LOGGER.error(f"Test runner {name} failed: {e}")
+
+        # Run post_test_command after plugin-based tests if provided
+        if post_test_command:
+            post_result = self._run_shell_command(post_test_command, "post_test_command")
+            if post_result.returncode != 0:
+                LOGGER.warning(
+                    f"post_test_command failed (exit code {post_result.returncode}): "
+                    f"{post_result.stderr.strip()[:200] if post_result.stderr else ''}"
                 )
-
-                issues.extend(result.issues)
-
-            except FileNotFoundError:
-                LOGGER.debug(f"Test runner {name} not available")
-            except Exception as e:
-                LOGGER.error(f"Test runner {name} failed: {e}")
 
         return issues
 
@@ -413,6 +482,7 @@ class DomainRunner:
         threshold: float = 80.0,
         run_tests: bool = True,
         exclude_patterns: Optional[List[str]] = None,
+        post_test_command: Optional[str] = None,
     ) -> List[UnifiedIssue]:
         """Run coverage analysis.
 
@@ -421,6 +491,7 @@ class DomainRunner:
             threshold: Coverage percentage threshold.
             run_tests: Whether to run tests for coverage.
             exclude_patterns: Domain-specific exclude patterns to merge.
+            post_test_command: Shell command to run after coverage completes.
 
         Returns:
             List of coverage issues.
@@ -433,45 +504,53 @@ class DomainRunner:
 
         if not plugins:
             LOGGER.warning("No coverage plugins found")
-            return issues
+        else:
+            plugins = filter_plugins_by_config(plugins, self.config, "coverage", self.project_root)
 
-        plugins = filter_plugins_by_config(plugins, self.config, "coverage", self.project_root)
-
-        for name, plugin_class in plugins.items():
-            try:
-                self._log("info", f"Running coverage: {name}")
-                plugin = plugin_class(project_root=self.project_root)
-                result = plugin.measure_coverage(
-                    context, threshold=threshold, run_tests=run_tests
-                )
-
-                status = "PASSED" if result.passed else "FAILED"
-
-                # Build log message with test stats if available
-                log_parts = [
-                    f"{name}: {result.percentage:.1f}%",
-                    f"({result.covered_lines}/{result.total_lines} lines)",
-                    f"- threshold: {threshold}%",
-                    f"- {status}",
-                ]
-                if result.test_stats:
-                    ts = result.test_stats
-                    log_parts.append(
-                        f"| Tests: {ts.total} total, {ts.passed} passed, "
-                        f"{ts.failed} failed, {ts.skipped} skipped"
+            for name, plugin_class in plugins.items():
+                try:
+                    self._log("info", f"Running coverage: {name}")
+                    plugin = plugin_class(project_root=self.project_root)
+                    result = plugin.measure_coverage(
+                        context, threshold=threshold, run_tests=run_tests
                     )
 
-                self._log("info", " ".join(log_parts))
+                    status = "PASSED" if result.passed else "FAILED"
 
-                # Store the coverage result in context for MCP to access
-                context.coverage_result = result
+                    # Build log message with test stats if available
+                    log_parts = [
+                        f"{name}: {result.percentage:.1f}%",
+                        f"({result.covered_lines}/{result.total_lines} lines)",
+                        f"- threshold: {threshold}%",
+                        f"- {status}",
+                    ]
+                    if result.test_stats:
+                        ts = result.test_stats
+                        log_parts.append(
+                            f"| Tests: {ts.total} total, {ts.passed} passed, "
+                            f"{ts.failed} failed, {ts.skipped} skipped"
+                        )
 
-                issues.extend(result.issues)
+                    self._log("info", " ".join(log_parts))
 
-            except FileNotFoundError:
-                LOGGER.debug(f"Coverage plugin {name} not available")
-            except Exception as e:
-                LOGGER.error(f"Coverage plugin {name} failed: {e}")
+                    # Store the coverage result in context for MCP to access
+                    context.coverage_result = result
+
+                    issues.extend(result.issues)
+
+                except FileNotFoundError:
+                    LOGGER.debug(f"Coverage plugin {name} not available")
+                except Exception as e:
+                    LOGGER.error(f"Coverage plugin {name} failed: {e}")
+
+        # Run post_test_command after coverage completes if provided
+        if post_test_command:
+            post_result = self._run_shell_command(post_test_command, "post_test_command")
+            if post_result.returncode != 0:
+                LOGGER.warning(
+                    f"post_test_command failed (exit code {post_result.returncode}): "
+                    f"{post_result.stderr.strip()[:200] if post_result.stderr else ''}"
+                )
 
         return issues
 

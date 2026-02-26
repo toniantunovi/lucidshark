@@ -249,6 +249,8 @@ pipeline:
 
   testing:
     enabled: true
+    test_command: "make test"       # Optional: custom shell command overrides plugin-based runner
+    post_test_command: "make clean" # Optional: runs after tests complete
     tools:
       - name: pytest
         args: ["-v"]
@@ -487,6 +489,8 @@ pipeline:
 
   testing:
     enabled: boolean
+    test_command: string      # Optional: custom shell command overrides plugin-based runner
+    post_test_command: string # Optional: runs after tests complete
     exclude: [string]  # Patterns to exclude from testing
     tools:
       - name: string

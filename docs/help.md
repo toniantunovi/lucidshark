@@ -579,6 +579,8 @@ pipeline:
 
   testing:
     enabled: true
+    test_command: "npm test"            # Optional: custom shell command overrides plugin-based runner
+    post_test_command: "npm run cleanup" # Optional: runs after tests complete
     exclude:          # Patterns to exclude from test execution
       - "tests/integration/**"
     tools:
@@ -932,6 +934,8 @@ exclude:
 | `security.exclude` | array | [] | Patterns to exclude from security scanning (combined with global `exclude`) |
 | `security.tools` | array | (auto) | Security tools with domains |
 | `testing.enabled` | bool | false | Enable test execution |
+| `testing.test_command` | string | (none) | Custom shell command to run tests (overrides plugin-based runner) |
+| `testing.post_test_command` | string | (none) | Shell command to run after tests complete (cleanup, reports, etc.) |
 | `testing.exclude` | array | [] | Patterns to exclude from test execution (combined with global `exclude`) |
 | `testing.tools` | array | (auto) | Test frameworks |
 | `coverage.enabled` | bool | false | Enable coverage analysis |

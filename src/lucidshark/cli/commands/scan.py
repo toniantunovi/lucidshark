@@ -214,9 +214,19 @@ class ScanCommand(Command):
         if testing_enabled:
             # Run tests, with coverage instrumentation if coverage is also enabled
             testing_exclude = None
-            if config.pipeline.testing and config.pipeline.testing.exclude:
-                testing_exclude = config.pipeline.testing.exclude
-            all_issues.extend(runner.run_tests(context, with_coverage=coverage_enabled, exclude_patterns=testing_exclude))
+            test_command = None
+            post_test_command = None
+            if config.pipeline.testing:
+                if config.pipeline.testing.exclude:
+                    testing_exclude = config.pipeline.testing.exclude
+                test_command = config.pipeline.testing.test_command
+                post_test_command = config.pipeline.testing.post_test_command
+            all_issues.extend(runner.run_tests(
+                context, with_coverage=coverage_enabled,
+                exclude_patterns=testing_exclude,
+                test_command=test_command,
+                post_test_command=post_test_command,
+            ))
 
         coverage_summary: Optional[CoverageSummary] = None
         if coverage_enabled:
@@ -227,8 +237,15 @@ class ScanCommand(Command):
             coverage_exclude = None
             if config.pipeline.coverage and config.pipeline.coverage.exclude:
                 coverage_exclude = config.pipeline.coverage.exclude
+            coverage_post_test_command = None
+            if config.pipeline.testing:
+                coverage_post_test_command = config.pipeline.testing.post_test_command
             all_issues.extend(
-                runner.run_coverage(context, coverage_threshold, run_tests_for_coverage, exclude_patterns=coverage_exclude)
+                runner.run_coverage(
+                    context, coverage_threshold, run_tests_for_coverage,
+                    exclude_patterns=coverage_exclude,
+                    post_test_command=coverage_post_test_command,
+                )
             )
 
             # Build coverage summary from context.coverage_result

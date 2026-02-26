@@ -306,7 +306,12 @@ def _parse_domain_pipeline_config(
             tools.append(ToolConfig(name=tool_data))
 
     exclude = domain_data.get("exclude", [])
-    return DomainPipelineConfig(enabled=enabled, tools=tools, exclude=exclude)
+    test_command = domain_data.get("test_command")
+    post_test_command = domain_data.get("post_test_command")
+    return DomainPipelineConfig(
+        enabled=enabled, tools=tools, exclude=exclude,
+        test_command=test_command, post_test_command=post_test_command,
+    )
 
 
 def _parse_coverage_pipeline_config(

@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict, Type
+from unittest.mock import patch, MagicMock
 
 
+from lucidshark.config.models import LucidSharkConfig
 from lucidshark.core.domain_runner import (
+    DomainRunner,
     EXTENSION_LANGUAGE,
     PLUGIN_LANGUAGES,
     check_severity_threshold,
@@ -384,3 +387,177 @@ class TestExtensionLanguageMapping:
         assert EXTENSION_LANGUAGE[".yaml"] == "yaml"
         assert EXTENSION_LANGUAGE[".yml"] == "yaml"
         assert EXTENSION_LANGUAGE[".json"] == "json"
+
+
+class TestDomainRunnerTestCommand:
+    """Tests for DomainRunner.run_tests with test_command and post_test_command."""
+
+    def _make_runner(self, tmp_path: Path) -> DomainRunner:
+        """Create a DomainRunner with default config."""
+        config = LucidSharkConfig()
+        return DomainRunner(tmp_path, config)
+
+    def _make_context(self, tmp_path: Path) -> Any:
+        """Create a minimal ScanContext-like mock."""
+        ctx = MagicMock()
+        ctx.project_root = tmp_path
+        ctx.ignore_patterns = MagicMock()
+        return ctx
+
+    def test_test_command_success(self, tmp_path: Path) -> None:
+        """Test that a successful test_command returns no issues."""
+        runner = self._make_runner(tmp_path)
+        context = self._make_context(tmp_path)
+
+        with patch("lucidshark.core.domain_runner.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="OK", stderr="")
+            issues = runner.run_tests(context, test_command="echo test")
+
+        assert len(issues) == 0
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args
+        assert call_args[0][0] == "echo test"
+        assert call_args[1]["shell"] is True
+
+    def test_test_command_failure(self, tmp_path: Path) -> None:
+        """Test that a failed test_command creates a test failure issue."""
+        runner = self._make_runner(tmp_path)
+        context = self._make_context(tmp_path)
+
+        with patch("lucidshark.core.domain_runner.subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(
+                returncode=1, stdout="", stderr="FAILED: test_foo"
+            )
+            issues = runner.run_tests(context, test_command="make test")
+
+        assert len(issues) == 1
+        assert issues[0].id == "custom-test-failure"
+        assert issues[0].domain == ToolDomain.TESTING
+        assert issues[0].severity == Severity.HIGH
+        assert "exited with code 1" in issues[0].description
+        assert "FAILED: test_foo" in issues[0].description
+
+    def test_test_command_skips_plugin_discovery(self, tmp_path: Path) -> None:
+        """Test that test_command skips plugin-based test runner discovery."""
+        runner = self._make_runner(tmp_path)
+        context = self._make_context(tmp_path)
+
+        with patch("lucidshark.core.domain_runner.subprocess.run") as mock_run, \
+             patch("lucidshark.plugins.test_runners.discover_test_runner_plugins") as mock_discover:
+            mock_run.return_value = MagicMock(returncode=0, stdout="OK", stderr="")
+            runner.run_tests(context, test_command="npm test")
+
+        # Plugin discovery should NOT be called when test_command is set
+        mock_discover.assert_not_called()
+
+    def test_no_test_command_uses_plugins(self, tmp_path: Path) -> None:
+        """Test that without test_command, plugin-based discovery is used."""
+        runner = self._make_runner(tmp_path)
+        context = self._make_context(tmp_path)
+
+        with patch("lucidshark.plugins.test_runners.discover_test_runner_plugins") as mock_discover:
+            mock_discover.return_value = {}
+            runner.run_tests(context, test_command=None)
+
+        mock_discover.assert_called_once()
+
+    def test_post_test_command_runs_after_test_command(self, tmp_path: Path) -> None:
+        """Test that post_test_command runs after test_command."""
+        runner = self._make_runner(tmp_path)
+        context = self._make_context(tmp_path)
+        call_order: list[str] = []
+
+        def side_effect(cmd: str, **_kwargs: Any) -> MagicMock:
+            call_order.append(cmd)
+            return MagicMock(returncode=0, stdout="", stderr="")
+
+        with patch("lucidshark.core.domain_runner.subprocess.run", side_effect=side_effect):
+            runner.run_tests(
+                context,
+                test_command="make test",
+                post_test_command="make clean",
+            )
+
+        assert call_order == ["make test", "make clean"]
+
+    def test_post_test_command_runs_after_plugins(self, tmp_path: Path) -> None:
+        """Test that post_test_command runs after plugin-based tests (no test_command)."""
+        runner = self._make_runner(tmp_path)
+        context = self._make_context(tmp_path)
+
+        with patch("lucidshark.plugins.test_runners.discover_test_runner_plugins") as mock_discover, \
+             patch("lucidshark.core.domain_runner.subprocess.run") as mock_run:
+            mock_discover.return_value = {}
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            runner.run_tests(context, post_test_command="make clean")
+
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args
+        assert call_args[0][0] == "make clean"
+
+    def test_post_test_command_failure_logged_not_raised(self, tmp_path: Path) -> None:
+        """Test that post_test_command failure is logged but doesn't raise."""
+        runner = self._make_runner(tmp_path)
+        context = self._make_context(tmp_path)
+
+        call_count = 0
+
+        def side_effect(_cmd: str, **_kwargs: Any) -> MagicMock:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                return MagicMock(returncode=0, stdout="OK", stderr="")
+            return MagicMock(returncode=1, stdout="", stderr="cleanup error")
+
+        with patch("lucidshark.core.domain_runner.subprocess.run", side_effect=side_effect):
+            issues = runner.run_tests(
+                context,
+                test_command="make test",
+                post_test_command="bad-cleanup",
+            )
+
+        # Test command succeeded, so no test failure issues
+        assert len(issues) == 0
+
+
+class TestDomainRunnerCoveragePostTestCommand:
+    """Tests for DomainRunner.run_coverage with post_test_command."""
+
+    def _make_runner(self, tmp_path: Path) -> DomainRunner:
+        """Create a DomainRunner with default config."""
+        config = LucidSharkConfig()
+        return DomainRunner(tmp_path, config)
+
+    def _make_context(self, tmp_path: Path) -> Any:
+        """Create a minimal ScanContext-like mock."""
+        ctx = MagicMock()
+        ctx.project_root = tmp_path
+        ctx.ignore_patterns = MagicMock()
+        return ctx
+
+    def test_post_test_command_runs_after_coverage(self, tmp_path: Path) -> None:
+        """Test that post_test_command runs after coverage analysis."""
+        runner = self._make_runner(tmp_path)
+        context = self._make_context(tmp_path)
+
+        with patch("lucidshark.plugins.coverage.discover_coverage_plugins") as mock_discover, \
+             patch("lucidshark.core.domain_runner.subprocess.run") as mock_run:
+            mock_discover.return_value = {}
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            runner.run_coverage(context, post_test_command="make report")
+
+        mock_run.assert_called_once()
+        call_args = mock_run.call_args
+        assert call_args[0][0] == "make report"
+
+    def test_no_post_test_command_skips_subprocess(self, tmp_path: Path) -> None:
+        """Test that no post_test_command means no subprocess call."""
+        runner = self._make_runner(tmp_path)
+        context = self._make_context(tmp_path)
+
+        with patch("lucidshark.plugins.coverage.discover_coverage_plugins") as mock_discover, \
+             patch("lucidshark.core.domain_runner.subprocess.run") as mock_run:
+            mock_discover.return_value = {}
+            runner.run_coverage(context, post_test_command=None)
+
+        mock_run.assert_not_called()

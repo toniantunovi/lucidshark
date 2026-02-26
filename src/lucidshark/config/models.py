@@ -81,6 +81,8 @@ class DomainPipelineConfig:
     enabled: bool = True
     tools: List[ToolConfig] = field(default_factory=list)
     exclude: List[str] = field(default_factory=list)  # Patterns to exclude from this domain
+    test_command: Optional[str] = None  # Custom shell command to run tests (testing domain only)
+    post_test_command: Optional[str] = None  # Shell command to run after tests (testing domain only)
 
 
 @dataclass

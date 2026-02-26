@@ -1111,10 +1111,18 @@ ignore:
         """
         loop = asyncio.get_event_loop()
         testing_exclude = None
-        if self.config.pipeline.testing and self.config.pipeline.testing.exclude:
-            testing_exclude = self.config.pipeline.testing.exclude
+        test_command = None
+        post_test_command = None
+        if self.config.pipeline.testing:
+            if self.config.pipeline.testing.exclude:
+                testing_exclude = self.config.pipeline.testing.exclude
+            test_command = self.config.pipeline.testing.test_command
+            post_test_command = self.config.pipeline.testing.post_test_command
         run_fn = functools.partial(
-            self._runner.run_tests, context, with_coverage, exclude_patterns=testing_exclude
+            self._runner.run_tests, context, with_coverage,
+            exclude_patterns=testing_exclude,
+            test_command=test_command,
+            post_test_command=post_test_command,
         )
         return await loop.run_in_executor(None, run_fn)
 
@@ -1134,13 +1142,17 @@ ignore:
         """
         loop = asyncio.get_event_loop()
         coverage_exclude = None
+        post_test_command = None
         if self.config.pipeline.coverage and self.config.pipeline.coverage.exclude:
             coverage_exclude = self.config.pipeline.coverage.exclude
+        if self.config.pipeline.testing:
+            post_test_command = self.config.pipeline.testing.post_test_command
         run_coverage_fn = functools.partial(
             self._runner.run_coverage,
             context,
             run_tests=run_tests,
             exclude_patterns=coverage_exclude,
+            post_test_command=post_test_command,
         )
         issues = await loop.run_in_executor(None, run_coverage_fn)
         # Coverage result is stored in context.coverage_result by DomainRunner

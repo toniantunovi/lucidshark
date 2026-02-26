@@ -414,7 +414,10 @@ class TestScanCommandRunScan:
         result = cmd._run_scan(args, config)
 
         assert result.issues == []
-        mock_runner.run_tests.assert_called_once_with(mock_ctx, with_coverage=False, exclude_patterns=None)
+        mock_runner.run_tests.assert_called_once_with(
+            mock_ctx, with_coverage=False, exclude_patterns=None,
+            test_command=None, post_test_command=None,
+        )
 
     @patch("lucidshark.cli.commands.scan.PipelineExecutor")
     @patch("lucidshark.cli.commands.scan.DomainRunner")
@@ -454,7 +457,10 @@ class TestScanCommandRunScan:
 
         result = cmd._run_scan(args, config)
 
-        mock_runner.run_tests.assert_called_once_with(mock_ctx, with_coverage=True, exclude_patterns=None)
+        mock_runner.run_tests.assert_called_once_with(
+            mock_ctx, with_coverage=True, exclude_patterns=None,
+            test_command=None, post_test_command=None,
+        )
         mock_runner.run_coverage.assert_called_once()
         assert result.coverage_summary is not None
         assert result.coverage_summary.coverage_percentage == 85.0
