@@ -167,7 +167,11 @@ pipeline:
   linting:  { enabled: true, tools: [{ name: ruff }] }
   type_checking:  { enabled: true, tools: [{ name: mypy, strict: true }] }
   security: { enabled: true, tools: [{ name: trivy }, { name: opengrep }] }
-  testing:  { enabled: true, tools: [{ name: pytest }] }
+  testing:
+    enabled: true
+    test_command: "make test"            # Optional: custom command overrides plugin-based runner
+    post_test_command: "make clean"      # Optional: runs after tests complete
+    tools: [{ name: pytest }]
   coverage: { enabled: true, threshold: 80 }
   duplication: { enabled: true, threshold: 10.0 }
 fail_on:

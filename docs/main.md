@@ -255,6 +255,23 @@ pipeline:
       - name: pytest
         args: ["-v"]
 
+#### Custom Test Commands
+
+`test_command` replaces the plugin-based test runner with a custom shell command. When set,
+LucidShark runs the command from the project root and skips plugin discovery entirely. A
+non-zero exit code is reported as a HIGH-severity issue.
+
+`post_test_command` runs after tests complete — whether from a custom command or the
+plugin-based runner — and also after coverage analysis. Failures are logged as warnings
+and do not fail the pipeline.
+
+```yaml
+testing:
+  enabled: true
+  test_command: "docker compose run --rm app pytest"
+  post_test_command: "rm -rf tmp/test-artifacts"
+```
+
   coverage:
     enabled: true
     threshold: 80

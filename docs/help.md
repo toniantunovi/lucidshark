@@ -591,6 +591,39 @@ pipeline:
       - name: maven       # Java tests (JUnit/TestNG via Maven/Gradle)
       - name: cargo       # Rust tests (cargo test)
 
+#### Custom Test Commands
+
+**`test_command`** lets you replace the plugin-based test runner with a custom shell command.
+When set, LucidShark executes the command via the shell from the project root directory and
+skips plugin discovery entirely (the `tools` list is ignored). A non-zero exit code is reported
+as a HIGH-severity test failure issue.
+
+```yaml
+testing:
+  enabled: true
+  test_command: "docker compose run --rm app pytest -x"
+```
+
+**`post_test_command`** runs a shell command after tests complete. It executes after both
+custom test commands and plugin-based runners, and also after coverage analysis. If the
+post-test command fails (non-zero exit code), it is logged as a warning but does **not**
+fail the pipeline.
+
+```yaml
+testing:
+  enabled: true
+  post_test_command: "npm run cleanup"
+  tools:
+    - name: jest
+```
+
+Common use cases:
+
+- **Custom build steps**: `test_command: "make test"` when your test workflow requires a build system
+- **Docker-based environments**: `test_command: "docker compose run --rm app pytest"` to run tests inside a container
+- **Cleanup**: `post_test_command: "rm -rf tmp/test-artifacts"` to remove temporary files after tests
+- **Report generation**: `post_test_command: "node scripts/merge-reports.js"` to post-process test output
+
   coverage:
     enabled: true
     exclude:          # Patterns to exclude from coverage analysis
