@@ -45,25 +45,31 @@ class LucidSharkMCPServer:
                 Tool(
                     name="scan",
                     description=(
-                        "Run quality checks on the codebase or specific files. "
+                        "Run comprehensive code quality checks. LucidShark is a unified pipeline "
+                        "for: LINTING (Ruff, ESLint, Biome, Checkstyle, Clippy - style issues, code smells); "
+                        "TYPE_CHECKING (mypy, Pyright, tsc, SpotBugs, cargo check - type errors); "
+                        "SAST security (OpenGrep - code vulnerabilities); "
+                        "SCA security (Trivy - dependency vulnerabilities); "
+                        "IAC security (Checkov - infrastructure misconfigurations); "
+                        "CONTAINER security (Trivy - container image vulnerabilities); "
+                        "TESTING (pytest, Jest, Karma, Playwright, JUnit, cargo test - runs tests); "
+                        "COVERAGE (coverage.py, Istanbul, JaCoCo, Tarpaulin - coverage gaps); "
+                        "DUPLICATION (Duplo - code clones). "
                         "By default, scans only changed files (uncommitted changes). "
                         "Use all_files=true for full project scan. "
-                        "Returns structured issues with fix instructions. "
                         "WHEN TO CALL: Run proactively after editing/writing code files, "
                         "after fixing bugs, before reporting tasks as done, and before commits. "
-                        "Use fix=true after code changes to auto-fix linting. "
+                        "Use fix=true to auto-fix linting issues. "
                         "DOMAIN SELECTION: Pick domains based on files changed — "
-                        ".py/.js/.ts/.rs/.go → [\"linting\", \"type_checking\"]; "
+                        ".py/.js/.ts/.rs/.go/.java → [\"linting\", \"type_checking\"]; "
                         "Dockerfile → [\"container\"]; Terraform/K8s → [\"iac\"]; "
                         "dependency files → [\"sca\"]; security-sensitive code → [\"sast\"]; "
+                        "to run tests → [\"testing\"]; to check coverage → [\"coverage\"]; "
                         "before commits or mixed changes → [\"all\"]. "
-                        "IMPORTANT OUTPUT FORMAT: After receiving results, you MUST present them as: "
-                        "(1) Announce what you're checking before the scan runs. "
-                        "(2) List ALL issues grouped by domain (linting, type_checking, security, etc). "
-                        "(3) Show pass/fail status for EVERY domain that was checked. "
-                        "(4) End with a summary table showing: total issues, count by severity, "
-                        "status per domain, and a recommended next action. "
-                        "Even when no issues are found, confirm which domains passed."
+                        "OUTPUT FORMAT: (1) Announce what you're checking. "
+                        "(2) List ALL issues grouped by domain. "
+                        "(3) Show pass/fail status for EVERY domain checked. "
+                        "(4) End with summary: total issues, count by severity, status per domain."
                     ),
                     inputSchema={
                         "type": "object",
@@ -152,8 +158,10 @@ class LucidSharkMCPServer:
                 Tool(
                     name="get_status",
                     description=(
-                        "Get current LucidShark status and configuration. "
-                        "Shows available tools, enabled domains, and cached issues."
+                        "Get current LucidShark status, configuration, and capabilities. "
+                        "Shows which scan domains are enabled (linting, type_checking, sast, sca, "
+                        "iac, container, testing, coverage, duplication), available tools per domain, "
+                        "thresholds, and any cached issues from previous scans."
                     ),
                     inputSchema={
                         "type": "object",

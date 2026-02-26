@@ -27,12 +27,26 @@ LUCIDSHARK_MCP_ARGS = ["serve", "--mcp"]
 # Claude skill content for proactive lucidshark usage
 LUCIDSHARK_SKILL_CONTENT = """---
 name: lucidshark
-description: "PROACTIVE code quality scanning. Run after writing/editing code, fixing bugs, adding features, refactoring, before commits. Auto-run - don't wait for user to ask."
+description: "Unified code quality pipeline: linting, type checking, security (SAST/SCA/IaC/container), testing, coverage, duplication. Run proactively after code changes."
 ---
 
-# LucidShark Code Quality Scanner
+# LucidShark - Unified Code Quality Pipeline
 
 Run scans proactively after code changes. Don't wait for user to ask.
+
+## What It Can Do
+
+| Domain | What It Does | Tools |
+|--------|--------------|-------|
+| **linting** | Style issues, code smells, auto-fix | Ruff, ESLint, Biome, Checkstyle, Clippy |
+| **type_checking** | Type errors, static analysis | mypy, Pyright, tsc, SpotBugs, cargo check |
+| **sast** | Security vulnerabilities in code | OpenGrep |
+| **sca** | Dependency vulnerabilities | Trivy |
+| **iac** | Infrastructure misconfigurations | Checkov |
+| **container** | Container image vulnerabilities | Trivy |
+| **testing** | Run tests, report failures | pytest, Jest, Karma, Playwright, JUnit, cargo test |
+| **coverage** | Code coverage analysis | coverage.py, Istanbul, JaCoCo, Tarpaulin |
+| **duplication** | Detect code clones | Duplo |
 
 ## When to Scan
 
@@ -40,23 +54,20 @@ Run scans proactively after code changes. Don't wait for user to ask.
 |---------|--------|
 | After editing code | `scan(fix=true)` |
 | After fixing bugs | `scan(fix=true)` to verify no new issues |
-| After adding features | Scan before reporting done |
+| User asks to run tests | `scan(domains=["testing"])` |
+| User asks about coverage | `scan(domains=["coverage"])` |
+| Security concerns | `scan(domains=["sast", "sca"])` |
 | Before commits | `scan(domains=["all"])` |
-| User says "check/scan/lint/quality/errors" | Run appropriate scan |
 
 **Skip scanning** if user explicitly says "don't scan" or "skip checks".
 
 ## Smart Domain Selection
 
-Pick domains based on what files changed — don't always scan everything:
+Pick domains based on what files changed:
 
 | Files Changed | Recommended Domains |
 |---|---|
-| `.py` | `["linting", "type_checking"]` |
-| `.js`, `.ts`, `.tsx`, `.jsx` | `["linting", "type_checking"]` |
-| `.rs` | `["linting", "type_checking", "testing"]` |
-| `.go` | `["linting", "type_checking"]` |
-| `.java`, `.kt` | `["linting", "type_checking"]` |
+| `.py`, `.js`, `.ts`, `.rs`, `.go`, `.java`, `.kt` | `["linting", "type_checking"]` |
 | `Dockerfile`, `docker-compose.*` | `["container"]` |
 | `.tf`, `.yaml`/`.yml` (k8s/CloudFormation) | `["iac"]` |
 | `package.json`, `requirements.txt`, `Cargo.toml`, `go.mod` | `["sca"]` |
@@ -68,9 +79,10 @@ Pick domains based on what files changed — don't always scan everything:
 | Command | Use Case |
 |---------|----------|
 | `scan(fix=true)` | Default after code changes (auto-fixes linting) |
-| `scan(domains=[...], fix=true)` | Targeted scan with auto-fix for specific domains |
-| `scan(domains=["all"])` | Full scan before commits or PRs |
-| `scan(all_files=true)` | Scan entire project, not just changed files |
+| `scan(domains=["testing"])` | Run tests |
+| `scan(domains=["coverage"])` | Check test coverage |
+| `scan(domains=["sast", "sca"])` | Security scan (code + dependencies) |
+| `scan(domains=["all"])` | Full scan including tests, coverage, duplication |
 | `check_file(file_path="...")` | Quick check on a single file |
 
 **Default:** Scans only uncommitted changes. Use `all_files=true` for full project.
@@ -92,7 +104,7 @@ Pick domains based on what files changed — don't always scan everything:
 
 | Command | Purpose |
 |---------|---------|
-| `get_status()` | Show configuration and cached issues |
+| `get_status()` | Show configuration, enabled domains, available tools |
 | `autoconfigure()` | Guide for creating lucidshark.yml |
 | `validate_config()` | Validate configuration file |
 | `get_help()` | Full documentation |
@@ -104,44 +116,62 @@ Pick domains based on what files changed — don't always scan everything:
 LUCIDSHARK_CLAUDE_MD_SECTION = """\
 
 <!-- lucidshark:start - managed by lucidshark init, do not edit manually -->
-## LucidShark - Code Quality Scanning
+## LucidShark - Unified Code Quality Pipeline
 
-LucidShark is available as an MCP tool (`mcp__lucidshark__scan`). Run it **proactively** after code changes — do not wait for the user to ask.
+LucidShark is available as an MCP tool (`mcp__lucidshark__scan`). It provides comprehensive code quality checks in one unified tool.
+
+### What It Can Do
+
+| Domain | What It Does | Tools Used |
+|--------|--------------|------------|
+| **linting** | Style issues, code smells, auto-fix available | Ruff, ESLint, Biome, Checkstyle, Clippy |
+| **type_checking** | Type errors, static analysis | mypy, Pyright, tsc, SpotBugs, cargo check |
+| **sast** | Security vulnerabilities in code | OpenGrep |
+| **sca** | Dependency vulnerabilities | Trivy |
+| **iac** | Infrastructure misconfigurations | Checkov |
+| **container** | Container image vulnerabilities | Trivy |
+| **testing** | Run tests, report failures | pytest, Jest, Karma, Playwright, JUnit, cargo test |
+| **coverage** | Code coverage analysis | coverage.py, Istanbul, JaCoCo, Tarpaulin |
+| **duplication** | Detect code clones | Duplo |
 
 ### Automatic Scan Triggers
 
-You MUST run a scan in these situations without being asked:
+Run scans **proactively** after code changes — do not wait for the user to ask:
 
-1. **After editing/writing code files** — run `mcp__lucidshark__scan(fix=true)` with targeted domains (see table below)
+1. **After editing/writing code files** — `mcp__lucidshark__scan(fix=true)` with targeted domains
 2. **After fixing a bug** — scan to verify the fix didn't introduce new issues
 3. **Before reporting any task as complete** — always scan your changes before saying "done"
-4. **Before creating a commit** — run `mcp__lucidshark__scan(domains=["all"])` for a comprehensive check
-5. **After refactoring** — scan to catch regressions or style issues introduced
+4. **Before creating a commit** — `mcp__lucidshark__scan(domains=["all"])` for comprehensive check
+5. **After refactoring** — scan to catch regressions or style issues
 
 ### Smart Domain Selection
 
-Choose scan domains based on the file types you changed. Targeted scans are fast — prefer them over scanning everything:
+Choose domains based on file types changed. Targeted scans are fast:
 
-| Files you edited | Domains to use |
+| Files edited | Domains to use |
 |---|---|
-| Python (`.py`) | `domains=["linting", "type_checking"]` |
-| JavaScript/TypeScript (`.js`, `.ts`, `.tsx`, `.jsx`) | `domains=["linting", "type_checking"]` |
-| Rust (`.rs`) | `domains=["linting", "type_checking"]` |
-| Go (`.go`) | `domains=["linting", "type_checking"]` |
-| Java/Kotlin (`.java`, `.kt`) | `domains=["linting", "type_checking"]` |
-| Dockerfile / docker-compose | `domains=["container"]` |
-| Terraform / K8s / IaC YAML | `domains=["iac"]` |
-| Dependency files (`package.json`, `requirements.txt`, `Cargo.toml`, `go.mod`) | `domains=["sca"]` |
-| Security-sensitive code (auth, crypto, SQL, input handling) | `domains=["sast"]` |
-| Multiple file types or before commit/PR | `domains=["all"]` |
+| Python (`.py`) | `["linting", "type_checking"]` |
+| JavaScript/TypeScript (`.js`, `.ts`, `.tsx`, `.jsx`) | `["linting", "type_checking"]` |
+| Rust (`.rs`) | `["linting", "type_checking"]` |
+| Go (`.go`) | `["linting", "type_checking"]` |
+| Java/Kotlin (`.java`, `.kt`) | `["linting", "type_checking"]` |
+| Dockerfile / docker-compose | `["container"]` |
+| Terraform / K8s / IaC YAML | `["iac"]` |
+| Dependency files (`package.json`, `requirements.txt`, etc.) | `["sca"]` |
+| Security-sensitive code (auth, crypto, SQL) | `["sast"]` |
+| User asks to run tests | `["testing"]` |
+| User asks about coverage | `["coverage"]` |
+| Before commit/PR or mixed changes | `["all"]` |
 
 ### Quick Reference
 
-- **Fast scan after edits**: `mcp__lucidshark__scan(fix=true)` — auto-fixes linting, scans only changed files
-- **Targeted scan**: `mcp__lucidshark__scan(domains=["linting", "type_checking"], fix=true)` — pick relevant domains
-- **Pre-commit full scan**: `mcp__lucidshark__scan(domains=["all"])` — checks everything
-- **Single file check**: `mcp__lucidshark__check_file(file_path="path/to/file")` — quick check on one file
-- **Fix guidance**: `mcp__lucidshark__get_fix_instructions(issue_id="...")` — detailed fix steps for an issue
+- **Scan after edits**: `mcp__lucidshark__scan(fix=true)` — auto-fixes linting, scans only changed files
+- **Run tests**: `mcp__lucidshark__scan(domains=["testing"])` — execute test suite
+- **Check coverage**: `mcp__lucidshark__scan(domains=["coverage"])` — analyze test coverage
+- **Security scan**: `mcp__lucidshark__scan(domains=["sast", "sca"])` — code + dependency vulnerabilities
+- **Full scan**: `mcp__lucidshark__scan(domains=["all"])` — all checks including tests, coverage, duplication
+- **Single file**: `mcp__lucidshark__check_file(file_path="...")` — quick check on one file
+- **Fix guidance**: `mcp__lucidshark__get_fix_instructions(issue_id="...")` — detailed fix steps
 
 ### When NOT to Scan
 
