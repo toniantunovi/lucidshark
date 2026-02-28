@@ -35,7 +35,7 @@ _FALLBACK_VERSIONS: Dict[str, str] = {
     "opengrep": "1.16.0",
     "checkov": "3.2.500",
     # Duplication detection
-    "duplo": "0.1.5",
+    "duplo": "0.1.6",
 }
 
 
