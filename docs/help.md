@@ -592,41 +592,6 @@ pipeline:
       - name: maven       # Java tests (JUnit/TestNG via Maven/Gradle)
       - name: cargo       # Rust tests (cargo test)
 
-#### Custom Commands
-
-All pipeline domains support `command` and `post_command` fields for custom shell commands.
-This provides a unified way to override plugin-based runners across linting, type checking,
-testing, and coverage domains.
-
-**`command`** replaces the plugin-based runner with a custom shell command. When set,
-LucidShark executes the command via the shell from the project root directory and skips
-plugin discovery entirely (the `tools` list is ignored). A non-zero exit code is reported
-as a HIGH-severity issue.
-
-**`post_command`** runs a shell command after the main command (or plugin-based runner)
-completes. If the post-command fails (non-zero exit code), it is logged as a warning but
-does **not** fail the pipeline.
-
-```yaml
-pipeline:
-  linting:
-    command: "npm run lint -- --format json"  # Custom linting
-  type_checking:
-    command: "npm run typecheck"              # Custom type checking
-  testing:
-    command: "docker compose run --rm app pytest -x"
-    post_command: "npm run cleanup"
-  coverage:
-    command: "npm run test:coverage"
-```
-
-Common use cases:
-
-- **Custom build steps**: `command: "make test"` when your workflow requires a build system
-- **Docker-based environments**: `command: "docker compose run --rm app pytest"` to run inside a container
-- **Cleanup**: `post_command: "rm -rf tmp/test-artifacts"` to remove temporary files
-- **Report generation**: `post_command: "node scripts/merge-reports.js"` to post-process output
-
   # IMPORTANT: Coverage requires testing to be enabled (see "Testing and Coverage Integration")
   # Testing produces the coverage files that coverage analysis reads
   coverage:
@@ -677,6 +642,41 @@ exclude:
 output:
   format: json  # json, table, sarif, summary
 ```
+
+#### Custom Commands
+
+All pipeline domains support `command` and `post_command` fields for custom shell commands.
+This provides a unified way to override plugin-based runners across linting, type checking,
+testing, and coverage domains.
+
+**`command`** replaces the plugin-based runner with a custom shell command. When set,
+LucidShark executes the command via the shell from the project root directory and skips
+plugin discovery entirely (the `tools` list is ignored). A non-zero exit code is reported
+as a HIGH-severity issue.
+
+**`post_command`** runs a shell command after the main command (or plugin-based runner)
+completes. If the post-command fails (non-zero exit code), it is logged as a warning but
+does **not** fail the pipeline.
+
+```yaml
+pipeline:
+  linting:
+    command: "npm run lint -- --format json"  # Custom linting
+  type_checking:
+    command: "npm run typecheck"              # Custom type checking
+  testing:
+    command: "docker compose run --rm app pytest -x"
+    post_command: "npm run cleanup"
+  coverage:
+    command: "npm run test:coverage"
+```
+
+Common use cases:
+
+- **Custom build steps**: `command: "make test"` when your workflow requires a build system
+- **Docker-based environments**: `command: "docker compose run --rm app pytest"` to run inside a container
+- **Cleanup**: `post_command: "rm -rf tmp/test-artifacts"` to remove temporary files
+- **Report generation**: `post_command: "node scripts/merge-reports.js"` to post-process output
 
 ### Common Configuration Examples
 

@@ -602,7 +602,7 @@ Installation uses:
 
 #### 5.5.2 Version Pinning
 
-LucidShark pins tool versions internally for reproducibility. Versions are defined in `pyproject.toml` under `[tool.lucidshark.tools]`:
+LucidShark pins versions for tools it downloads directly (security scanners and duplication detection). Versions are defined in `pyproject.toml` under `[tool.lucidshark.tools]`:
 
 ```toml
 # pyproject.toml
@@ -611,16 +611,11 @@ LucidShark pins tool versions internally for reproducibility. Versions are defin
 trivy = "0.68.2"
 opengrep = "1.15.0"
 checkov = "3.2.499"
-# Linters
-ruff = "0.15.0"
-biome = "2.3.14"
-checkstyle = "13.2.0"
-# Type checkers
-pyright = "1.1.408"
-spotbugs = "4.9.8"
 # Duplication detection
-duplo = "0.1.4"
+duplo = "0.1.6"
 ```
+
+**Language-specific tools** (ruff, eslint, biome, mypy, pyright, checkstyle, spotbugs, etc.) are **not** version-pinned by LucidShark. Install these via your package manager (pip, npm, cargo) to ensure compatibility with your project.
 
 When installed as a package, LucidShark uses hardcoded fallback versions from `src/lucidshark/bootstrap/versions.py`.
 
@@ -634,7 +629,6 @@ Binaries are cached in `{project_root}/.lucidshark/` by default. The `LUCIDSHARK
 │   ├── trivy/{version}/trivy
 │   ├── opengrep/{version}/opengrep
 │   ├── checkov/{version}/venv/
-│   ├── ruff/{version}/ruff
 │   └── duplo/{version}/duplo
 ├── cache/
 │   └── trivy/          # Vulnerability database
