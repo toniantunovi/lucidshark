@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lucidshark"
-version = "0.5.38"
+version = "0.5.39"
 description = "LucidShark - The trust layer for AI-assisted development"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -69,6 +69,9 @@ dependencies = [
 dev = [
   "pytest>=7.0",
   "pytest-asyncio>=0.23.0",
+  "pytest-cov>=7.0",
+  "coverage>=7.0",
+  "ruff>=0.4",
   "mypy>=1.0",
   "pyright>=1.1",
   "types-PyYAML>=6.0",
@@ -146,4 +149,4 @@ trivy = "0.68.2"
 opengrep = "1.15.0"
 checkov = "3.2.499"
 # Duplication detection
-duplo = "0.1.5"
+duplo = "0.1.6"
