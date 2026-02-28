@@ -44,6 +44,7 @@ a = Analysis(
         'lucidshark.plugins.scanners.opengrep',
         'lucidshark.plugins.scanners.checkov',
         # Plugin entry points - reporters
+        'lucidshark.plugins.reporters.ai_reporter',
         'lucidshark.plugins.reporters.json_reporter',
         'lucidshark.plugins.reporters.sarif_reporter',
         'lucidshark.plugins.reporters.summary_reporter',
@@ -67,10 +68,11 @@ a = Analysis(
         'pathspec',
         'questionary',
         'jinja2',
-        'mcp',
         'watchdog',
         'defusedxml',
         'tomli',
+        # Note: 'mcp' is optional - not bundled by default
+        # The serve --mcp command will fail gracefully if mcp is not available
     ],
     hookspath=[],
     hooksconfig={},
