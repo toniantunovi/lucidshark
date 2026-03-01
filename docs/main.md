@@ -608,7 +608,7 @@ LucidShark pins versions for tools it downloads directly (security scanners and 
 # pyproject.toml
 [tool.lucidshark.tools]
 # Security scanners
-trivy = "0.68.2"
+trivy = "0.69.2"
 opengrep = "1.15.0"
 checkov = "3.2.499"
 # Duplication detection
