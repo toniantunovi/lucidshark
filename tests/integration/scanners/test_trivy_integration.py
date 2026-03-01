@@ -33,6 +33,7 @@ def _skip_if_db_unavailable(issues: List[UnifiedIssue], package: str) -> None:
         )
 
 
+@trivy_available
 class TestTrivyBinaryDownload:
     """Tests for Trivy binary download and management."""
 
