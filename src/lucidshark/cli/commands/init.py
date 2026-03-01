@@ -734,5 +734,5 @@ class InitCommand(Command):
         print("    lucidshark status               # Show configuration")
         print("    lucidshark validate             # Validate lucidshark.yml")
         print("    lucidshark help                 # Show documentation")
-        print("\n  MCP server (optional, requires lucidshark[mcp]):")
+        print("\n  MCP server:")
         print("    lucidshark serve --mcp          # Run as MCP server")

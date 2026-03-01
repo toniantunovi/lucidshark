@@ -71,8 +71,7 @@ a = Analysis(
         'watchdog',
         'defusedxml',
         'tomli',
-        # Note: 'mcp' is optional - not bundled by default
-        # The serve --mcp command will fail gracefully if mcp is not available
+        'mcp',
     ],
     hookspath=[],
     hooksconfig={},

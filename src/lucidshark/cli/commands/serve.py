@@ -86,8 +86,7 @@ class ServeCommand(Command):
             asyncio.run(server.run())
             return EXIT_SUCCESS
         except ImportError as e:
-            LOGGER.error(f"MCP dependencies not installed: {e}")
-            LOGGER.error("Install with: pip install lucidshark[mcp]")
+            LOGGER.error(f"MCP import error: {e}")
             return EXIT_SCANNER_ERROR
         except Exception as e:
             LOGGER.error(f"MCP server error: {e}")

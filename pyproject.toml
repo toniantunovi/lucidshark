@@ -62,12 +62,10 @@ dependencies = [
   "defusedxml>=0.7.1",
   "tomli>=2.0.0; python_version < '3.11'",
   "certifi>=2024.0.0",
+  "mcp>=1.0.0",
 ]
 
 [project.optional-dependencies]
-mcp = [
-  "mcp>=1.0.0",
-]
 dev = [
   "pytest>=7.0",
   "pytest-asyncio>=0.23.0",
