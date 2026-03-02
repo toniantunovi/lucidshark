@@ -14,6 +14,7 @@ from lucidshark.cli.commands.init import (
     LUCIDSHARK_MCP_ARGS,
     LUCIDSHARK_SKILL_CONTENT,
     LUCIDSHARK_CLAUDE_MD_SECTION,
+    LUCIDSHARK_HOOKS_CONFIG,
 )
 from lucidshark.cli.exit_codes import EXIT_SUCCESS
 
@@ -472,8 +473,9 @@ class TestConfigureClaudeMd:
         content = claude_md.read_text(encoding="utf-8")
         assert "<!-- lucidshark:start" in content
         assert "<!-- lucidshark:end -->" in content
-        assert "lucidshark scan" in content  # CLI-first approach
-        assert "Smart Domain Selection" in content
+        assert "MUST" in content  # Directive-first language
+        assert "mcp__lucidshark__scan" in content  # MCP tools primary
+        assert "Domain Selection" in content
 
     def test_appends_to_existing_claude_md(self, tmp_path: Path) -> None:
         """Test appending to an existing .claude/CLAUDE.md without LucidShark section."""
@@ -530,7 +532,8 @@ class TestConfigureClaudeMd:
         assert success
         content = claude_md.read_text(encoding="utf-8")
         assert "Old lucidshark content" not in content
-        assert "Smart Domain Selection" in content
+        assert "MUST" in content  # New directive-first content
+        assert "mcp__lucidshark__scan" in content
         assert "## Other stuff" in content
 
     def test_dry_run_does_not_write(self, tmp_path: Path, capsys) -> None:
@@ -588,6 +591,144 @@ class TestConfigureClaudeMd:
 
         with patch.object(Path, "cwd", return_value=tmp_path):
             success = cmd._configure_claude_md(dry_run=False, force=False, remove=True)
+
+        assert success
+        captured = capsys.readouterr()
+        assert "not found" in captured.out
+
+
+class TestConfigureClaudeHooks:
+    """Tests for Claude Code hooks configuration."""
+
+    def test_creates_new_settings_json(self, tmp_path: Path, capsys) -> None:
+        """Test creating .claude/settings.json with hooks."""
+        cmd = InitCommand(version="1.0.0")
+
+        with patch.object(Path, "cwd", return_value=tmp_path):
+            success = cmd._configure_claude_hooks(dry_run=False, force=False, remove=False)
+
+        assert success
+        settings_path = tmp_path / ".claude" / "settings.json"
+        assert settings_path.exists()
+        settings = json.loads(settings_path.read_text(encoding="utf-8"))
+        assert "hooks" in settings
+        assert "PostToolUse" in settings["hooks"]
+        # Verify it contains the LucidShark hook
+        hook_group = settings["hooks"]["PostToolUse"][0]
+        assert "Edit" in hook_group["matcher"]
+        assert "LucidShark" in hook_group["hooks"][0]["command"]
+
+    def test_preserves_existing_settings(self, tmp_path: Path) -> None:
+        """Test merging hooks into existing settings."""
+        cmd = InitCommand(version="1.0.0")
+        settings_path = tmp_path / ".claude" / "settings.json"
+        settings_path.parent.mkdir(parents=True)
+        existing = {"other_setting": "value", "hooks": {"PreToolUse": [{"matcher": "Bash", "hooks": []}]}}
+        settings_path.write_text(json.dumps(existing), encoding="utf-8")
+
+        with patch.object(Path, "cwd", return_value=tmp_path):
+            success = cmd._configure_claude_hooks(dry_run=False, force=False, remove=False)
+
+        assert success
+        settings = json.loads(settings_path.read_text(encoding="utf-8"))
+        assert settings["other_setting"] == "value"
+        assert "PostToolUse" in settings["hooks"]
+
+    def test_skips_if_already_configured(self, tmp_path: Path, capsys) -> None:
+        """Test that setup skips if hooks already configured."""
+        cmd = InitCommand(version="1.0.0")
+        settings_path = tmp_path / ".claude" / "settings.json"
+        settings_path.parent.mkdir(parents=True)
+        settings_path.write_text(json.dumps(LUCIDSHARK_HOOKS_CONFIG), encoding="utf-8")
+
+        with patch.object(Path, "cwd", return_value=tmp_path):
+            success = cmd._configure_claude_hooks(dry_run=False, force=False, remove=False)
+
+        assert success
+        captured = capsys.readouterr()
+        assert "already configured" in captured.out
+
+    def test_force_overwrites_existing(self, tmp_path: Path) -> None:
+        """Test that --force replaces hooks."""
+        cmd = InitCommand(version="1.0.0")
+        settings_path = tmp_path / ".claude" / "settings.json"
+        settings_path.parent.mkdir(parents=True)
+        # Write existing hooks with different content
+        old_hooks = {
+            "hooks": {
+                "PostToolUse": [
+                    {
+                        "matcher": "Edit|Write|NotebookEdit",
+                        "hooks": [
+                            {"type": "command", "command": "echo '[LucidShark] old message'"}
+                        ],
+                    }
+                ]
+            }
+        }
+        settings_path.write_text(json.dumps(old_hooks), encoding="utf-8")
+
+        with patch.object(Path, "cwd", return_value=tmp_path):
+            success = cmd._configure_claude_hooks(dry_run=False, force=True, remove=False)
+
+        assert success
+        settings = json.loads(settings_path.read_text(encoding="utf-8"))
+        command = settings["hooks"]["PostToolUse"][0]["hooks"][0]["command"]
+        assert "scan before completing" in command
+
+    def test_dry_run_does_not_write(self, tmp_path: Path, capsys) -> None:
+        """Test that --dry-run does not write settings file."""
+        cmd = InitCommand(version="1.0.0")
+
+        with patch.object(Path, "cwd", return_value=tmp_path):
+            success = cmd._configure_claude_hooks(dry_run=True, force=False, remove=False)
+
+        assert success
+        assert not (tmp_path / ".claude" / "settings.json").exists()
+        captured = capsys.readouterr()
+        assert "Would create" in captured.out
+
+    def test_remove_deletes_hooks(self, tmp_path: Path, capsys) -> None:
+        """Test that --remove removes hooks key, preserves other settings."""
+        cmd = InitCommand(version="1.0.0")
+        settings_path = tmp_path / ".claude" / "settings.json"
+        settings_path.parent.mkdir(parents=True)
+        settings = {"other_setting": "keep_me"}
+        settings.update(LUCIDSHARK_HOOKS_CONFIG)
+        settings_path.write_text(json.dumps(settings), encoding="utf-8")
+
+        with patch.object(Path, "cwd", return_value=tmp_path):
+            success = cmd._configure_claude_hooks(dry_run=False, force=False, remove=True)
+
+        assert success
+        assert settings_path.exists()
+        remaining = json.loads(settings_path.read_text(encoding="utf-8"))
+        assert "hooks" not in remaining
+        assert remaining["other_setting"] == "keep_me"
+        captured = capsys.readouterr()
+        assert "Removed LucidShark hooks" in captured.out
+
+    def test_remove_deletes_file_if_empty(self, tmp_path: Path, capsys) -> None:
+        """Test that --remove removes file if only hooks remain."""
+        cmd = InitCommand(version="1.0.0")
+        settings_path = tmp_path / ".claude" / "settings.json"
+        settings_path.parent.mkdir(parents=True)
+        settings_path.write_text(json.dumps(LUCIDSHARK_HOOKS_CONFIG), encoding="utf-8")
+
+        with patch.object(Path, "cwd", return_value=tmp_path):
+            success = cmd._configure_claude_hooks(dry_run=False, force=False, remove=True)
+
+        assert success
+        assert not settings_path.exists()
+        captured = capsys.readouterr()
+        assert "was empty" in captured.out
+
+    def test_remove_not_found(self, tmp_path: Path, capsys) -> None:
+        """Test removing when hooks do not exist."""
+        cmd = InitCommand(version="1.0.0")
+
+        with patch.object(Path, "cwd", return_value=tmp_path):
+            success = cmd._configure_claude_hooks(dry_run=False, force=False, remove=True)
 
         assert success
         captured = capsys.readouterr()

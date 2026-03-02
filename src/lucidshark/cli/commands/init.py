@@ -25,7 +25,7 @@ LOGGER = get_logger(__name__)
 # MCP server arguments for LucidShark
 LUCIDSHARK_MCP_ARGS = ["serve", "--mcp"]
 
-# Claude skill content for proactive lucidshark usage (CLI-first)
+# Claude skill content for proactive lucidshark usage
 LUCIDSHARK_SKILL_CONTENT = """---
 name: lucidshark
 description: "Unified code quality pipeline: linting, type checking, security (SAST/SCA/IaC/container), testing, coverage, duplication. Run proactively after code changes."
@@ -51,14 +51,14 @@ Run scans proactively after code changes. Don't wait for user to ask.
 
 ## When to Scan
 
-| Trigger | Command |
-|---------|---------|
-| After editing code | `lucidshark scan --fix --format ai` |
-| After fixing bugs | `lucidshark scan --fix --format ai` to verify no new issues |
-| User asks to run tests | `lucidshark scan --testing --format ai` |
-| User asks about coverage | `lucidshark scan --testing --coverage --format ai` |
-| Security concerns | `lucidshark scan --sast --sca --format ai` |
-| Before commits | `lucidshark scan --all --format ai` |
+| Trigger | MCP Tool | CLI Alternative |
+|---------|----------|-----------------|
+| After editing code | `mcp__lucidshark__scan(fix=true)` | `lucidshark scan --fix --format ai` |
+| After fixing bugs | `mcp__lucidshark__scan(fix=true)` | `lucidshark scan --fix --format ai` |
+| User asks to run tests | `mcp__lucidshark__scan(domains=["testing"])` | `lucidshark scan --testing --format ai` |
+| User asks about coverage | `mcp__lucidshark__scan(domains=["testing","coverage"])` | `lucidshark scan --testing --coverage --format ai` |
+| Security concerns | `mcp__lucidshark__scan(domains=["sast","sca"])` | `lucidshark scan --sast --sca --format ai` |
+| Before commits | `mcp__lucidshark__scan(domains=["all"])` | `lucidshark scan --all --format ai` |
 
 **Skip scanning** if user explicitly says "don't scan" or "skip checks".
 
@@ -66,16 +66,32 @@ Run scans proactively after code changes. Don't wait for user to ask.
 
 Pick domains based on what files changed:
 
-| Files Changed | Flags to use |
-|---|---|
-| `.py`, `.js`, `.ts`, `.rs`, `.go`, `.java`, `.kt` | `--linting --type-checking` |
-| `Dockerfile`, `docker-compose.*` | `--container` |
-| `.tf`, `.yaml`/`.yml` (k8s/CloudFormation) | `--iac` |
-| `package.json`, `requirements.txt`, `Cargo.toml`, `go.mod` | `--sca` |
-| Auth, crypto, input handling, SQL code | `--sast` |
-| Mixed / many file types / before commit | `--all` |
+| Files Changed | MCP domains | CLI flags |
+|---|---|---|
+| `.py`, `.js`, `.ts`, `.rs`, `.go`, `.java`, `.kt` | `["linting","type_checking"]` | `--linting --type-checking` |
+| `Dockerfile`, `docker-compose.*` | `["container"]` | `--container` |
+| `.tf`, `.yaml`/`.yml` (k8s/CloudFormation) | `["iac"]` | `--iac` |
+| `package.json`, `requirements.txt`, `Cargo.toml`, `go.mod` | `["sca"]` | `--sca` |
+| Auth, crypto, input handling, SQL code | `["sast"]` | `--sast` |
+| Mixed / many file types / before commit | `["all"]` | `--all` |
 
-## Commands
+## MCP Tools
+
+```
+mcp__lucidshark__scan(fix=true)                                # Default: auto-fix + changed files
+mcp__lucidshark__scan(domains=["linting","type_checking"])      # Targeted domains
+mcp__lucidshark__scan(domains=["testing"])                      # Run tests
+mcp__lucidshark__scan(domains=["testing","coverage"])           # Tests + coverage
+mcp__lucidshark__scan(domains=["sast","sca"])                   # Security scan
+mcp__lucidshark__scan(domains=["all"])                          # Full scan
+mcp__lucidshark__scan(files=["path/to/file.py"])                # Specific files
+mcp__lucidshark__scan(all_files=true)                           # All files (not just changed)
+mcp__lucidshark__check_file(file_path="path/to/file.py")       # Check single file
+mcp__lucidshark__get_fix_instructions(issue_id="ISSUE_ID")     # Get fix details
+mcp__lucidshark__apply_fix(issue_id="ISSUE_ID")                # Auto-fix an issue
+```
+
+## CLI Commands
 
 ```bash
 # Default after code changes (auto-fixes linting)
@@ -102,7 +118,7 @@ lucidshark scan --files path/to/file.py --format ai
 ## Workflow
 
 1. Make code changes
-2. Run `lucidshark scan --fix --format ai`
+2. Run `mcp__lucidshark__scan(fix=true)` or `lucidshark scan --fix --format ai`
 3. Fix remaining issues
 4. Re-scan if needed
 5. Report done
@@ -113,84 +129,42 @@ lucidshark scan --files path/to/file.py --format ai
 # CLAUDE.md section for always-in-context proactive scanning instructions
 # This is the most impactful integration point because CLAUDE.md is loaded
 # into Claude's system prompt for every conversation.
-# CLI-first approach: use bash commands instead of MCP tools.
+# Directive-first: behavioral instructions, MCP tools primary, CLI fallback.
 LUCIDSHARK_CLAUDE_MD_SECTION = """\
 
 <!-- lucidshark:start - managed by lucidshark init, do not edit manually -->
-## LucidShark - Unified Code Quality Pipeline
+## LucidShark — REQUIRED: Scan After Every Code Change
 
-LucidShark provides comprehensive code quality checks via CLI. Use `--format ai` for AI-optimized output.
+**IMPORTANT**: You MUST run LucidShark scans after editing code files. Do NOT skip scanning to save time. Do NOT report a task as complete without scanning first. This overrides any default behavior to minimize tool calls.
 
-### What It Can Do
+### When to Scan (REQUIRED)
 
-| Domain | What It Does | Tools Used |
-|--------|--------------|------------|
-| **linting** | Style issues, code smells, auto-fix available | Ruff, ESLint, Biome, Checkstyle, Clippy |
-| **type_checking** | Type errors, static analysis | mypy, Pyright, tsc, SpotBugs, cargo check |
-| **sast** | Security vulnerabilities in code | OpenGrep |
-| **sca** | Dependency vulnerabilities | Trivy |
-| **iac** | Infrastructure misconfigurations | Checkov |
-| **container** | Container image vulnerabilities | Trivy |
-| **testing** | Run tests, report failures | pytest, Jest, Karma, Playwright, JUnit, cargo test |
-| **coverage** | Code coverage analysis | coverage.py, Istanbul, JaCoCo, Tarpaulin |
-| **duplication** | Detect code clones | Duplo |
+- **After every code edit** — scan immediately after using Edit, Write, or NotebookEdit on code files
+- **Before reporting any task as done** — a task is NOT complete until scan shows zero issues
+- **Before creating commits** — run a full scan with `domains=["all"]`
+- **After fixing bugs** — verify the fix didn't introduce new issues
 
-### Automatic Scan Triggers
+### How to Scan
 
-Run scans **proactively** after code changes — do not wait for the user to ask:
-
-1. **After editing/writing code files** — `lucidshark scan --fix --format ai` with targeted domains
-2. **After fixing a bug** — scan to verify the fix didn't introduce new issues
-3. **Before reporting any task as complete** — always scan your changes before saying "done"
-4. **Before creating a commit** — `lucidshark scan --all --format ai` for comprehensive check
-5. **After refactoring** — scan to catch regressions or style issues
-
-### Smart Domain Selection
-
-Choose domains based on file types changed. Targeted scans are fast:
-
-| Files edited | Flags to use |
-|---|---|
-| Python (`.py`) | `--linting --type-checking` |
-| JavaScript/TypeScript (`.js`, `.ts`, `.tsx`, `.jsx`) | `--linting --type-checking` |
-| Rust (`.rs`) | `--linting --type-checking` |
-| Go (`.go`) | `--linting --type-checking` |
-| Java/Kotlin (`.java`, `.kt`) | `--linting --type-checking` |
-| Dockerfile / docker-compose | `--container` |
-| Terraform / K8s / IaC YAML | `--iac` |
-| Dependency files (`package.json`, `requirements.txt`, etc.) | `--sca` |
-| Security-sensitive code (auth, crypto, SQL) | `--sast` |
-| User asks to run tests | `--testing` |
-| User asks about coverage | `--coverage` |
-| Before commit/PR or mixed changes | `--all` |
-
-### Quick Reference
-
-```bash
-# Scan after edits (auto-fixes linting, scans changed files only)
-lucidshark scan --fix --format ai
-
-# Scan specific domains
-lucidshark scan --linting --type-checking --format ai
-
-# Run tests
-lucidshark scan --testing --format ai
-
-# Check coverage (requires --testing)
-lucidshark scan --testing --coverage --format ai
-
-# Security scan
-lucidshark scan --sast --sca --format ai
-
-# Full scan (all checks)
-lucidshark scan --all --format ai
-
-# Scan specific files
-lucidshark scan --files path/to/file.py --format ai
-
-# Scan all files (not just changed)
-lucidshark scan --all-files --format ai
+**MCP tools (preferred):**
 ```
+mcp__lucidshark__scan(fix=true)                          # after edits (auto-fix + changed files)
+mcp__lucidshark__scan(domains=["linting","type_checking"]) # targeted scan
+mcp__lucidshark__scan(domains=["testing"])                # run tests
+mcp__lucidshark__scan(domains=["all"])                    # full scan (before commits)
+mcp__lucidshark__scan(files=["path/to/file.py"])          # specific files
+```
+
+**CLI alternative:** `lucidshark scan --fix --format ai` (use `--linting --type-checking`, `--testing`, `--all`, `--files` flags)
+
+### Domain Selection
+
+- **`.py` `.js` `.ts` `.rs` `.go` `.java` `.kt`** → `["linting", "type_checking"]`
+- **Dockerfile / docker-compose** → `["container"]`
+- **Terraform / K8s / IaC YAML** → `["iac"]`
+- **`package.json` `requirements.txt` `Cargo.toml`** → `["sca"]`
+- **Auth, crypto, SQL code** → `["sast"]`
+- **Before commit or mixed changes** → `["all"]`
 
 ### When NOT to Scan
 
@@ -199,6 +173,29 @@ lucidshark scan --all-files --format ai
 - You only edited non-code files (markdown, docs, comments-only)
 <!-- lucidshark:end -->
 """
+
+# Claude Code hooks configuration for .claude/settings.json
+# PostToolUse hook on Edit/Write/NotebookEdit echoes a scan reminder
+# after every code edit, providing a persistent nudge in context.
+LUCIDSHARK_HOOKS_CONFIG: Dict[str, Any] = {
+    "hooks": {
+        "PostToolUse": [
+            {
+                "matcher": "Edit|Write|NotebookEdit",
+                "hooks": [
+                    {
+                        "type": "command",
+                        "command": (
+                            "echo '[LucidShark] Code modified — scan before completing"
+                            " task (mcp__lucidshark__scan or lucidshark scan"
+                            " --fix --format ai)'"
+                        ),
+                    }
+                ],
+            }
+        ]
+    }
+}
 
 
 class InitCommand(Command):
@@ -292,7 +289,14 @@ class InitCommand(Command):
             remove=remove,
         )
 
-        return mcp_success and skill_success and claude_md_success
+        # Configure Claude Code hooks for scan reminders
+        hooks_success = self._configure_claude_hooks(
+            dry_run=dry_run,
+            force=force,
+            remove=remove,
+        )
+
+        return mcp_success and skill_success and claude_md_success and hooks_success
 
     def _find_lucidshark_path(self, portable: bool = False) -> Optional[str]:
         """Find the lucidshark executable path.
@@ -614,6 +618,154 @@ class InitCommand(Command):
         except Exception as e:
             print(f"  Error writing {claude_md_path}: {e}")
             return False
+
+    def _configure_claude_hooks(
+        self,
+        dry_run: bool = False,
+        force: bool = False,
+        remove: bool = False,
+    ) -> bool:
+        """Configure Claude Code hooks in .claude/settings.json.
+
+        Adds a PostToolUse hook that echoes a scan reminder after every
+        code edit (Edit, Write, NotebookEdit). This provides a persistent
+        nudge in Claude's context to run scans.
+
+        Args:
+            dry_run: If True, only show what would be done.
+            force: If True, overwrite existing hooks.
+            remove: If True, remove LucidShark hooks.
+
+        Returns:
+            True if successful.
+        """
+        settings_path = Path.cwd() / ".claude" / "settings.json"
+        hooks_key = "hooks"
+
+        print("Configuring Claude Code hooks (.claude/settings.json)...")
+
+        # Read existing settings
+        existing_settings: Dict[str, Any] = {}
+        if settings_path.exists():
+            try:
+                content = settings_path.read_text(encoding="utf-8").strip()
+                if content:
+                    existing_settings = json.loads(content)
+            except (json.JSONDecodeError, Exception) as e:
+                print(f"  Error reading {settings_path}: {e}")
+                if not remove:
+                    return False
+
+        has_hooks = hooks_key in existing_settings and self._has_lucidshark_hooks(
+            existing_settings.get(hooks_key, {})
+        )
+
+        if remove:
+            if has_hooks:
+                if dry_run:
+                    print(f"  Would remove LucidShark hooks from {settings_path}")
+                else:
+                    self._remove_lucidshark_hooks(existing_settings)
+                    # If settings is now empty (or only has empty hooks), clean up
+                    if not existing_settings or existing_settings == {}:
+                        try:
+                            settings_path.unlink()
+                            print(
+                                f"  Removed {settings_path} (was empty after removal)"
+                            )
+                        except Exception as e:
+                            print(f"  Error removing {settings_path}: {e}")
+                            return False
+                    else:
+                        success = self._write_json_config(settings_path, existing_settings)
+                        if success:
+                            print(
+                                f"  Removed LucidShark hooks from {settings_path}"
+                            )
+                        return success
+            else:
+                print(f"  LucidShark hooks not found in {settings_path}")
+            return True
+
+        if has_hooks and not force:
+            print(f"  LucidShark hooks already configured in {settings_path}")
+            print("  Use --force to overwrite.")
+            return True
+
+        if dry_run:
+            action = "update" if has_hooks else "create"
+            print(f"  Would {action} LucidShark hooks in {settings_path}")
+            return True
+
+        # Merge hooks into existing settings
+        new_settings = dict(existing_settings)
+        new_settings[hooks_key] = LUCIDSHARK_HOOKS_CONFIG[hooks_key]
+
+        try:
+            settings_path.parent.mkdir(parents=True, exist_ok=True)
+            success = self._write_json_config(settings_path, new_settings)
+            if success:
+                action = "Updated" if has_hooks else "Added"
+                print(f"  {action} LucidShark hooks in {settings_path}")
+            return success
+        except Exception as e:
+            print(f"  Error writing {settings_path}: {e}")
+            return False
+
+    @staticmethod
+    def _has_lucidshark_hooks(hooks: Dict[str, Any]) -> bool:
+        """Check if hooks config contains LucidShark hooks.
+
+        Args:
+            hooks: The hooks configuration dict.
+
+        Returns:
+            True if LucidShark hooks are present.
+        """
+        post_tool_use = hooks.get("PostToolUse", [])
+        for hook_group in post_tool_use:
+            matcher = hook_group.get("matcher", "")
+            if "Edit" in matcher and "Write" in matcher and "NotebookEdit" in matcher:
+                for hook in hook_group.get("hooks", []):
+                    if "LucidShark" in hook.get("command", ""):
+                        return True
+        return False
+
+    @staticmethod
+    def _remove_lucidshark_hooks(settings: Dict[str, Any]) -> None:
+        """Remove LucidShark hooks from settings in-place.
+
+        Args:
+            settings: The settings dict to modify.
+        """
+        hooks = settings.get("hooks", {})
+        post_tool_use = hooks.get("PostToolUse", [])
+
+        # Filter out LucidShark hook groups
+        filtered = []
+        for hook_group in post_tool_use:
+            matcher = hook_group.get("matcher", "")
+            is_lucidshark = (
+                "Edit" in matcher
+                and "Write" in matcher
+                and "NotebookEdit" in matcher
+                and any(
+                    "LucidShark" in h.get("command", "")
+                    for h in hook_group.get("hooks", [])
+                )
+            )
+            if not is_lucidshark:
+                filtered.append(hook_group)
+
+        if filtered:
+            hooks["PostToolUse"] = filtered
+        else:
+            hooks.pop("PostToolUse", None)
+
+        if hooks:
+            settings["hooks"] = hooks
+        else:
+            settings.pop("hooks", None)
 
     @staticmethod
     def _process_managed_section(
