@@ -1451,7 +1451,7 @@ ignore:
         min_lines = 7
         min_chars = 3
         exclude_patterns = None
-        use_baseline = True
+        use_baseline = False
         use_cache = True
         use_git = True
         if self.config.pipeline.duplication:

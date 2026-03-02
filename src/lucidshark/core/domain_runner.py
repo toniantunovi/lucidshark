@@ -930,7 +930,7 @@ class DomainRunner:
         min_lines: int = 4,
         min_chars: int = 3,
         exclude_patterns: Optional[List[str]] = None,
-        use_baseline: bool = True,
+        use_baseline: bool = False,
         use_cache: bool = True,
         use_git: bool = True,
     ) -> List[UnifiedIssue]:

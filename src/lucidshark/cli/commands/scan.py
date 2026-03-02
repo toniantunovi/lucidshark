@@ -338,7 +338,7 @@ class ScanCommand(Command):
             min_lines = min_lines or 4
 
             # Get baseline/cache/git flags from config
-            use_baseline = True
+            use_baseline = False
             use_cache = True
             use_git = True
             if config.pipeline.duplication:
