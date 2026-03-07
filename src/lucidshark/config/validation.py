@@ -89,6 +89,7 @@ VALID_PIPELINE_DOMAIN_KEYS: Set[str] = {
     "enabled",
     "tools",
     "exclude",
+    "threshold_scope",  # Scope for threshold check: "changed", "project", or "both"
     "command",       # Custom shell command to run instead of plugins
     "pre_command",   # Shell command to run before main command (e.g., cleanup)
     "post_command",  # Shell command to run after main command
@@ -102,6 +103,7 @@ VALID_PIPELINE_COVERAGE_KEYS: Set[str] = {
     "enabled",
     "tools",
     "threshold",
+    "threshold_scope",  # Scope for threshold check: "changed", "project", or "both"
     "extra_args",  # Extra arguments to pass to Maven/Gradle
     "exclude",
     "command",       # Custom shell command to run coverage
@@ -121,6 +123,7 @@ VALID_PIPELINE_DUPLICATION_KEYS: Set[str] = {
     "enabled",
     "tools",
     "threshold",
+    "threshold_scope",  # Scope for threshold check: "changed", "project", or "both"
     "min_lines",
     "min_chars",
     "exclude",

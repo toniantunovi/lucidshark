@@ -307,11 +307,13 @@ def _parse_domain_pipeline_config(
             tools.append(ToolConfig(name=tool_data))
 
     exclude = domain_data.get("exclude", [])
+    threshold_scope = domain_data.get("threshold_scope", "changed")
     command = domain_data.get("command")
     pre_command = domain_data.get("pre_command")
     post_command = domain_data.get("post_command")
     return DomainPipelineConfig(
         enabled=enabled, tools=tools, exclude=exclude,
+        threshold_scope=threshold_scope,
         command=command, pre_command=pre_command, post_command=post_command,
     )
 
@@ -343,6 +345,7 @@ def _parse_coverage_pipeline_config(
     return CoveragePipelineConfig(
         enabled=coverage_data.get("enabled", False),
         threshold=coverage_data.get("threshold", 80),
+        threshold_scope=coverage_data.get("threshold_scope", "changed"),
         tools=tools,
         extra_args=coverage_data.get("extra_args", []),
         exclude=coverage_data.get("exclude", []),
@@ -379,6 +382,7 @@ def _parse_duplication_pipeline_config(
     return DuplicationPipelineConfig(
         enabled=duplication_data.get("enabled", False),
         threshold=duplication_data.get("threshold", 10.0),
+        threshold_scope=duplication_data.get("threshold_scope", "changed"),
         min_lines=duplication_data.get("min_lines", 4),
         min_chars=duplication_data.get("min_chars", 3),
         exclude=duplication_data.get("exclude", []),
