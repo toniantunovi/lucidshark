@@ -6,6 +6,8 @@ Validates that scanner plugin tools are present and executable.
 from __future__ import annotations
 
 import os
+import shutil
+import sys
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -14,6 +16,16 @@ from typing import Dict, List
 from lucidshark.core.logging import get_logger
 
 LOGGER = get_logger(__name__)
+
+# ELF magic bytes (Linux binaries)
+_ELF_MAGIC = b"\x7fELF"
+# Mach-O magic bytes (macOS binaries) — both 32-bit and 64-bit, both endiannesses
+_MACHO_MAGICS = {
+    b"\xfe\xed\xfa\xce",
+    b"\xfe\xed\xfa\xcf",
+    b"\xce\xfa\xed\xfe",
+    b"\xcf\xfa\xed\xfe",
+}
 
 
 class ToolStatus(str, Enum):
@@ -73,3 +85,64 @@ def validate_binary(path: Path) -> ToolStatus:
         return ToolStatus.NOT_EXECUTABLE
 
     return ToolStatus.PRESENT
+
+
+def is_binary_for_current_platform(path: Path) -> bool:
+    """Check if a native binary matches the current platform.
+
+    Reads the magic bytes to determine if the binary is ELF (Linux) or
+    Mach-O (macOS) and compares against the running OS. This catches stale
+    binaries cached from a different platform (e.g. macOS binaries in a
+    Linux devcontainer).
+
+    Args:
+        path: Path to the binary file.
+
+    Returns:
+        True if the binary format matches the current OS, or if the format
+        cannot be determined (non-native binaries like scripts are allowed).
+    """
+    try:
+        with open(path, "rb") as f:
+            magic = f.read(4)
+    except OSError:
+        return True  # Can't read — let the caller handle it
+
+    if len(magic) < 4:
+        return True  # Too small to be a native binary, likely a script
+
+    current_os = sys.platform  # "linux", "darwin", etc.
+
+    if magic == _ELF_MAGIC:
+        # ELF binary — only valid on Linux
+        if current_os != "linux":
+            LOGGER.warning(f"Binary {path} is ELF (Linux) but running on {current_os}")
+            return False
+        return True
+
+    if magic in _MACHO_MAGICS:
+        # Mach-O binary — only valid on macOS
+        if current_os != "darwin":
+            LOGGER.warning(
+                f"Binary {path} is Mach-O (macOS) but running on {current_os}"
+            )
+            return False
+        return True
+
+    # Unknown format (script, JAR, etc.) — assume valid
+    return True
+
+
+def remove_stale_binary_dir(binary_dir: Path, binary_name: str) -> None:
+    """Remove a binary directory containing a wrong-platform binary.
+
+    Args:
+        binary_dir: The version-specific binary directory to clean up.
+        binary_name: Name of the binary file that was invalid.
+    """
+    LOGGER.info(
+        f"Removing stale {binary_name} binary at {binary_dir} "
+        f"(wrong platform, will re-download)"
+    )
+    shutil.rmtree(binary_dir, ignore_errors=True)
+    binary_dir.mkdir(parents=True, exist_ok=True)

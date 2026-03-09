@@ -18,6 +18,10 @@ import pathspec
 from lucidshark.bootstrap.download import secure_urlopen
 from lucidshark.bootstrap.paths import LucidsharkPaths
 from lucidshark.bootstrap.platform import get_platform_info
+from lucidshark.bootstrap.validation import (
+    is_binary_for_current_platform,
+    remove_stale_binary_dir,
+)
 from lucidshark.bootstrap.versions import get_tool_version
 from lucidshark.core.git import is_git_repo
 from lucidshark.core.logging import get_logger
@@ -129,8 +133,10 @@ class DuploPlugin(DuplicationPlugin):
         binary_path = binary_dir / "lucidshark-duplo"
 
         if binary_path.exists():
-            LOGGER.debug(f"Duplo binary found at {binary_path}")
-            return binary_path
+            if is_binary_for_current_platform(binary_path):
+                LOGGER.debug(f"Duplo binary found at {binary_path}")
+                return binary_path
+            remove_stale_binary_dir(binary_dir, "lucidshark-duplo")
 
         LOGGER.info(f"Downloading lucidshark-duplo v{self._version}...")
         self._download_binary(binary_dir)

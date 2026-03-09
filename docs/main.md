@@ -712,7 +712,7 @@ LucidShark pins versions for tools it downloads directly (security scanners and 
 # Security scanners
 trivy = "0.69.3"
 opengrep = "1.16.3"
-checkov = "3.2.506"
+checkov = "3.2.508"
 # Duplication detection
 duplo = "0.1.6"
 ```

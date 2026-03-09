@@ -23,7 +23,7 @@ _FALLBACK_VERSIONS: Dict[str, str] = {
     # Security scanners
     "trivy": "0.69.3",
     "opengrep": "1.16.3",
-    "checkov": "3.2.506",
+    "checkov": "3.2.508",
     # Linters
     "pmd": "7.22.0",
     # Duplication detection

@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import stat
+import sys
 from pathlib import Path
+from unittest.mock import patch
 
 
 from lucidshark.bootstrap.validation import (
     validate_binary,
+    is_binary_for_current_platform,
+    remove_stale_binary_dir,
     PluginValidationResult,
     ToolStatus,
 )
@@ -116,3 +120,79 @@ class TestValidateBinary:
 
         status = validate_binary(path)
         assert status == ToolStatus.NOT_EXECUTABLE
+
+
+class TestIsBinaryForCurrentPlatform:
+    """Tests for is_binary_for_current_platform function."""
+
+    def test_elf_binary_on_linux(self, tmp_path: Path) -> None:
+        path = tmp_path / "tool"
+        path.write_bytes(b"\x7fELF" + b"\x00" * 100)
+        with patch.object(sys, "platform", "linux"):
+            assert is_binary_for_current_platform(path) is True
+
+    def test_elf_binary_on_macos(self, tmp_path: Path) -> None:
+        path = tmp_path / "tool"
+        path.write_bytes(b"\x7fELF" + b"\x00" * 100)
+        with patch.object(sys, "platform", "darwin"):
+            assert is_binary_for_current_platform(path) is False
+
+    def test_macho_binary_on_macos(self, tmp_path: Path) -> None:
+        # Mach-O 64-bit little-endian magic
+        path = tmp_path / "tool"
+        path.write_bytes(b"\xcf\xfa\xed\xfe" + b"\x00" * 100)
+        with patch.object(sys, "platform", "darwin"):
+            assert is_binary_for_current_platform(path) is True
+
+    def test_macho_binary_on_linux(self, tmp_path: Path) -> None:
+        path = tmp_path / "tool"
+        path.write_bytes(b"\xcf\xfa\xed\xfe" + b"\x00" * 100)
+        with patch.object(sys, "platform", "linux"):
+            assert is_binary_for_current_platform(path) is False
+
+    def test_macho_big_endian_on_linux(self, tmp_path: Path) -> None:
+        # Mach-O 64-bit big-endian magic
+        path = tmp_path / "tool"
+        path.write_bytes(b"\xfe\xed\xfa\xcf" + b"\x00" * 100)
+        with patch.object(sys, "platform", "linux"):
+            assert is_binary_for_current_platform(path) is False
+
+    def test_script_file_always_valid(self, tmp_path: Path) -> None:
+        path = tmp_path / "tool"
+        path.write_text("#!/bin/bash\necho hello")
+        assert is_binary_for_current_platform(path) is True
+
+    def test_nonexistent_file_returns_true(self, tmp_path: Path) -> None:
+        path = tmp_path / "nonexistent"
+        assert is_binary_for_current_platform(path) is True
+
+    def test_empty_file_returns_true(self, tmp_path: Path) -> None:
+        path = tmp_path / "tool"
+        path.write_bytes(b"")
+        assert is_binary_for_current_platform(path) is True
+
+    def test_short_file_returns_true(self, tmp_path: Path) -> None:
+        path = tmp_path / "tool"
+        path.write_bytes(b"\x7f")
+        assert is_binary_for_current_platform(path) is True
+
+
+class TestRemoveStaleBinaryDir:
+    """Tests for remove_stale_binary_dir function."""
+
+    def test_removes_directory_and_recreates(self, tmp_path: Path) -> None:
+        binary_dir = tmp_path / "bin" / "tool" / "1.0"
+        binary_dir.mkdir(parents=True)
+        (binary_dir / "tool").write_bytes(b"\xcf\xfa\xed\xfe" + b"\x00" * 100)
+        (binary_dir / "LICENSE").write_text("MIT")
+
+        remove_stale_binary_dir(binary_dir, "tool")
+
+        assert binary_dir.exists()
+        assert not (binary_dir / "tool").exists()
+        assert not (binary_dir / "LICENSE").exists()
+
+    def test_handles_nonexistent_directory(self, tmp_path: Path) -> None:
+        binary_dir = tmp_path / "nonexistent"
+        remove_stale_binary_dir(binary_dir, "tool")
+        assert binary_dir.exists()

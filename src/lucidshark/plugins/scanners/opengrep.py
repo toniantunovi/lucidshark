@@ -12,6 +12,10 @@ from lucidshark.core.models import ScanContext, ScanDomain, Severity, UnifiedIss
 from lucidshark.bootstrap.download import secure_urlopen
 from lucidshark.bootstrap.paths import LucidsharkPaths
 from lucidshark.bootstrap.platform import get_platform_info
+from lucidshark.bootstrap.validation import (
+    is_binary_for_current_platform,
+    remove_stale_binary_dir,
+)
 from lucidshark.bootstrap.versions import get_tool_version
 from lucidshark.core.logging import get_logger
 from lucidshark.core.subprocess_runner import run_with_streaming, temporary_env
@@ -75,8 +79,10 @@ class OpenGrepScanner(ScannerPlugin):
         binary_path = binary_dir / binary_name
 
         if binary_path.exists():
-            LOGGER.debug(f"OpenGrep binary found at {binary_path}")
-            return binary_path
+            if is_binary_for_current_platform(binary_path):
+                LOGGER.debug(f"OpenGrep binary found at {binary_path}")
+                return binary_path
+            remove_stale_binary_dir(binary_dir, "opengrep")
 
         LOGGER.info(f"Downloading OpenGrep v{self._version}...")
         self._download_binary(binary_dir)

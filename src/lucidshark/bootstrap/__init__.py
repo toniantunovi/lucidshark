@@ -14,6 +14,8 @@ from lucidshark.bootstrap.platform import get_platform_info, PlatformInfo
 from lucidshark.bootstrap.paths import get_lucidshark_home, LucidsharkPaths
 from lucidshark.bootstrap.validation import (
     validate_binary,
+    is_binary_for_current_platform,
+    remove_stale_binary_dir,
     PluginValidationResult,
     ToolStatus,
 )
@@ -24,6 +26,8 @@ __all__ = [
     "get_lucidshark_home",
     "LucidsharkPaths",
     "validate_binary",
+    "is_binary_for_current_platform",
+    "remove_stale_binary_dir",
     "PluginValidationResult",
     "ToolStatus",
 ]
