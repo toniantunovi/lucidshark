@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.54] - 2026-03-10
+
 ### Added
 - **SpotBugs type checker plugin** is now a managed tool — auto-downloaded from GitHub releases on first use, cached at `.lucidshark/bin/spotbugs/{version}/`
   - Managed binary: auto-downloaded on first use (version 4.9.8), no manual installation required
@@ -24,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Uses `--file-list` for precise file targeting (respects gitignore patterns)
   - Requires Java runtime (any Java project already has one)
 - PMD tool detection for existing project configurations
+- `paths` option for `ignore_issues` — scope ignored issues to specific file paths with glob patterns
+
+### Fixed
+- Missing hiddenimports for PyInstaller binary distribution (PMD, Checkstyle, SpotBugs plugins)
+- Cross-platform binary detection and replacement for stale binaries
+- Flaky Checkstyle test on Linux CI
 
 ## [0.5.50] - 2026-03-08
 
@@ -167,6 +175,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - YAML configuration system
 - CI/CD integration support
 
+[0.5.54]: https://github.com/toniantunovi/lucidshark/compare/v0.5.50...v0.5.54
 [0.5.50]: https://github.com/toniantunovi/lucidshark/compare/v0.5.48...v0.5.50
 [0.5.48]: https://github.com/toniantunovi/lucidshark/compare/v0.5.46...v0.5.48
 [0.5.46]: https://github.com/toniantunovi/lucidshark/compare/v0.5.41...v0.5.46
