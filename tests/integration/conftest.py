@@ -237,6 +237,17 @@ def _ensure_pmd_downloaded() -> bool:
         return False
 
 
+def _ensure_checkstyle_downloaded() -> bool:
+    """Ensure Checkstyle JAR is downloaded. Returns True if available."""
+    root = Path(__file__).parent.parent.parent
+    try:
+        linter = CheckstyleLinter(project_root=root)
+        linter.ensure_binary()
+        return True
+    except Exception:
+        return False
+
+
 # =============================================================================
 # Type checker availability checks
 # =============================================================================
@@ -305,6 +316,7 @@ _pyright_available = _ensure_pyright_available()
 _tsc_available = _ensure_tsc_available()
 _spotbugs_available = _java_available and _ensure_spotbugs_downloaded()
 _pmd_available = _java_available and _ensure_pmd_downloaded()
+_checkstyle_available = _java_available and _ensure_checkstyle_downloaded()
 _maven_available = _java_available and _is_maven_available()
 
 
@@ -440,6 +452,11 @@ spotbugs_available = pytest.mark.skipif(
 
 pmd_available = pytest.mark.skipif(
     not _pmd_available, reason="PMD not available (requires Java and download)"
+)
+
+checkstyle_available = pytest.mark.skipif(
+    not _checkstyle_available,
+    reason="Checkstyle not available (requires Java and download)",
 )
 
 maven_available = pytest.mark.skipif(

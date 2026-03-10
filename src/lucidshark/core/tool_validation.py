@@ -67,7 +67,7 @@ INSTALL_INSTRUCTIONS: Dict[str, str] = {
     "prettier": "npm install -g prettier",
     "rustfmt": "rustup component add rustfmt",
     "google_java_format": "Download from github.com/google/google-java-format",
-    "checkstyle": "brew install checkstyle (macOS) or download from checkstyle.org",
+    # Note: checkstyle and pmd are managed tools (auto-downloaded) and not listed here
 }
 
 

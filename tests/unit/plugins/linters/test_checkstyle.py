@@ -5,14 +5,15 @@ from __future__ import annotations
 import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from lucidshark.core.models import ScanContext, Severity, ToolDomain
 from lucidshark.plugins.linters.checkstyle import (
-    CheckstyleLinter,
+    DEFAULT_VERSION,
     SEVERITY_MAP,
+    CheckstyleLinter,
 )
 
 
@@ -26,6 +27,31 @@ def make_completed_process(
         stdout=stdout,
         stderr=stderr,
     )
+
+
+SAMPLE_CHECKSTYLE_OUTPUT = """<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="13.3.0">
+    <file name="/project/src/Main.java">
+        <error line="5" column="1" severity="warning"
+               message="Missing Javadoc comment."
+               source="com.puppycrawl.tools.checkstyle.checks.javadoc.MissingJavadocMethodCheck"/>
+    </file>
+</checkstyle>"""
+
+
+SAMPLE_CHECKSTYLE_MULTI_FILE = """<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="13.3.0">
+    <file name="/project/src/A.java">
+        <error line="1" severity="error" message="Tab character detected."
+               source="com.puppycrawl.tools.checkstyle.checks.whitespace.FileTabCharacterCheck"/>
+    </file>
+    <file name="/project/src/B.java">
+        <error line="10" column="5" severity="warning" message="Line too long."
+               source="com.puppycrawl.tools.checkstyle.checks.sizes.LineLengthCheck"/>
+        <error line="20" column="3" severity="info" message="Missing @param tag."
+               source="com.puppycrawl.tools.checkstyle.checks.javadoc.JavadocMethodCheck"/>
+    </file>
+</checkstyle>"""
 
 
 class TestCheckstyleLinterProperties:
@@ -51,18 +77,22 @@ class TestCheckstyleLinterProperties:
         linter = CheckstyleLinter()
         assert linter.supports_fix is False
 
-    def test_get_version_returns_unknown_when_not_installed(self) -> None:
-        """Test get_version returns unknown when checkstyle not installed."""
-        linter = CheckstyleLinter()
-        # Mock ensure_binary to simulate checkstyle not being installed
-        with patch.object(linter, "ensure_binary", side_effect=FileNotFoundError):
-            assert linter.get_version() == "unknown"
+    def test_get_version(self) -> None:
+        """Test get_version returns configured version."""
+        linter = CheckstyleLinter(version="13.3.0")
+        assert linter.get_version() == "13.3.0"
 
     def test_init_with_project_root(self) -> None:
         """Test initialization with project root."""
         with tempfile.TemporaryDirectory() as tmpdir:
             linter = CheckstyleLinter(project_root=Path(tmpdir))
             assert linter._project_root == Path(tmpdir)
+
+    def test_init_default_version(self) -> None:
+        """Test default version is loaded from pyproject.toml."""
+        linter = CheckstyleLinter()
+        assert linter._version == DEFAULT_VERSION
+        assert isinstance(linter._version, str)
 
 
 class TestCheckstyleSeverityMapping:
@@ -85,65 +115,126 @@ class TestCheckstyleSeverityMapping:
         assert SEVERITY_MAP["ignore"] == Severity.INFO
 
 
-class TestCheckstyleJavaDetection:
-    """Tests for Java detection."""
-
-    @patch("shutil.which")
-    def test_java_available(self, mock_which) -> None:
-        """Test Java detection when available."""
-        mock_which.return_value = "/usr/bin/java"
-        linter = CheckstyleLinter()
-        java_path = linter._check_java_available()
-        assert java_path == Path("/usr/bin/java")
-
-    @patch("shutil.which")
-    def test_java_not_available(self, mock_which) -> None:
-        """Test Java detection when not available."""
-        mock_which.return_value = None
-        linter = CheckstyleLinter()
-        java_path = linter._check_java_available()
-        assert java_path is None
-
-    def test_ensure_binary_no_checkstyle_raises(self) -> None:
-        """Test ensure_binary raises when checkstyle not available."""
-        linter = CheckstyleLinter()
-
-        with patch("shutil.which", return_value=None):
-            with pytest.raises(FileNotFoundError, match="Checkstyle is not installed"):
-                linter.ensure_binary()
-
-
 class TestCheckstyleEnsureBinary:
     """Tests for ensure_binary method."""
 
-    def test_finds_checkstyle_in_path(self) -> None:
-        """Test finds checkstyle in PATH."""
-        linter = CheckstyleLinter()
+    def test_cached_jar_found(self) -> None:
+        """Test finds cached JAR."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            linter = CheckstyleLinter(version="13.3.0", project_root=Path(tmpdir))
 
-        with patch.object(
-            linter, "_check_java_available", return_value=Path("/usr/bin/java")
-        ):
-            with patch("shutil.which", return_value="/usr/bin/checkstyle"):
-                with tempfile.TemporaryDirectory() as tmpdir:
-                    # Create a fake lib/spotbugs.jar structure
-                    lib_dir = Path(tmpdir) / "lib"
-                    lib_dir.mkdir()
+            # Create fake cached JAR
+            jar_dir = Path(tmpdir) / ".lucidshark" / "bin" / "checkstyle" / "13.3.0"
+            jar_dir.mkdir(parents=True)
+            jar_path = jar_dir / "checkstyle-13.3.0-all.jar"
+            jar_path.touch()
+
+            result = linter.ensure_binary()
+            assert result == jar_path
+
+    def test_download_triggered_when_not_cached(self) -> None:
+        """Test download is triggered when JAR not cached."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            linter = CheckstyleLinter(version="13.3.0", project_root=Path(tmpdir))
+
+            with patch("shutil.which", return_value="/usr/bin/java"):
+                with patch.object(linter, "_download_binary") as mock_download:
+                    # After download, create the JAR
+                    def create_jar(dest_dir):
+                        dest_dir.mkdir(parents=True, exist_ok=True)
+                        (dest_dir / "checkstyle-13.3.0-all.jar").touch()
+
+                    mock_download.side_effect = create_jar
+
                     result = linter.ensure_binary()
-                    assert result[0] == Path("/usr/bin/checkstyle")
-                    assert result[1] == "standalone"
+                    mock_download.assert_called_once()
+                    assert result.name == "checkstyle-13.3.0-all.jar"
 
-    def test_raises_when_not_found(self) -> None:
-        """Test raises FileNotFoundError when checkstyle not found."""
-        linter = CheckstyleLinter()
+    def test_java_not_found_raises(self) -> None:
+        """Test raises FileNotFoundError when Java not available."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            linter = CheckstyleLinter(version="13.3.0", project_root=Path(tmpdir))
 
-        with patch.object(
-            linter, "_check_java_available", return_value=Path("/usr/bin/java")
-        ):
             with patch("shutil.which", return_value=None):
-                with pytest.raises(
-                    FileNotFoundError, match="Checkstyle is not installed"
-                ):
+                with pytest.raises(FileNotFoundError, match="Java is required"):
                     linter.ensure_binary()
+
+    def test_download_fails_raises_runtime_error(self) -> None:
+        """Test raises RuntimeError when download fails."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            linter = CheckstyleLinter(version="13.3.0", project_root=Path(tmpdir))
+
+            with patch("shutil.which", return_value="/usr/bin/java"):
+                with patch.object(linter, "_download_binary"):
+                    # Don't create the JAR — simulate failed download
+                    with pytest.raises(RuntimeError, match="Failed to download"):
+                        linter.ensure_binary()
+
+
+class TestCheckstyleDownloadBinary:
+    """Tests for _download_binary method."""
+
+    def test_download_jar(self) -> None:
+        """Test downloading JAR file."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            linter = CheckstyleLinter(version="13.3.0", project_root=Path(tmpdir))
+            dest_dir = Path(tmpdir) / "dest"
+
+            # Create mock JAR content
+            jar_content = b"PK\x03\x04fake jar content"
+
+            mock_response = MagicMock()
+            mock_response.read.return_value = jar_content
+            mock_response.__enter__ = MagicMock(return_value=mock_response)
+            mock_response.__exit__ = MagicMock(return_value=False)
+
+            with patch(
+                "lucidshark.plugins.linters.checkstyle.secure_urlopen",
+                return_value=mock_response,
+            ):
+                linter._download_binary(dest_dir)
+
+            # Verify JAR was created
+            jar_path = dest_dir / "checkstyle-13.3.0-all.jar"
+            assert jar_path.exists()
+
+    def test_download_cleans_up_temp_on_network_error(self) -> None:
+        """Verify temp file is cleaned up when secure_urlopen raises."""
+        from urllib.error import URLError
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            linter = CheckstyleLinter(version="13.3.0", project_root=Path(tmpdir))
+            dest_dir = Path(tmpdir) / "dest"
+
+            with patch(
+                "lucidshark.plugins.linters.checkstyle.secure_urlopen",
+                side_effect=URLError("connection refused"),
+            ):
+                with pytest.raises(URLError):
+                    linter._download_binary(dest_dir)
+
+    def test_download_validates_url_domain(self) -> None:
+        """Verify URL domain validation."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            linter = CheckstyleLinter(version="13.3.0", project_root=Path(tmpdir))
+            # URL validation happens in _download_binary - the URL is constructed
+            # internally so this test just verifies the download attempt uses HTTPS
+            dest_dir = Path(tmpdir) / "dest"
+
+            mock_response = MagicMock()
+            mock_response.read.return_value = b"content"
+            mock_response.__enter__ = MagicMock(return_value=mock_response)
+            mock_response.__exit__ = MagicMock(return_value=False)
+
+            with patch(
+                "lucidshark.plugins.linters.checkstyle.secure_urlopen",
+                return_value=mock_response,
+            ) as mock_urlopen:
+                linter._download_binary(dest_dir)
+
+            # Verify called with HTTPS URL
+            call_args = mock_urlopen.call_args[0][0]
+            assert call_args.startswith("https://github.com/")
 
 
 class TestCheckstyleFindConfigFile:
@@ -155,7 +246,7 @@ class TestCheckstyleFindConfigFile:
             config_file = Path(tmpdir) / "checkstyle.xml"
             config_file.touch()
 
-            linter = CheckstyleLinter()
+            linter = CheckstyleLinter(project_root=Path(tmpdir))
             result = linter._find_config_file(Path(tmpdir))
             assert result == str(config_file)
 
@@ -165,7 +256,7 @@ class TestCheckstyleFindConfigFile:
             config_file = Path(tmpdir) / ".checkstyle.xml"
             config_file.touch()
 
-            linter = CheckstyleLinter()
+            linter = CheckstyleLinter(project_root=Path(tmpdir))
             result = linter._find_config_file(Path(tmpdir))
             assert result == str(config_file)
 
@@ -177,16 +268,42 @@ class TestCheckstyleFindConfigFile:
             config_file = config_dir / "checkstyle.xml"
             config_file.touch()
 
-            linter = CheckstyleLinter()
+            linter = CheckstyleLinter(project_root=Path(tmpdir))
             result = linter._find_config_file(Path(tmpdir))
             assert result == str(config_file)
 
-    def test_defaults_to_google_checks(self) -> None:
-        """Test defaults to Google checks when no config found."""
+    def test_finds_config_checkstyle_xml(self) -> None:
+        """Test finding config/checkstyle.xml."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            linter = CheckstyleLinter()
+            config_dir = Path(tmpdir) / "config"
+            config_dir.mkdir(parents=True)
+            config_file = config_dir / "checkstyle.xml"
+            config_file.touch()
+
+            linter = CheckstyleLinter(project_root=Path(tmpdir))
             result = linter._find_config_file(Path(tmpdir))
-            assert result == "/google_checks.xml"
+            assert result == str(config_file)
+
+    def test_defaults_to_bundled_config(self) -> None:
+        """Test defaults to bundled google config when no custom config."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            linter = CheckstyleLinter(project_root=Path(tmpdir))
+            result = linter._find_config_file(Path(tmpdir))
+            # Should use bundled config cached to .lucidshark/config
+            assert result.endswith("checkstyle-google.xml")
+            assert "lucidshark" in result.lower()
+
+    def test_priority_ordering_with_multiple_configs(self) -> None:
+        """Verify checkstyle.xml takes priority over config/checkstyle.xml."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            (Path(tmpdir) / "checkstyle.xml").touch()
+            config_dir = Path(tmpdir) / "config"
+            config_dir.mkdir()
+            (config_dir / "checkstyle.xml").touch()
+
+            linter = CheckstyleLinter(project_root=Path(tmpdir))
+            result = linter._find_config_file(Path(tmpdir))
+            assert result == str(Path(tmpdir) / "checkstyle.xml")
 
 
 class TestCheckstyleFindJavaFiles:
@@ -258,68 +375,92 @@ class TestCheckstyleFindJavaFiles:
             files = linter._find_java_files(context)
             assert files == []
 
+    def test_ignore_patterns_excludes_matching_files(self) -> None:
+        """Verify ignore_patterns filtering excludes matching files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src_dir = Path(tmpdir) / "src"
+            src_dir.mkdir()
+            (src_dir / "Main.java").touch()
+            build_dir = Path(tmpdir) / "build"
+            build_dir.mkdir()
+            (build_dir / "Generated.java").touch()
+
+            mock_patterns = MagicMock()
+            mock_patterns.matches = MagicMock(
+                side_effect=lambda f, root: "build" in str(f)
+            )
+
+            context = ScanContext(
+                project_root=Path(tmpdir),
+                paths=[src_dir, build_dir],
+                enabled_domains=[],
+                ignore_patterns=mock_patterns,
+            )
+
+            linter = CheckstyleLinter()
+            files = linter._find_java_files(context)
+            assert len(files) == 1
+            assert files[0].endswith("Main.java")
+
+    def test_ignore_patterns_none_includes_all(self) -> None:
+        """Verify ignore_patterns=None includes all Java files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src_dir = Path(tmpdir) / "src"
+            src_dir.mkdir()
+            (src_dir / "A.java").touch()
+            (src_dir / "B.java").touch()
+
+            context = ScanContext(
+                project_root=Path(tmpdir),
+                paths=[src_dir],
+                enabled_domains=[],
+                ignore_patterns=None,
+            )
+
+            linter = CheckstyleLinter()
+            files = linter._find_java_files(context)
+            assert len(files) == 2
+
+    def test_fallback_to_project_root(self) -> None:
+        """Verify fallback to project_root when no paths and no standard dirs."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            (Path(tmpdir) / "Main.java").touch()
+
+            context = ScanContext(
+                project_root=Path(tmpdir),
+                paths=[],
+                enabled_domains=[],
+            )
+
+            linter = CheckstyleLinter()
+            files = linter._find_java_files(context)
+            assert len(files) == 1
+            assert files[0].endswith("Main.java")
+
+    def test_excludes_non_java_files(self) -> None:
+        """Verify non-.java files are excluded."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src_dir = Path(tmpdir) / "src"
+            src_dir.mkdir()
+            (src_dir / "Main.java").touch()
+            (src_dir / "Main.kt").touch()
+            (src_dir / "Main.py").touch()
+            (src_dir / "Main.class").touch()
+
+            context = ScanContext(
+                project_root=Path(tmpdir),
+                paths=[src_dir],
+                enabled_domains=[],
+            )
+
+            linter = CheckstyleLinter()
+            files = linter._find_java_files(context)
+            assert len(files) == 1
+            assert files[0].endswith("Main.java")
+
 
 class TestCheckstyleLint:
     """Tests for lint method."""
-
-    def test_lint_no_java(self) -> None:
-        """Test lint returns empty when Java not available."""
-        linter = CheckstyleLinter()
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            context = ScanContext(
-                project_root=Path(tmpdir),
-                paths=[Path(tmpdir)],
-                enabled_domains=[],
-            )
-
-            with patch.object(
-                linter, "ensure_binary", side_effect=FileNotFoundError("no java")
-            ):
-                issues = linter.lint(context)
-                assert issues == []
-
-    def test_lint_no_java_runtime(self) -> None:
-        """Test lint returns empty when Java runtime disappears after binary check."""
-        linter = CheckstyleLinter()
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            context = ScanContext(
-                project_root=Path(tmpdir),
-                paths=[Path(tmpdir)],
-                enabled_domains=[],
-            )
-
-            with patch.object(
-                linter,
-                "ensure_binary",
-                return_value=(Path("/usr/bin/checkstyle"), "standalone"),
-            ):
-                with patch.object(linter, "_check_java_available", return_value=None):
-                    issues = linter.lint(context)
-                    assert issues == []
-
-    def test_lint_no_java_files(self) -> None:
-        """Test lint returns empty when no Java files found."""
-        linter = CheckstyleLinter()
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            context = ScanContext(
-                project_root=Path(tmpdir),
-                paths=[Path(tmpdir)],
-                enabled_domains=[],
-            )
-
-            with patch.object(
-                linter,
-                "ensure_binary",
-                return_value=(Path("/usr/bin/checkstyle"), "standalone"),
-            ):
-                with patch.object(
-                    linter, "_check_java_available", return_value=Path("/usr/bin/java")
-                ):
-                    issues = linter.lint(context)
-                    assert issues == []
 
     def test_lint_success(self) -> None:
         """Test successful linting with XML output."""
@@ -338,36 +479,153 @@ class TestCheckstyleLint:
                 enabled_domains=[],
             )
 
-            xml_output = """<?xml version="1.0" encoding="UTF-8"?>
-<checkstyle version="10.12.0">
-    <file name="/project/src/Main.java">
-        <error line="5" column="1" severity="warning"
-               message="Missing Javadoc comment."
-               source="com.puppycrawl.tools.checkstyle.checks.javadoc.MissingJavadocMethodCheck"/>
-    </file>
-</checkstyle>"""
+            mock_result = make_completed_process(0, SAMPLE_CHECKSTYLE_OUTPUT)
 
-            mock_result = make_completed_process(0, xml_output)
+            with patch.object(
+                linter, "ensure_binary", return_value=Path("/opt/checkstyle.jar")
+            ):
+                with patch(
+                    "lucidshark.plugins.linters.checkstyle.run_with_streaming",
+                    return_value=mock_result,
+                ):
+                    issues = linter.lint(context)
+
+                    assert len(issues) == 1
+                    assert issues[0].source_tool == "checkstyle"
+                    assert issues[0].domain == ToolDomain.LINTING
+                    assert issues[0].severity == Severity.MEDIUM
+                    assert issues[0].line_start == 5
+
+    def test_lint_uses_java_jar_command(self) -> None:
+        """Verify command uses java -jar."""
+        linter = CheckstyleLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            src_dir = tmpdir_path / "src"
+            src_dir.mkdir()
+            (src_dir / "Main.java").touch()
+
+            context = ScanContext(
+                project_root=tmpdir_path,
+                paths=[src_dir],
+                enabled_domains=[],
+            )
+
+            mock_result = make_completed_process(
+                0, '<?xml version="1.0"?><checkstyle/>'
+            )
+            captured_cmd = []
+
+            def capture_cmd(**kwargs):
+                captured_cmd.extend(kwargs.get("cmd", []))
+                return mock_result
+
+            with patch.object(
+                linter, "ensure_binary", return_value=Path("/opt/checkstyle.jar")
+            ):
+                with patch(
+                    "lucidshark.plugins.linters.checkstyle.run_with_streaming",
+                    side_effect=capture_cmd,
+                ):
+                    linter.lint(context)
+
+            assert "java" in captured_cmd
+            assert "-jar" in captured_cmd
+            assert "/opt/checkstyle.jar" in captured_cmd
+
+    def test_lint_passes_correct_kwargs_to_runner(self) -> None:
+        """Verify correct cwd, tool_name, timeout passed to run_with_streaming."""
+        linter = CheckstyleLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            src_dir = tmpdir_path / "src"
+            src_dir.mkdir()
+            (src_dir / "Main.java").touch()
+
+            context = ScanContext(
+                project_root=tmpdir_path,
+                paths=[src_dir],
+                enabled_domains=[],
+            )
+
+            mock_result = make_completed_process(
+                0, '<?xml version="1.0"?><checkstyle/>'
+            )
+            captured_kwargs = {}
+
+            def capture_kwargs(**kwargs):
+                captured_kwargs.update(kwargs)
+                return mock_result
+
+            with patch.object(
+                linter, "ensure_binary", return_value=Path("/opt/checkstyle.jar")
+            ):
+                with patch(
+                    "lucidshark.plugins.linters.checkstyle.run_with_streaming",
+                    side_effect=capture_kwargs,
+                ):
+                    linter.lint(context)
+
+            assert captured_kwargs["cwd"] == tmpdir_path
+            assert captured_kwargs["tool_name"] == "checkstyle"
+            assert captured_kwargs["timeout"] == 120
+
+    def test_lint_no_binary(self) -> None:
+        """Test lint returns empty when binary not available."""
+        linter = CheckstyleLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            context = ScanContext(
+                project_root=Path(tmpdir),
+                paths=[Path(tmpdir)],
+                enabled_domains=[],
+            )
 
             with patch.object(
                 linter,
                 "ensure_binary",
-                return_value=(Path("/usr/bin/checkstyle"), "standalone"),
+                side_effect=FileNotFoundError("Java not found"),
             ):
-                with patch.object(
-                    linter, "_check_java_available", return_value=Path("/usr/bin/java")
-                ):
-                    with patch(
-                        "lucidshark.plugins.linters.checkstyle.run_with_streaming",
-                        return_value=mock_result,
-                    ):
-                        issues = linter.lint(context)
+                issues = linter.lint(context)
+                assert issues == []
 
-                        assert len(issues) == 1
-                        assert issues[0].source_tool == "checkstyle"
-                        assert issues[0].domain == ToolDomain.LINTING
-                        assert issues[0].severity == Severity.MEDIUM
-                        assert issues[0].line_start == 5
+    def test_lint_runtime_error_from_ensure_binary(self) -> None:
+        """Verify RuntimeError from ensure_binary is caught and returns []."""
+        linter = CheckstyleLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            context = ScanContext(
+                project_root=Path(tmpdir),
+                paths=[Path(tmpdir)],
+                enabled_domains=[],
+            )
+
+            with patch.object(
+                linter,
+                "ensure_binary",
+                side_effect=RuntimeError("Failed to download Checkstyle"),
+            ):
+                issues = linter.lint(context)
+                assert issues == []
+
+    def test_lint_no_files(self) -> None:
+        """Test lint returns empty when no Java files found."""
+        linter = CheckstyleLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            context = ScanContext(
+                project_root=Path(tmpdir),
+                paths=[Path(tmpdir)],
+                enabled_domains=[],
+            )
+
+            with patch.object(
+                linter, "ensure_binary", return_value=Path("/opt/checkstyle.jar")
+            ):
+                issues = linter.lint(context)
+                assert issues == []
 
     def test_lint_timeout(self) -> None:
         """Test lint handles timeout."""
@@ -376,8 +634,7 @@ class TestCheckstyleLint:
         with tempfile.TemporaryDirectory() as tmpdir:
             src_dir = Path(tmpdir) / "src"
             src_dir.mkdir()
-            java_file = src_dir / "Main.java"
-            java_file.touch()
+            (src_dir / "Main.java").touch()
 
             context = ScanContext(
                 project_root=Path(tmpdir),
@@ -386,19 +643,14 @@ class TestCheckstyleLint:
             )
 
             with patch.object(
-                linter,
-                "ensure_binary",
-                return_value=(Path("/usr/bin/checkstyle"), "standalone"),
+                linter, "ensure_binary", return_value=Path("/opt/checkstyle.jar")
             ):
-                with patch.object(
-                    linter, "_check_java_available", return_value=Path("/usr/bin/java")
+                with patch(
+                    "lucidshark.plugins.linters.checkstyle.run_with_streaming",
+                    side_effect=subprocess.TimeoutExpired("java", 120),
                 ):
-                    with patch(
-                        "lucidshark.plugins.linters.checkstyle.run_with_streaming",
-                        side_effect=subprocess.TimeoutExpired("java", 120),
-                    ):
-                        issues = linter.lint(context)
-                        assert issues == []
+                    issues = linter.lint(context)
+                    assert issues == []
 
     def test_lint_subprocess_error(self) -> None:
         """Test lint handles subprocess errors."""
@@ -407,8 +659,7 @@ class TestCheckstyleLint:
         with tempfile.TemporaryDirectory() as tmpdir:
             src_dir = Path(tmpdir) / "src"
             src_dir.mkdir()
-            java_file = src_dir / "Main.java"
-            java_file.touch()
+            (src_dir / "Main.java").touch()
 
             context = ScanContext(
                 project_root=Path(tmpdir),
@@ -417,19 +668,127 @@ class TestCheckstyleLint:
             )
 
             with patch.object(
-                linter,
-                "ensure_binary",
-                return_value=(Path("/usr/bin/checkstyle"), "standalone"),
+                linter, "ensure_binary", return_value=Path("/opt/checkstyle.jar")
             ):
-                with patch.object(
-                    linter, "_check_java_available", return_value=Path("/usr/bin/java")
+                with patch(
+                    "lucidshark.plugins.linters.checkstyle.run_with_streaming",
+                    side_effect=OSError("command failed"),
+                ):
+                    issues = linter.lint(context)
+                    assert issues == []
+
+    def test_lint_nonzero_exit_code_with_valid_xml(self) -> None:
+        """Verify issues are parsed even when Checkstyle returns non-zero exit code."""
+        linter = CheckstyleLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            src_dir = tmpdir_path / "src"
+            src_dir.mkdir()
+            (src_dir / "Main.java").touch()
+
+            context = ScanContext(
+                project_root=tmpdir_path,
+                paths=[src_dir],
+                enabled_domains=[],
+            )
+
+            # Checkstyle returns non-zero when violations are found
+            mock_result = make_completed_process(1, SAMPLE_CHECKSTYLE_OUTPUT)
+
+            with patch.object(
+                linter, "ensure_binary", return_value=Path("/opt/checkstyle.jar")
+            ):
+                with patch(
+                    "lucidshark.plugins.linters.checkstyle.run_with_streaming",
+                    return_value=mock_result,
+                ):
+                    issues = linter.lint(context)
+                    assert len(issues) == 1
+                    assert issues[0].rule_id == "MissingJavadocMethodCheck"
+
+    def test_lint_temp_file_cleaned_up_on_success(self) -> None:
+        """Verify temp file is deleted after successful lint."""
+        linter = CheckstyleLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            src_dir = tmpdir_path / "src"
+            src_dir.mkdir()
+            (src_dir / "Main.java").touch()
+
+            context = ScanContext(
+                project_root=tmpdir_path,
+                paths=[src_dir],
+                enabled_domains=[],
+            )
+
+            mock_result = make_completed_process(
+                0, '<?xml version="1.0"?><checkstyle/>'
+            )
+            created_files = []
+            original_named_temp = tempfile.NamedTemporaryFile
+
+            def tracking_temp(*args, **kwargs):
+                f = original_named_temp(*args, **kwargs)
+                created_files.append(Path(f.name))
+                return f
+
+            with patch.object(
+                linter, "ensure_binary", return_value=Path("/opt/checkstyle.jar")
+            ):
+                with patch(
+                    "lucidshark.plugins.linters.checkstyle.run_with_streaming",
+                    return_value=mock_result,
                 ):
                     with patch(
-                        "lucidshark.plugins.linters.checkstyle.run_with_streaming",
-                        side_effect=OSError("command failed"),
+                        "lucidshark.plugins.linters.checkstyle.tempfile.NamedTemporaryFile",
+                        side_effect=tracking_temp,
+                    ):
+                        linter.lint(context)
+
+            for f in created_files:
+                assert not f.exists(), f"Temp file {f} should be cleaned up"
+
+    def test_lint_temp_file_cleaned_up_on_timeout(self) -> None:
+        """Verify temp file is deleted when run_with_streaming times out."""
+        linter = CheckstyleLinter()
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            src_dir = Path(tmpdir) / "src"
+            src_dir.mkdir()
+            (src_dir / "Main.java").touch()
+
+            context = ScanContext(
+                project_root=Path(tmpdir),
+                paths=[src_dir],
+                enabled_domains=[],
+            )
+
+            created_files = []
+            original_named_temp = tempfile.NamedTemporaryFile
+
+            def tracking_temp(*args, **kwargs):
+                f = original_named_temp(*args, **kwargs)
+                created_files.append(Path(f.name))
+                return f
+
+            with patch.object(
+                linter, "ensure_binary", return_value=Path("/opt/checkstyle.jar")
+            ):
+                with patch(
+                    "lucidshark.plugins.linters.checkstyle.run_with_streaming",
+                    side_effect=subprocess.TimeoutExpired("java", 120),
+                ):
+                    with patch(
+                        "lucidshark.plugins.linters.checkstyle.tempfile.NamedTemporaryFile",
+                        side_effect=tracking_temp,
                     ):
                         issues = linter.lint(context)
-                        assert issues == []
+
+            assert issues == []
+            for f in created_files:
+                assert not f.exists(), f"Temp file {f} should be cleaned up"
 
 
 class TestCheckstyleParseOutput:
@@ -451,35 +810,36 @@ class TestCheckstyleParseOutput:
         """Test parsing XML with no errors."""
         linter = CheckstyleLinter()
         xml = """<?xml version="1.0" encoding="UTF-8"?>
-<checkstyle version="10.12.0">
+<checkstyle version="13.3.0">
     <file name="/project/Main.java">
     </file>
 </checkstyle>"""
         issues = linter._parse_output(xml, Path("/project"))
         assert issues == []
 
-    def test_parse_multiple_files(self) -> None:
+    def test_parse_single_error(self) -> None:
+        """Test parsing XML with single error."""
+        linter = CheckstyleLinter()
+        issues = linter._parse_output(SAMPLE_CHECKSTYLE_OUTPUT, Path("/project"))
+        assert len(issues) == 1
+        assert issues[0].rule_id == "MissingJavadocMethodCheck"
+        assert issues[0].severity == Severity.MEDIUM
+        assert issues[0].line_start == 5
+
+    def test_parse_multiple_files_and_errors(self) -> None:
         """Test parsing XML with multiple files and errors."""
         linter = CheckstyleLinter()
-        xml = """<?xml version="1.0" encoding="UTF-8"?>
-<checkstyle version="10.12.0">
-    <file name="/project/A.java">
-        <error line="1" severity="error" message="Error 1"
-               source="com.example.Check1"/>
-    </file>
-    <file name="/project/B.java">
-        <error line="10" severity="warning" message="Warning 1"
-               source="com.example.Check2"/>
-        <error line="20" severity="info" message="Info 1"
-               source="com.example.Check3"/>
-    </file>
-</checkstyle>"""
-
-        issues = linter._parse_output(xml, Path("/project"))
+        issues = linter._parse_output(SAMPLE_CHECKSTYLE_MULTI_FILE, Path("/project"))
         assert len(issues) == 3
         assert issues[0].severity == Severity.HIGH
         assert issues[1].severity == Severity.MEDIUM
         assert issues[2].severity == Severity.LOW
+
+    def test_parse_whitespace_only_output(self) -> None:
+        """Verify whitespace-only output returns empty list."""
+        linter = CheckstyleLinter()
+        issues = linter._parse_output("   \n\t  ", Path("/project"))
+        assert issues == []
 
 
 class TestCheckstyleErrorToIssue:

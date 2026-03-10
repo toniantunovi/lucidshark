@@ -8,12 +8,17 @@ https://checkstyle.org/
 from __future__ import annotations
 
 import hashlib
+import importlib.resources  # nosemgrep: python37-compatibility-importlib2 (requires-python>=3.10)
 import shutil
 import subprocess
+import tempfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
+from lucidshark.bootstrap.download import secure_urlopen
+from lucidshark.bootstrap.paths import LucidsharkPaths
+from lucidshark.bootstrap.versions import get_tool_version
 from lucidshark.core.logging import get_logger
 from lucidshark.core.models import (
     ScanContext,
@@ -25,6 +30,9 @@ from lucidshark.core.subprocess_runner import run_with_streaming
 from lucidshark.plugins.linters.base import LinterPlugin
 
 LOGGER = get_logger(__name__)
+
+# Default version from pyproject.toml [tool.lucidshark.tools]
+DEFAULT_VERSION = get_tool_version("checkstyle")
 
 # Checkstyle severity mapping
 SEVERITY_MAP = {
@@ -38,13 +46,23 @@ SEVERITY_MAP = {
 class CheckstyleLinter(LinterPlugin):
     """Checkstyle linter plugin for Java code analysis."""
 
-    def __init__(self, project_root: Optional[Path] = None):
+    def __init__(
+        self,
+        version: str = DEFAULT_VERSION,
+        project_root: Optional[Path] = None,
+    ) -> None:
         """Initialize CheckstyleLinter.
 
         Args:
-            project_root: Optional project root for finding Checkstyle installation.
+            version: Checkstyle version to use.
+            project_root: Optional project root for binary cache.
         """
         super().__init__(project_root=project_root)
+        self._version = version
+        if project_root:
+            self._paths = LucidsharkPaths.for_project(project_root)
+        else:
+            self._paths = LucidsharkPaths.default()
 
     @property
     def name(self) -> str:
@@ -63,53 +81,81 @@ class CheckstyleLinter(LinterPlugin):
 
     def get_version(self) -> str:
         """Get Checkstyle version."""
-        try:
-            binary, _ = self.ensure_binary()
-            result = subprocess.run(
-                [str(binary), "--version"],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            if result.returncode == 0:
-                # Output: "Checkstyle version: X.Y.Z"
-                return result.stdout.strip().split()[-1]
-        except Exception:
-            pass
-        return "unknown"
+        return self._version
 
-    def _check_java_available(self) -> Optional[Path]:
-        """Check if Java is available.
+    def ensure_binary(self) -> Path:
+        """Ensure Checkstyle JAR is available, downloading if needed.
 
         Returns:
-            Path to java binary or None if not found.
-        """
-        java_path = shutil.which("java")
-        return Path(java_path) if java_path else None
-
-    def ensure_binary(self) -> Tuple[Path, str]:
-        """Ensure Checkstyle is available.
-
-        Checks for:
-        1. checkstyle command in PATH (standalone installation)
-
-        Returns:
-            Tuple of (path to checkstyle, mode: 'standalone' or 'jar').
+            Path to the Checkstyle all-in-one JAR.
 
         Raises:
-            FileNotFoundError: If Checkstyle is not installed.
+            FileNotFoundError: If Java is not available.
+            RuntimeError: If Checkstyle cannot be downloaded.
         """
-        # Check for standalone checkstyle command
-        checkstyle_path = shutil.which("checkstyle")
-        if checkstyle_path:
-            return Path(checkstyle_path), "standalone"
+        binary_dir = self._paths.plugin_bin_dir(self.name, self._version)
+        jar_path = binary_dir / f"checkstyle-{self._version}-all.jar"
 
-        raise FileNotFoundError(
-            "Checkstyle is not installed. Install it with:\n"
-            "  brew install checkstyle  (macOS)\n"
-            "  apt install checkstyle   (Debian/Ubuntu)\n"
-            "  OR use the Gradle/Maven Checkstyle plugin"
+        if jar_path.exists():
+            LOGGER.debug(f"Checkstyle JAR found at {jar_path}")
+            return jar_path
+
+        # Verify Java is available before downloading
+        if not shutil.which("java"):
+            raise FileNotFoundError(
+                "Java is required to run Checkstyle but was not found. "
+                "Install a JDK (e.g., OpenJDK 11+) and ensure 'java' is in PATH."
+            )
+
+        LOGGER.info(f"Downloading Checkstyle v{self._version}...")
+        self._download_binary(binary_dir)
+
+        if not jar_path.exists():
+            raise RuntimeError(f"Failed to download Checkstyle JAR to {jar_path}")
+
+        return jar_path
+
+    def _download_binary(self, dest_dir: Path) -> None:
+        """Download Checkstyle all-in-one JAR from GitHub releases.
+
+        Args:
+            dest_dir: Directory to save the JAR into.
+        """
+        # Construct download URL
+        # Format: https://github.com/checkstyle/checkstyle/releases/download/checkstyle-{VERSION}/checkstyle-{VERSION}-all.jar
+        url = (
+            f"https://github.com/checkstyle/checkstyle/releases/download/"
+            f"checkstyle-{self._version}/checkstyle-{self._version}-all.jar"
         )
+
+        LOGGER.debug(f"Downloading from {url}")
+
+        # Create destination directory
+        dest_dir.mkdir(parents=True, exist_ok=True)
+
+        # Validate URL scheme and domain for security
+        if not url.startswith("https://github.com/"):
+            raise ValueError(f"Invalid download URL: {url}")
+
+        jar_path = dest_dir / f"checkstyle-{self._version}-all.jar"
+
+        # Download JAR directly (no extraction needed)
+        tmp_file = tempfile.NamedTemporaryFile(suffix=".jar", delete=False)
+        tmp_path = Path(tmp_file.name)
+        try:
+            with secure_urlopen(url) as response:  # nosec B310 nosemgrep
+                tmp_file.write(response.read())
+            tmp_file.close()
+
+            # Move to final location
+            shutil.move(str(tmp_path), str(jar_path))
+            LOGGER.info(f"Checkstyle v{self._version} installed to {jar_path}")
+
+        finally:
+            # Ensure file is closed before attempting to delete
+            if not tmp_file.closed:
+                tmp_file.close()
+            tmp_path.unlink(missing_ok=True)
 
     def lint(self, context: ScanContext) -> List[UnifiedIssue]:
         """Run Checkstyle linting checks.
@@ -121,22 +167,13 @@ class CheckstyleLinter(LinterPlugin):
             List of linting issues.
         """
         try:
-            binary, mode = self.ensure_binary()
-        except FileNotFoundError as e:
+            jar_path = self.ensure_binary()
+        except (FileNotFoundError, RuntimeError) as e:
             LOGGER.warning(str(e))
             return []
 
         # Determine config file
         config_file = self._find_config_file(context.project_root)
-
-        # Build command for standalone checkstyle
-        cmd = [
-            str(binary),
-            "-c",
-            config_file,
-            "-f",
-            "xml",
-        ]
 
         # Find Java source files
         java_files = self._find_java_files(context)
@@ -144,24 +181,46 @@ class CheckstyleLinter(LinterPlugin):
             LOGGER.info("No Java files found to check")
             return []
 
-        cmd.extend(java_files)
-
-        LOGGER.debug(f"Running: {' '.join(cmd[:10])}...")  # Truncate for readability
-
+        # Write file list to temp file for precise targeting
+        file_list_file = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".txt", delete=False
+        )
+        file_list_path = Path(file_list_file.name)
         try:
-            result = run_with_streaming(
-                cmd=cmd,
-                cwd=context.project_root,
-                tool_name="checkstyle",
-                stream_handler=context.stream_handler,
-                timeout=120,
-            )
-        except subprocess.TimeoutExpired:
-            LOGGER.warning("Checkstyle timed out after 120 seconds")
-            return []
-        except Exception as e:
-            LOGGER.error(f"Failed to run Checkstyle: {e}")
-            return []
+            for f in java_files:
+                file_list_file.write(f + "\n")
+            file_list_file.close()
+
+            # Build command for java -jar execution
+            cmd = [
+                "java",
+                "-jar",
+                str(jar_path),
+                "-c",
+                config_file,
+                "-f",
+                "xml",
+            ]
+            cmd.extend(java_files)
+
+            LOGGER.debug(f"Running: {' '.join(cmd[:10])}...")
+
+            try:
+                result = run_with_streaming(
+                    cmd=cmd,
+                    cwd=context.project_root,
+                    tool_name="checkstyle",
+                    stream_handler=context.stream_handler,
+                    timeout=120,
+                )
+            except subprocess.TimeoutExpired:
+                LOGGER.warning("Checkstyle timed out after 120 seconds")
+                return []
+            except Exception as e:
+                LOGGER.error(f"Failed to run Checkstyle: {e}")
+                return []
+        finally:
+            file_list_path.unlink(missing_ok=True)
 
         # Parse XML output
         issues = self._parse_output(result.stdout, context.project_root)
@@ -176,13 +235,14 @@ class CheckstyleLinter(LinterPlugin):
             project_root: Project root directory.
 
         Returns:
-            Path to config file or built-in config name.
+            Path to config file or bundled config path.
         """
         # Check for custom config files
         custom_configs = [
             "checkstyle.xml",
             ".checkstyle.xml",
             "config/checkstyle/checkstyle.xml",
+            "config/checkstyle.xml",
         ]
 
         for config in custom_configs:
@@ -190,8 +250,29 @@ class CheckstyleLinter(LinterPlugin):
             if config_path.exists():
                 return str(config_path)
 
-        # Use built-in Google checks as default
-        return "/google_checks.xml"
+        # Use bundled google_checks configuration
+        # Cache it to .lucidshark/config since Checkstyle needs a real file path
+        cached_config = self._paths.config_dir / "checkstyle-google.xml"
+        if cached_config.exists():
+            return str(cached_config)
+
+        try:
+            config_resource = importlib.resources.files("lucidshark.data").joinpath(
+                "checkstyle-google.xml"
+            )
+            config_content = config_resource.read_text(encoding="utf-8")
+
+            # Cache to .lucidshark/config for Checkstyle to access
+            cached_config.parent.mkdir(parents=True, exist_ok=True)
+            cached_config.write_text(config_content, encoding="utf-8")
+            LOGGER.debug(f"Cached Checkstyle config to {cached_config}")
+            return str(cached_config)
+        except (ModuleNotFoundError, FileNotFoundError, TypeError) as e:
+            # Fallback to built-in google_checks if bundled config unavailable
+            LOGGER.debug(
+                f"Bundled Checkstyle config not found ({e}), using /google_checks.xml"
+            )
+            return "/google_checks.xml"
 
     def _find_java_files(self, context: ScanContext) -> List[str]:
         """Find Java source files to check.

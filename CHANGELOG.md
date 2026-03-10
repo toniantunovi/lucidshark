@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Checkstyle linter plugin** is now a managed tool — auto-downloaded from GitHub releases on first use, cached at `.lucidshark/bin/checkstyle/{version}/`
+  - Default configuration: bundled Google Java Style (`checkstyle-google.xml`) with relaxed Javadoc rules
+  - Custom config detection: `checkstyle.xml`, `.checkstyle.xml`, `config/checkstyle/checkstyle.xml`
+  - Only requires Java runtime (any Java project already has one)
 - **PMD linter plugin** for Java static analysis — complements Checkstyle with bug detection, design issues, performance, and complexity checks (296 rules across 8 categories)
   - Managed binary: auto-downloaded on first use from GitHub releases, cached at `.lucidshark/bin/pmd/{version}/`
   - Default ruleset: `rulesets/java/quickstart.xml` (118 rules); auto-detects custom configs (`pmd-ruleset.xml`, `pmd.xml`, `config/pmd/pmd.xml`, etc.)

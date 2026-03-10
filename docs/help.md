@@ -798,6 +798,8 @@ The following tools are **automatically downloaded** by LucidShark and do not re
 | `opengrep` | Security (SAST) | Static analysis for code security patterns |
 | `checkov` | Security (IaC) | Infrastructure-as-Code security scanner |
 | `duplo` | Duplication | Code duplication detection |
+| `pmd` | Linting (Java) | Bug detection, design issues, complexity analysis |
+| `checkstyle` | Linting (Java) | Style checking with Google or custom checks |
 
 #### Manually Installed Tools
 
@@ -810,8 +812,6 @@ All other tools must be installed manually before use. If you configure a tool t
 | `ruff` | Python | `pip install ruff` |
 | `eslint` | JavaScript, TypeScript | `npm install -g eslint` |
 | `biome` | JavaScript, TypeScript | `npm install -g @biomejs/biome` |
-| `checkstyle` | Java | `brew install checkstyle` (macOS) or download from checkstyle.org |
-| `pmd` | Java | **Managed** — auto-downloaded on first use (requires Java) |
 | `clippy` | Rust | `rustup component add clippy` |
 
 **Type Checkers:**

@@ -36,10 +36,11 @@ Java has two complementary linters. **Checkstyle** enforces coding style and con
 
 Java style checker distributed as a JAR file. Requires Java runtime.
 
-- Default configuration: Google Java Style (`google_checks.xml`)
+- **Managed tool** — auto-downloaded on first use, cached at `.lucidshark/bin/checkstyle/{version}/`
+- Default configuration: bundled Google Java Style (`checkstyle-google.xml`) with relaxed Javadoc rules
 - Custom config detection: `checkstyle.xml`, `.checkstyle.xml`, `config/checkstyle/checkstyle.xml`
 - Does not support auto-fix
-- Must be installed manually (`brew install checkstyle` on macOS)
+- Only requires Java (which any Java project already has)
 
 ### PMD
 
