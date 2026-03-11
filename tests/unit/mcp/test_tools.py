@@ -754,3 +754,89 @@ class TestLanguageDetection:
         assert "linting" in domains
         assert "sast" in domains
         assert "sca" in domains
+
+
+class TestMCPToolExecutorDomainPopulation:
+    """Tests for domain population in scan results."""
+
+    @pytest.fixture
+    def project_root(self, tmp_path: Path) -> Path:
+        """Create a temporary project root."""
+        return tmp_path
+
+    @pytest.fixture
+    def domain_config(self) -> LucidSharkConfig:
+        """Create a config with linting and type_checking enabled."""
+        from lucidshark.config.models import ScannerDomainConfig
+
+        return LucidSharkConfig(
+            pipeline=PipelineConfig(
+                linting=DomainPipelineConfig(enabled=True),
+                type_checking=DomainPipelineConfig(enabled=True),
+                testing=DomainPipelineConfig(enabled=True),
+            ),
+            scanners={
+                "sca": ScannerDomainConfig(enabled=True),
+                "sast": ScannerDomainConfig(enabled=True),
+            },
+        )
+
+    @pytest.fixture
+    def executor(
+        self, project_root: Path, domain_config: LucidSharkConfig
+    ) -> MCPToolExecutor:
+        """Create an executor instance with domain config."""
+        return MCPToolExecutor(project_root, domain_config)
+
+    @pytest.mark.asyncio
+    async def test_scan_result_shows_all_configured_domains(
+        self, executor: MCPToolExecutor
+    ) -> None:
+        """Test that scan result includes all configured domains in domain_status."""
+        # Only run linting, but config has linting, type_checking, testing, sca, sast
+        with patch.object(executor, "_run_linting", return_value=[]):
+            result = await executor.scan(["linting"])
+
+        # Should show all configured domains in domain_status
+        domain_status = result.get("domain_status", {})
+
+        # Linting was executed, should show pass
+        assert "linting" in domain_status
+        assert domain_status["linting"]["status"] == "pass"
+
+        # Other configured domains should show as skipped
+        for domain in ["type_checking", "testing", "sca", "sast"]:
+            assert domain in domain_status, f"Expected {domain} in domain_status"
+            assert domain_status[domain]["status"] == "skipped", (
+                f"Expected {domain} to be skipped, got {domain_status[domain]['status']}"
+            )
+
+    @pytest.mark.asyncio
+    async def test_scan_partial_domains_shows_correct_status(
+        self, executor: MCPToolExecutor
+    ) -> None:
+        """Test partial domain execution shows correct pass/skipped status."""
+        mock_issue = UnifiedIssue(
+            id="test-issue",
+            domain=ToolDomain.LINTING,
+            rule_id="F401",
+            source_tool="ruff",
+            severity=Severity.LOW,
+            title="Test issue",
+            description="Test",
+        )
+
+        with (
+            patch.object(executor, "_run_linting", return_value=[mock_issue]),
+            patch.object(executor, "_run_type_checking", return_value=[]),
+        ):
+            result = await executor.scan(["linting", "type_checking"])
+
+        domain_status = result.get("domain_status", {})
+
+        # Linting should be fail (has issues)
+        assert domain_status.get("linting", {}).get("status") == "fail"
+        # Type checking should be pass (no issues)
+        assert domain_status.get("type_checking", {}).get("status") == "pass"
+        # Testing should be skipped (not executed)
+        assert domain_status.get("testing", {}).get("status") == "skipped"

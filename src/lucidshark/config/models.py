@@ -346,6 +346,40 @@ class LucidSharkConfig:
 
         return domains
 
+    def get_all_configured_domains(self) -> List[str]:
+        """Get list of all configured domain names (both tool and security).
+
+        Returns domains that are explicitly enabled in the pipeline config.
+        Tool domains: linting, type_checking, testing, coverage, duplication, formatting
+        Security domains: sca, sast, iac, container
+
+        Returns:
+            List of domain names that are configured and enabled.
+        """
+        domains: List[str] = []
+
+        # Check tool domains in pipeline config
+        if self.pipeline.linting is not None and self.pipeline.linting.enabled:
+            domains.append("linting")
+        if (
+            self.pipeline.type_checking is not None
+            and self.pipeline.type_checking.enabled
+        ):
+            domains.append("type_checking")
+        if self.pipeline.testing is not None and self.pipeline.testing.enabled:
+            domains.append("testing")
+        if self.pipeline.coverage is not None and self.pipeline.coverage.enabled:
+            domains.append("coverage")
+        if self.pipeline.duplication is not None and self.pipeline.duplication.enabled:
+            domains.append("duplication")
+        if self.pipeline.formatting is not None and self.pipeline.formatting.enabled:
+            domains.append("formatting")
+
+        # Add security domains
+        domains.extend(self.get_enabled_domains())
+
+        return domains
+
     def get_plugin_for_domain(self, domain: str) -> str:
         """Get which plugin serves a domain.
 

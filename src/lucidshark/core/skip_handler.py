@@ -68,7 +68,9 @@ def _is_skip_mandatory(skip: ToolSkipInfo, config: "LucidSharkConfig") -> bool:
         return skip.reason not in INFORMATIONAL_REASONS
 
     # Per-tool mandatory config
-    domain_name = skip.domain.value if hasattr(skip.domain, "value") else str(skip.domain)
+    domain_name = (
+        skip.domain.value if hasattr(skip.domain, "value") else str(skip.domain)
+    )
 
     # Check pipeline domain config for tool-specific mandatory flag
     domain_config = getattr(config.pipeline, domain_name, None)
@@ -102,7 +104,9 @@ def _skip_to_issue(skip: ToolSkipInfo) -> UnifiedIssue:
         source_tool="lucidshark",
         severity=Severity.HIGH,
         rule_id="mandatory-tool-skipped",
-        title=title_map.get(skip.reason, f"Mandatory tool '{skip.tool_name}' was skipped"),
+        title=title_map.get(
+            skip.reason, f"Mandatory tool '{skip.tool_name}' was skipped"
+        ),
         description=skip.message,
         recommendation=skip.suggestion,
         fixable=False,

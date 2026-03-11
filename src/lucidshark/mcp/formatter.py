@@ -63,13 +63,17 @@ class InstructionFormatter:
         self,
         issues: List[UnifiedIssue],
         checked_domains: Optional[List[str]] = None,
+        executed_domains: Optional[List[str]] = None,
         duplication_result: Optional[DuplicationResult] = None,
     ) -> Dict[str, Any]:
         """Format scan result as AI instructions.
 
         Args:
             issues: List of unified issues from scan.
-            checked_domains: List of domain names that were checked.
+            checked_domains: List of domain names that should appear in output
+                (all configured domains).
+            executed_domains: List of domain names that were actually run.
+                If None, assumes all checked_domains were executed.
             duplication_result: Optional duplication detection result for percentage display.
 
         Returns:
@@ -78,7 +82,7 @@ class InstructionFormatter:
             - blocking: Whether there are high-priority issues
             - summary: Human-readable summary
             - severity_counts: Issues by severity level
-            - domain_status: Pass/fail status for each checked domain
+            - domain_status: Pass/fail/skipped status for each checked domain
             - issues_by_domain: Issues grouped by domain
             - instructions: Sorted list of fix instructions
             - recommended_action: Suggested next step
@@ -113,11 +117,22 @@ class InstructionFormatter:
                     issues_by_domain[domain_name] = []
                 issues_by_domain[domain_name].append(self._issue_to_brief(issue))
 
-        # Build domain status (pass/fail for each checked domain)
+        # Build domain status (pass/fail/skipped for each checked domain)
         # Only active (non-ignored) issues count toward pass/fail
+        # If executed_domains is not provided (None), assume all checked_domains were executed
+        # Empty list [] means no domains were executed (all should show as skipped)
+        executed_set = set(executed_domains) if executed_domains is not None else None
         domain_status: Dict[str, Dict[str, Any]] = {}
         if checked_domains:
             for domain in checked_domains:
+                # Check if domain was actually executed
+                if executed_set is not None and domain not in executed_set:
+                    domain_status[domain] = {
+                        "status": "skipped",
+                        "display": "Skipped",
+                    }
+                    continue
+
                 # Special handling for duplication domain - show percentage
                 if domain == "duplication" and duplication_result is not None:
                     pct = duplication_result.duplication_percent

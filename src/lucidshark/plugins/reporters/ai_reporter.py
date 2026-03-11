@@ -53,6 +53,8 @@ class AIReporter(ReporterPlugin):
         """Convert ScanResult to AI-friendly format."""
         # Get checked domains from metadata
         checked_domains = self._get_checked_domains(result)
+        # Get executed domains (subset of checked that were actually run)
+        executed_domains = self._get_executed_domains(result)
 
         # Convert duplication summary to DuplicationResult if present
         duplication_result = None
@@ -72,6 +74,7 @@ class AIReporter(ReporterPlugin):
         output = self._formatter.format_scan_result(
             issues=result.issues,
             checked_domains=checked_domains,
+            executed_domains=executed_domains,
             duplication_result=duplication_result,
         )
 
@@ -87,7 +90,9 @@ class AIReporter(ReporterPlugin):
             output["skipped_tools"] = [
                 {
                     "tool": skip.tool_name,
-                    "domain": skip.domain.value if hasattr(skip.domain, "value") else str(skip.domain),
+                    "domain": skip.domain.value
+                    if hasattr(skip.domain, "value")
+                    else str(skip.domain),
                     "reason": skip.reason.value,
                     "message": skip.message,
                     "suggestion": skip.suggestion,
@@ -103,6 +108,11 @@ class AIReporter(ReporterPlugin):
 
     def _get_checked_domains(self, result: ScanResult) -> List[str]:
         """Extract checked domains from scan result metadata."""
+        # Prefer explicit enabled_domains from metadata (set by CLI scan)
+        if result.metadata and result.metadata.enabled_domains:
+            return result.metadata.enabled_domains
+
+        # Fall back to extracting from scanners_used
         checked_domains: List[str] = []
 
         if result.metadata and result.metadata.scanners_used:
@@ -119,3 +129,16 @@ class AIReporter(ReporterPlugin):
             checked_domains = list(seen_domains)
 
         return checked_domains
+
+    def _get_executed_domains(self, result: ScanResult) -> List[str]:
+        """Extract executed domains from scan result metadata.
+
+        Returns the list of domains that were actually run (as opposed to
+        just configured). If executed_domains is not set, falls back to
+        enabled_domains for backward compatibility.
+        """
+        if result.metadata and result.metadata.executed_domains:
+            return result.metadata.executed_domains
+
+        # Fall back to enabled_domains (assume all enabled were executed)
+        return self._get_checked_domains(result)

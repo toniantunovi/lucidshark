@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import IO, List
+from typing import IO, List, Set
 
 from lucidshark.core.models import ScanResult
 from lucidshark.plugins.reporters.base import ReporterPlugin
@@ -14,7 +14,7 @@ class SummaryReporter(ReporterPlugin):
     Produces a concise summary with:
     - Total issue count
     - Breakdown by severity
-    - Breakdown by scanner domain
+    - Breakdown by scanner domain (all configured domains)
     - Scan duration and project info
     """
 
@@ -54,10 +54,8 @@ class SummaryReporter(ReporterPlugin):
                     if count > 0:
                         lines.append(f"  {sev.upper()}: {count}")
 
-            if result.summary.by_scanner:
-                lines.append("\nBy domain:")
-                for domain, count in result.summary.by_scanner.items():
-                    lines.append(f"  {domain.upper()}: {count}")
+            # Show all configured domains with their status
+            lines.extend(self._format_domain_status(result))
         else:
             lines.append("All checks passed. No issues found.")
 
@@ -101,5 +99,48 @@ class SummaryReporter(ReporterPlugin):
         if result.metadata:
             lines.append(f"\nScan duration: {result.metadata.duration_ms}ms")
             lines.append(f"Project: {result.metadata.project_root}")
+
+        return lines
+
+    def _format_domain_status(self, result: ScanResult) -> List[str]:
+        """Format domain status showing all configured domains.
+
+        Shows pass/fail/skipped status for each configured domain.
+        """
+        lines: List[str] = []
+
+        # Get configured and executed domains from metadata
+        enabled_domains: List[str] = []
+        executed_domains: Set[str] = set()
+
+        if result.metadata:
+            enabled_domains = result.metadata.enabled_domains or []
+            executed_domains = set(result.metadata.executed_domains or [])
+
+        # If no metadata, fall back to showing domains with issues
+        if not enabled_domains:
+            if result.summary and result.summary.by_scanner:
+                lines.append("\nBy domain:")
+                for domain, count in result.summary.by_scanner.items():
+                    lines.append(f"  {domain.upper()}: {count} issues")
+            return lines
+
+        # Build issue counts by domain
+        issues_by_domain: dict[str, int] = {}
+        if result.summary and result.summary.by_scanner:
+            issues_by_domain = result.summary.by_scanner
+
+        lines.append("\nBy domain:")
+        for domain in enabled_domains:
+            issue_count = issues_by_domain.get(domain, 0)
+
+            if domain not in executed_domains:
+                status = "SKIPPED"
+            elif issue_count == 0:
+                status = "PASS"
+            else:
+                status = f"{issue_count} issues"
+
+            lines.append(f"  {domain.upper()}: {status}")
 
         return lines

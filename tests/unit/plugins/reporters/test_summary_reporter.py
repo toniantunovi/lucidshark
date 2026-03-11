@@ -232,3 +232,126 @@ class TestSummaryFormatSummary:
         assert "Coverage: 85.0% (PASSED)" in text
         assert "Duplication: 5.0% (PASSED)" in text
         assert "Scan duration: 5000ms" in text
+
+
+# --- _format_domain_status ---
+
+
+class TestSummaryFormatDomainStatus:
+    """Tests for _format_domain_status method."""
+
+    def test_no_metadata_falls_back_to_by_scanner(
+        self, reporter: SummaryReporter
+    ) -> None:
+        """When no metadata, fall back to showing domains with issues."""
+        result = ScanResult(
+            summary=ScanSummary(
+                total=5,
+                by_scanner={"sca": 3, "sast": 2},
+            )
+        )
+        lines = reporter._format_domain_status(result)
+        text = "\n".join(lines)
+        assert "By domain:" in text
+        assert "SCA: 3 issues" in text
+        assert "SAST: 2 issues" in text
+
+    def test_shows_all_enabled_domains(self, reporter: SummaryReporter) -> None:
+        """Shows all configured domains with their status."""
+        metadata = _make_metadata()
+        metadata.enabled_domains = ["linting", "type_checking", "sca", "sast"]
+        metadata.executed_domains = ["linting", "type_checking", "sca", "sast"]
+
+        result = ScanResult(
+            summary=ScanSummary(
+                total=3,
+                by_scanner={"linting": 3},
+            ),
+            metadata=metadata,
+        )
+        lines = reporter._format_domain_status(result)
+        text = "\n".join(lines)
+
+        assert "LINTING: 3 issues" in text
+        assert "TYPE_CHECKING: PASS" in text
+        assert "SCA: PASS" in text
+        assert "SAST: PASS" in text
+
+    def test_shows_skipped_for_not_executed(self, reporter: SummaryReporter) -> None:
+        """Domains not in executed_domains show as SKIPPED."""
+        metadata = _make_metadata()
+        metadata.enabled_domains = ["linting", "testing", "coverage", "sca"]
+        metadata.executed_domains = ["sca"]  # Only SCA executed
+
+        result = ScanResult(
+            summary=ScanSummary(total=0),
+            metadata=metadata,
+        )
+        lines = reporter._format_domain_status(result)
+        text = "\n".join(lines)
+
+        assert "LINTING: SKIPPED" in text
+        assert "TESTING: SKIPPED" in text
+        assert "COVERAGE: SKIPPED" in text
+        assert "SCA: PASS" in text
+
+    def test_all_domains_skipped(self, reporter: SummaryReporter) -> None:
+        """When no domains executed, all show as SKIPPED."""
+        metadata = _make_metadata()
+        metadata.enabled_domains = ["linting", "type_checking", "testing"]
+        metadata.executed_domains = []
+
+        result = ScanResult(
+            summary=ScanSummary(total=0),
+            metadata=metadata,
+        )
+        lines = reporter._format_domain_status(result)
+        text = "\n".join(lines)
+
+        assert "LINTING: SKIPPED" in text
+        assert "TYPE_CHECKING: SKIPPED" in text
+        assert "TESTING: SKIPPED" in text
+
+    def test_mixed_pass_fail_skipped(self, reporter: SummaryReporter) -> None:
+        """Test mix of pass, fail, and skipped domains."""
+        metadata = _make_metadata()
+        metadata.enabled_domains = [
+            "linting",
+            "type_checking",
+            "testing",
+            "sca",
+            "sast",
+        ]
+        metadata.executed_domains = ["linting", "sca", "sast"]
+
+        result = ScanResult(
+            summary=ScanSummary(
+                total=5,
+                by_scanner={"linting": 3, "sast": 2},
+            ),
+            metadata=metadata,
+        )
+        lines = reporter._format_domain_status(result)
+        text = "\n".join(lines)
+
+        assert "LINTING: 3 issues" in text  # fail
+        assert "TYPE_CHECKING: SKIPPED" in text
+        assert "TESTING: SKIPPED" in text
+        assert "SCA: PASS" in text
+        assert "SAST: 2 issues" in text  # fail
+
+    def test_empty_enabled_domains_returns_empty(
+        self, reporter: SummaryReporter
+    ) -> None:
+        """When enabled_domains is empty and no by_scanner, return minimal output."""
+        metadata = _make_metadata()
+        metadata.enabled_domains = []
+        metadata.executed_domains = []
+
+        result = ScanResult(
+            summary=ScanSummary(total=0),
+            metadata=metadata,
+        )
+        lines = reporter._format_domain_status(result)
+        # Should return empty since no domains configured
+        assert lines == []

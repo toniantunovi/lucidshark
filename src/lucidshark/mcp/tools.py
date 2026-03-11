@@ -425,15 +425,19 @@ class MCPToolExecutor:
         for issue in all_issues:
             self._issue_cache[issue.id] = issue
 
-        # Build list of checked domain names for the formatter
-        checked_domain_names: List[str] = []
+        # Build list of executed domain names (what was actually run)
+        executed_domain_names: List[str] = []
         for domain in enabled_domains:
-            checked_domain_names.append(domain.value)
+            executed_domain_names.append(domain.value)
+
+        # Get all configured domains for the report
+        all_configured_domains = self.config.get_all_configured_domains()
 
         # Format as AI instructions with domain status
         formatted_result = self.instruction_formatter.format_scan_result(
             all_issues,
-            checked_domains=checked_domain_names,
+            checked_domains=all_configured_domains,
+            executed_domains=executed_domain_names,
             duplication_result=context.duplication_result,
         )
 

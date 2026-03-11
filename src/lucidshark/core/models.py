@@ -308,6 +308,8 @@ class ScanMetadata:
     duration_ms: int
     project_root: str
     scanners_used: List[Dict[str, Any]] = field(default_factory=list)
+    enabled_domains: List[str] = field(default_factory=list)
+    executed_domains: List[str] = field(default_factory=list)
 
 
 @dataclass

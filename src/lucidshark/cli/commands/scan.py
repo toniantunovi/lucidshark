@@ -22,6 +22,7 @@ from lucidshark.core.models import (
     CoverageSummary,
     DuplicationSummary,
     ScanContext,
+    ScanMetadata,
     ScanResult,
     UnifiedIssue,
 )
@@ -611,9 +612,47 @@ class ScanCommand(Command):
         result.coverage_summary = coverage_summary
         result.duplication_summary = duplication_summary
 
+        # Collect all configured domains for reporting
+        # This ensures all domains from config appear in the output, even if not run
+        all_configured_domains = config.get_all_configured_domains()
+
+        # Track which domains were actually executed
+        executed_domains: List[str] = []
+        if linting_enabled:
+            executed_domains.append("linting")
+        if type_checking_enabled:
+            executed_domains.append("type_checking")
+        if formatting_enabled:
+            executed_domains.append("formatting")
+        if testing_enabled:
+            executed_domains.append("testing")
+        if coverage_enabled:
+            executed_domains.append("coverage")
+        if duplication_enabled:
+            executed_domains.append("duplication")
+        # Add security domains that were run
+        for domain in enabled_domains:
+            executed_domains.append(domain.value)
+
         # Preserve metadata from pipeline execution
         if pipeline_result and pipeline_result.metadata:
             result.metadata = pipeline_result.metadata
+            result.metadata.enabled_domains = all_configured_domains
+            result.metadata.executed_domains = executed_domains
+        else:
+            # Create minimal metadata if pipeline wasn't run
+            from datetime import datetime
+
+            now = datetime.now()
+            result.metadata = ScanMetadata(
+                lucidshark_version=self._version,
+                scan_started_at=now.isoformat(),
+                scan_finished_at=now.isoformat(),
+                duration_ms=0,
+                project_root=str(project_root),
+                enabled_domains=all_configured_domains,
+                executed_domains=executed_domains,
+            )
 
         # Store full (unfiltered) results for scope-based threshold checking
         if base_branch and full_issues is not all_issues:
@@ -625,7 +664,9 @@ class ScanCommand(Command):
             from lucidshark.core.skip_handler import process_skips
 
             # Process skips to determine mandatory flag and generate issues
-            processed_skips, mandatory_issues = process_skips(context.tool_skips, config)
+            processed_skips, mandatory_issues = process_skips(
+                context.tool_skips, config
+            )
             result.tool_skips = processed_skips
 
             # Add mandatory skip issues to the result

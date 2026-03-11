@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.57] - 2026-03-11
+
 ### Added
 - **Strict mode** (enabled by default) — all configured tools must run successfully for a scan to pass
   - `settings.strict_mode: true` (default) — tool skips (not installed, missing prerequisites, execution failed) create HIGH severity issues
@@ -14,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Skipped tools now tracked with `ToolSkipInfo` and `SkipReason` (tool_not_installed, no_applicable_files, missing_prerequisite, execution_failed)
 - **Testing failures now block scans** — when tests fail, a HIGH severity issue is created with pass/fail/skip/error counts
 - **Skipped tools section** in reporter output — summary and AI reporters now show which tools were skipped and why, with suggestions for fixing
+- **Domain status for all configured domains** — scan reports now show status for ALL configured domains, not just the ones that were executed
+  - Domains that weren't executed show "Skipped" status (e.g., when running `--linting` only, other configured domains show as skipped)
+  - New `enabled_domains` and `executed_domains` fields in `ScanMetadata` for tracking configuration vs execution
+  - `get_all_configured_domains()` method added to `LucidSharkConfig` to list all domains configured in pipeline and scanners
 
 ### Changed
 - **Breaking:** Coverage with 0/0 lines measured now fails instead of passing — previously returned 100% (vacuous pass), now returns 0% and fails any threshold
@@ -191,6 +197,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - YAML configuration system
 - CI/CD integration support
 
+[0.5.57]: https://github.com/toniantunovi/lucidshark/compare/v0.5.54...v0.5.57
 [0.5.54]: https://github.com/toniantunovi/lucidshark/compare/v0.5.50...v0.5.54
 [0.5.50]: https://github.com/toniantunovi/lucidshark/compare/v0.5.48...v0.5.50
 [0.5.48]: https://github.com/toniantunovi/lucidshark/compare/v0.5.46...v0.5.48

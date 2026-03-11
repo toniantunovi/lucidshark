@@ -410,6 +410,18 @@ All results normalized to common schema:
     "testing": { "passed": 42, "failed": 0 },
     "coverage": { "percentage": 85, "threshold": 80, "passed": true }
   },
+  "domain_status": {
+    "linting": { "status": "fail", "display": "3 issues" },
+    "type_checking": { "status": "fail", "display": "1 issue" },
+    "sast": { "status": "pass", "display": "Pass" },
+    "sca": { "status": "fail", "display": "3 issues" },
+    "testing": { "status": "skipped", "display": "Skipped" },
+    "coverage": { "status": "skipped", "display": "Skipped" }
+  },
+  "metadata": {
+    "enabled_domains": ["linting", "type_checking", "sast", "sca", "testing", "coverage"],
+    "executed_domains": ["linting", "type_checking", "sast", "sca"]
+  },
   "passed": false,
   "exit_code": 1
 }

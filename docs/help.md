@@ -347,6 +347,14 @@ Run quality checks on the codebase or specific files. Supports partial scanning 
   "blocking": true,
   "summary": "5 issues found: 1 critical, 2 high, 2 medium",
   "severity_counts": {"critical": 1, "high": 2, "medium": 2},
+  "domain_status": {
+    "linting": {"status": "pass", "display": "Pass"},
+    "type_checking": {"status": "fail", "display": "3 issues"},
+    "sast": {"status": "pass", "display": "Pass"},
+    "sca": {"status": "fail", "display": "2 issues"},
+    "testing": {"status": "skipped", "display": "Skipped"},
+    "coverage": {"status": "skipped", "display": "Skipped"}
+  },
   "instructions": [
     {
       "priority": 1,
@@ -360,6 +368,12 @@ Run quality checks on the codebase or specific files. Supports partial scanning 
     }
   ]
 }
+```
+
+The `domain_status` field shows all configured domains with their status:
+- `pass`: Domain executed with no issues
+- `fail`: Domain executed with issues found
+- `skipped`: Domain is configured but wasn't executed in this scan
 ```
 
 **Examples:**
@@ -1427,7 +1441,7 @@ Example:
 
 #### 2. Summary (always at the end)
 
-Conclude with a summary across all domains:
+Conclude with a summary across all domains. **Important:** Show ALL configured domains, not just the ones that were executed. Domains that weren't run in this scan should show "Skipped" status:
 
 ```
 ---
@@ -1439,13 +1453,18 @@ Conclude with a summary across all domains:
 | Type Checking | 1 issue |
 | Security | ✓ Pass |
 | SCA | ✓ Pass |
+| Testing | ⊘ Skipped |
+| Coverage | ⊘ Skipped |
+| Duplication | ⊘ Skipped |
 
 **Recommended action**: Run `scan(fix=true)` to auto-fix 2 linting issues, then address the type error.
 ```
 
+The "Skipped" status indicates domains that are configured in `lucidshark.yml` but weren't included in this specific scan run. This helps users understand what checks exist vs what was actually executed.
+
 #### 3. When All Checks Pass
 
-Even with no issues, confirm what was checked:
+Even with no issues, confirm what was checked. Show all configured domains with their status:
 
 ```
 **Scan Complete**: All checks passed ✓
@@ -1455,9 +1474,14 @@ Even with no issues, confirm what was checked:
 | Linting | ✓ Pass |
 | Type Checking | ✓ Pass |
 | Security | ✓ Pass |
+| SCA | ✓ Pass |
+| Testing | ⊘ Skipped |
+| Coverage | ⊘ Skipped |
 
 Ready to proceed.
 ```
+
+This makes it clear which domains were executed (Pass) vs which are configured but not run (Skipped).
 
 ### Recommended Workflow
 

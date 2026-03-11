@@ -283,3 +283,162 @@ class TestLucidSharkConfigIgnoreIssues:
         assert len(config.ignore_issues) == 2
         assert config.ignore_issues[0].rule_id == "E501"
         assert config.ignore_issues[1].reason == "accepted"
+
+
+class TestLucidSharkConfigGetAllConfiguredDomains:
+    """Tests for LucidSharkConfig.get_all_configured_domains method."""
+
+    def test_returns_empty_when_nothing_configured(self) -> None:
+        config = LucidSharkConfig()
+        assert config.get_all_configured_domains() == []
+
+    def test_returns_tool_domains_from_pipeline(self) -> None:
+        from lucidshark.config.models import PipelineConfig
+
+        config = LucidSharkConfig(
+            pipeline=PipelineConfig(
+                linting=DomainPipelineConfig(enabled=True),
+                type_checking=DomainPipelineConfig(enabled=True),
+                testing=DomainPipelineConfig(enabled=False),  # Disabled
+            )
+        )
+        domains = config.get_all_configured_domains()
+        assert "linting" in domains
+        assert "type_checking" in domains
+        assert "testing" not in domains  # Disabled
+
+    def test_returns_coverage_and_duplication(self) -> None:
+        from lucidshark.config.models import (
+            DuplicationPipelineConfig,
+            PipelineConfig,
+        )
+
+        config = LucidSharkConfig(
+            pipeline=PipelineConfig(
+                coverage=CoveragePipelineConfig(enabled=True),
+                duplication=DuplicationPipelineConfig(enabled=True),
+            )
+        )
+        domains = config.get_all_configured_domains()
+        assert "coverage" in domains
+        assert "duplication" in domains
+
+    def test_returns_security_domains(self) -> None:
+        config = LucidSharkConfig(
+            scanners={
+                "sca": ScannerDomainConfig(enabled=True),
+                "sast": ScannerDomainConfig(enabled=True),
+                "iac": ScannerDomainConfig(enabled=False),
+            }
+        )
+        domains = config.get_all_configured_domains()
+        assert "sca" in domains
+        assert "sast" in domains
+        assert "iac" not in domains
+
+    def test_returns_all_domains_combined(self) -> None:
+        from lucidshark.config.models import (
+            DuplicationPipelineConfig,
+            PipelineConfig,
+        )
+
+        config = LucidSharkConfig(
+            pipeline=PipelineConfig(
+                linting=DomainPipelineConfig(enabled=True),
+                type_checking=DomainPipelineConfig(enabled=True),
+                testing=DomainPipelineConfig(enabled=True),
+                coverage=CoveragePipelineConfig(enabled=True),
+                duplication=DuplicationPipelineConfig(enabled=True),
+            ),
+            scanners={
+                "sca": ScannerDomainConfig(enabled=True),
+                "sast": ScannerDomainConfig(enabled=True),
+            },
+        )
+        domains = config.get_all_configured_domains()
+
+        # Should have all tool domains
+        assert "linting" in domains
+        assert "type_checking" in domains
+        assert "testing" in domains
+        assert "coverage" in domains
+        assert "duplication" in domains
+        # Should have security domains
+        assert "sca" in domains
+        assert "sast" in domains
+        # Should be 7 total
+        assert len(domains) == 7
+
+    def test_formatting_disabled_not_included(self) -> None:
+        from lucidshark.config.models import PipelineConfig
+
+        config = LucidSharkConfig(
+            pipeline=PipelineConfig(
+                formatting=DomainPipelineConfig(enabled=False),
+            )
+        )
+        domains = config.get_all_configured_domains()
+        assert "formatting" not in domains
+
+    def test_formatting_enabled_included(self) -> None:
+        from lucidshark.config.models import PipelineConfig
+
+        config = LucidSharkConfig(
+            pipeline=PipelineConfig(
+                formatting=DomainPipelineConfig(enabled=True),
+            )
+        )
+        domains = config.get_all_configured_domains()
+        assert "formatting" in domains
+
+    def test_explicitly_disabled_domains_not_included(self) -> None:
+        """Test that domains with enabled=False are not included."""
+        from lucidshark.config.models import (
+            DuplicationPipelineConfig,
+            PipelineConfig,
+        )
+
+        config = LucidSharkConfig(
+            pipeline=PipelineConfig(
+                linting=DomainPipelineConfig(enabled=True),
+                type_checking=DomainPipelineConfig(
+                    enabled=False
+                ),  # Explicitly disabled
+                testing=DomainPipelineConfig(enabled=True),
+                coverage=CoveragePipelineConfig(enabled=False),  # Explicitly disabled
+                duplication=DuplicationPipelineConfig(enabled=True),
+            ),
+            scanners={
+                "sca": ScannerDomainConfig(enabled=True),
+                "sast": ScannerDomainConfig(enabled=False),  # Explicitly disabled
+            },
+        )
+        domains = config.get_all_configured_domains()
+
+        # Enabled domains should be present
+        assert "linting" in domains
+        assert "testing" in domains
+        assert "duplication" in domains
+        assert "sca" in domains
+
+        # Disabled domains should NOT be present
+        assert "type_checking" not in domains
+        assert "coverage" not in domains
+        assert "sast" not in domains
+
+    def test_none_pipeline_configs_not_included(self) -> None:
+        """Test that None pipeline configs are not included."""
+        from lucidshark.config.models import PipelineConfig
+
+        config = LucidSharkConfig(
+            pipeline=PipelineConfig(
+                linting=DomainPipelineConfig(enabled=True),
+                type_checking=None,  # Not configured at all
+                testing=None,
+            )
+        )
+        domains = config.get_all_configured_domains()
+
+        assert "linting" in domains
+        assert "type_checking" not in domains
+        assert "testing" not in domains

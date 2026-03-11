@@ -548,3 +548,170 @@ class TestInstructionFormatter:
         # Domain should pass because the only issue is ignored
         assert result["domain_status"]["sca"]["status"] == "pass"
         assert result["domain_status"]["sca"]["issue_count"] == 0
+
+    def test_format_scan_result_with_executed_domains(
+        self, formatter: InstructionFormatter
+    ) -> None:
+        """Test that domains not in executed_domains show as skipped."""
+        issues = [
+            UnifiedIssue(
+                id="issue-1",
+                domain=ScanDomain.SAST,
+                source_tool="opengrep",
+                severity=Severity.MEDIUM,
+                rule_id="test-rule",
+                title="Test issue",
+                description="Test",
+            )
+        ]
+
+        result = formatter.format_scan_result(
+            issues,
+            checked_domains=["linting", "sast", "sca"],
+            executed_domains=["sast", "sca"],  # linting not executed
+        )
+
+        # Linting should show as skipped
+        assert result["domain_status"]["linting"]["status"] == "skipped"
+        assert result["domain_status"]["linting"]["display"] == "Skipped"
+        # SAST should show fail (has issues)
+        assert result["domain_status"]["sast"]["status"] == "fail"
+        # SCA should show pass (executed, no issues)
+        assert result["domain_status"]["sca"]["status"] == "pass"
+
+    def test_format_scan_result_all_domains_skipped(
+        self, formatter: InstructionFormatter
+    ) -> None:
+        """Test when all configured domains are skipped."""
+        result = formatter.format_scan_result(
+            [],
+            checked_domains=["linting", "testing", "coverage"],
+            executed_domains=[],  # None executed
+        )
+
+        for domain in ["linting", "testing", "coverage"]:
+            assert result["domain_status"][domain]["status"] == "skipped"
+            assert result["domain_status"][domain]["display"] == "Skipped"
+
+    def test_format_scan_result_executed_domains_none_fallback(
+        self, formatter: InstructionFormatter
+    ) -> None:
+        """Test backward compatibility when executed_domains is None."""
+        issues = [
+            UnifiedIssue(
+                id="issue-1",
+                domain=ScanDomain.SCA,
+                source_tool="trivy",
+                severity=Severity.LOW,
+                rule_id="CVE-2024-1234",
+                title="Test",
+                description="Test",
+            )
+        ]
+
+        # When executed_domains is None, all checked_domains assumed executed
+        result = formatter.format_scan_result(
+            issues,
+            checked_domains=["sca", "sast"],
+            executed_domains=None,
+        )
+
+        # Both should have proper status (not skipped)
+        assert result["domain_status"]["sca"]["status"] == "fail"
+        assert result["domain_status"]["sast"]["status"] == "pass"
+
+    def test_format_scan_result_mixed_domain_states(
+        self, formatter: InstructionFormatter
+    ) -> None:
+        """Test mix of skipped, pass, and fail domains."""
+        issues = [
+            UnifiedIssue(
+                id="issue-1",
+                domain=ToolDomain.LINTING,
+                source_tool="ruff",
+                severity=Severity.MEDIUM,
+                rule_id="E501",
+                title="Line too long",
+                description="Test",
+            ),
+            UnifiedIssue(
+                id="issue-2",
+                domain=ToolDomain.LINTING,
+                source_tool="ruff",
+                severity=Severity.LOW,
+                rule_id="F401",
+                title="Unused import",
+                description="Test",
+            ),
+        ]
+
+        result = formatter.format_scan_result(
+            issues,
+            checked_domains=["linting", "type_checking", "testing", "sca"],
+            executed_domains=["linting", "type_checking", "sca"],
+        )
+
+        # Linting: fail (has 2 issues)
+        assert result["domain_status"]["linting"]["status"] == "fail"
+        assert result["domain_status"]["linting"]["issue_count"] == 2
+        # Type checking: pass (executed, no issues)
+        assert result["domain_status"]["type_checking"]["status"] == "pass"
+        # Testing: skipped (not executed)
+        assert result["domain_status"]["testing"]["status"] == "skipped"
+        # SCA: pass (executed, no issues)
+        assert result["domain_status"]["sca"]["status"] == "pass"
+
+    def test_format_scan_result_duplication_skipped_no_percentage(
+        self, formatter: InstructionFormatter
+    ) -> None:
+        """Test duplication domain shows skipped, not percentage when not executed."""
+        from lucidshark.plugins.duplication.base import DuplicationResult
+
+        # Duplication result exists but domain wasn't executed
+        duplication_result = DuplicationResult(
+            files_analyzed=10,
+            total_lines=1000,
+            duplicate_blocks=2,
+            duplicate_lines=50,
+            threshold=10.0,
+            duplicates=[],
+        )
+
+        result = formatter.format_scan_result(
+            [],
+            checked_domains=["linting", "duplication"],
+            executed_domains=["linting"],  # duplication NOT executed
+            duplication_result=duplication_result,
+        )
+
+        # Duplication should show as skipped, NOT as percentage
+        assert result["domain_status"]["duplication"]["status"] == "skipped"
+        assert result["domain_status"]["duplication"]["display"] == "Skipped"
+        assert "duplication_percent" not in result["domain_status"]["duplication"]
+
+    def test_format_scan_result_duplication_executed_shows_percentage(
+        self, formatter: InstructionFormatter
+    ) -> None:
+        """Test duplication domain shows percentage when executed."""
+        from lucidshark.plugins.duplication.base import DuplicationResult
+
+        duplication_result = DuplicationResult(
+            files_analyzed=10,
+            total_lines=1000,
+            duplicate_blocks=2,
+            duplicate_lines=50,
+            threshold=10.0,
+            duplicates=[],
+        )
+
+        result = formatter.format_scan_result(
+            [],
+            checked_domains=["linting", "duplication"],
+            executed_domains=["linting", "duplication"],  # duplication executed
+            duplication_result=duplication_result,
+        )
+
+        # Duplication should show percentage
+        assert result["domain_status"]["duplication"]["status"] == "pass"
+        assert "duplication" in result["domain_status"]["duplication"]["display"]
+        assert result["domain_status"]["duplication"]["duplication_percent"] == 5.0
