@@ -193,7 +193,14 @@ class ScanCommand(Command):
         )
 
         # Create domain runner for executing tool-based scans
-        runner = DomainRunner(project_root, config, log_level="info")
+        verbose_enabled = getattr(args, "verbose", False)
+        runner = DomainRunner(
+            project_root,
+            config,
+            log_level="info",
+            verbose=verbose_enabled,
+            stream_handler=stream_handler,
+        )
 
         all_issues: List[UnifiedIssue] = []
         pipeline_result: Optional[ScanResult] = None

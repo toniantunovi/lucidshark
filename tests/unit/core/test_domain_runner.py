@@ -1775,3 +1775,148 @@ class TestHasJestConfig:
 
     def test_no_config(self, tmp_path: Path) -> None:
         assert _has_jest_config(tmp_path) is False
+
+
+class TestLogCommandFailure:
+    """Tests for _log_command_failure helper method."""
+
+    def test_no_output_when_not_verbose(self, tmp_path: Path) -> None:
+        """When verbose is False, _log_command_failure should not emit or log."""
+        mock_handler = MagicMock()
+        runner = DomainRunner(
+            tmp_path, LucidSharkConfig(), verbose=False, stream_handler=mock_handler
+        )
+        result = subprocess.CompletedProcess(
+            args="test", returncode=1, stdout="error output", stderr="stderr output"
+        )
+
+        with patch("lucidshark.core.domain_runner.LOGGER") as mock_logger:
+            runner._log_command_failure("test_command", result)
+            # Neither stream handler nor logger should be called
+            mock_handler.emit.assert_not_called()
+            mock_logger.info.assert_not_called()
+
+    def test_logs_via_stream_handler_when_verbose(self, tmp_path: Path) -> None:
+        """When verbose and stream_handler present, emits via stream_handler."""
+        from lucidshark.core.streaming import StreamHandler, StreamEvent, StreamType
+
+        mock_handler = MagicMock(spec=StreamHandler)
+        runner = DomainRunner(
+            tmp_path, LucidSharkConfig(), verbose=True, stream_handler=mock_handler
+        )
+        result = subprocess.CompletedProcess(
+            args="test", returncode=1, stdout="", stderr="test error message"
+        )
+
+        runner._log_command_failure("test_command", result)
+
+        mock_handler.emit.assert_called_once()
+        event = mock_handler.emit.call_args[0][0]
+        assert isinstance(event, StreamEvent)
+        assert event.tool_name == "test_command"
+        assert event.stream_type == StreamType.STDERR
+        assert "test error message" in event.content
+
+    def test_truncates_long_output(self, tmp_path: Path) -> None:
+        """Truncates output to last N lines when output is very long."""
+        mock_handler = MagicMock()
+        runner = DomainRunner(
+            tmp_path, LucidSharkConfig(), verbose=True, stream_handler=mock_handler
+        )
+
+        # Create output with 200 lines
+        long_output = "\n".join([f"line {i}" for i in range(200)])
+        result = subprocess.CompletedProcess(
+            args="test", returncode=1, stdout="", stderr=long_output
+        )
+
+        runner._log_command_failure("test_command", result, max_lines=50)
+
+        mock_handler.emit.assert_called_once()
+        event = mock_handler.emit.call_args[0][0]
+        assert "showing last 50 of 200 lines" in event.content
+        # Should contain the last lines
+        assert "line 199" in event.content
+        # Should NOT contain early lines
+        assert "line 0\n" not in event.content
+
+    def test_combines_stdout_and_stderr(self, tmp_path: Path) -> None:
+        """When both stdout and stderr present, combines them with stderr marked."""
+        mock_handler = MagicMock()
+        runner = DomainRunner(
+            tmp_path, LucidSharkConfig(), verbose=True, stream_handler=mock_handler
+        )
+        result = subprocess.CompletedProcess(
+            args="test",
+            returncode=1,
+            stdout="stdout content",
+            stderr="stderr content",
+        )
+
+        runner._log_command_failure("test_command", result)
+
+        event = mock_handler.emit.call_args[0][0]
+        # Both should be in the output with stderr marked
+        assert "stdout content" in event.content
+        assert "--- stderr ---" in event.content
+        assert "stderr content" in event.content
+
+    def test_stdout_only(self, tmp_path: Path) -> None:
+        """When only stdout has content, shows stdout."""
+        mock_handler = MagicMock()
+        runner = DomainRunner(
+            tmp_path, LucidSharkConfig(), verbose=True, stream_handler=mock_handler
+        )
+        result = subprocess.CompletedProcess(
+            args="test", returncode=1, stdout="stdout only", stderr=""
+        )
+
+        runner._log_command_failure("test_command", result)
+
+        event = mock_handler.emit.call_args[0][0]
+        assert "stdout only" in event.content
+        # No stderr marker when stderr is empty
+        assert "--- stderr ---" not in event.content
+
+    def test_no_output_when_both_empty(self, tmp_path: Path) -> None:
+        """When both stdout and stderr are empty, nothing is emitted."""
+        mock_handler = MagicMock()
+        runner = DomainRunner(
+            tmp_path, LucidSharkConfig(), verbose=True, stream_handler=mock_handler
+        )
+        result = subprocess.CompletedProcess(
+            args="test", returncode=1, stdout="", stderr=""
+        )
+
+        runner._log_command_failure("test_command", result)
+
+        mock_handler.emit.assert_not_called()
+
+    def test_whitespace_only_treated_as_empty(self, tmp_path: Path) -> None:
+        """Whitespace-only output is treated as empty."""
+        mock_handler = MagicMock()
+        runner = DomainRunner(
+            tmp_path, LucidSharkConfig(), verbose=True, stream_handler=mock_handler
+        )
+        result = subprocess.CompletedProcess(
+            args="test", returncode=1, stdout="   \n\t  ", stderr="  \n  "
+        )
+
+        runner._log_command_failure("test_command", result)
+
+        mock_handler.emit.assert_not_called()
+
+    def test_falls_back_to_logger_without_stream_handler(self, tmp_path: Path) -> None:
+        """When verbose but no stream_handler, falls back to logger."""
+        runner = DomainRunner(
+            tmp_path, LucidSharkConfig(), verbose=True, stream_handler=None
+        )
+        result = subprocess.CompletedProcess(
+            args="test", returncode=1, stdout="", stderr="error output"
+        )
+
+        with patch("lucidshark.core.domain_runner.LOGGER") as mock_logger:
+            runner._log_command_failure("test_command", result)
+            mock_logger.info.assert_called_once()
+            call_args = mock_logger.info.call_args[0][0]
+            assert "error output" in call_args

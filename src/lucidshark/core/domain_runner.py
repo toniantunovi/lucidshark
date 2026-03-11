@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 from lucidshark.config import LucidSharkConfig
 from lucidshark.core.logging import get_logger
 from lucidshark.core.models import ScanContext, ScanDomain, UnifiedIssue
+from lucidshark.core.streaming import StreamEvent, StreamHandler, StreamType
 
 LOGGER = get_logger(__name__)
 
@@ -273,6 +274,8 @@ class DomainRunner:
         project_root: Path,
         config: LucidSharkConfig,
         log_level: str = "info",
+        verbose: bool = False,
+        stream_handler: Optional[StreamHandler] = None,
     ):
         """Initialize DomainRunner.
 
@@ -280,10 +283,14 @@ class DomainRunner:
             project_root: Project root directory.
             config: LucidShark configuration.
             log_level: Logging level for plugin execution ("info" or "debug").
+            verbose: If True, show command output on failure.
+            stream_handler: Optional handler for streaming output events.
         """
         self.project_root = project_root
         self.config = config
         self._log_level = log_level
+        self._verbose = verbose
+        self._stream_handler = stream_handler
 
     def _log(self, level: str, message: str) -> None:
         """Log a message at the configured level."""
@@ -291,6 +298,62 @@ class DomainRunner:
             LOGGER.info(message)
         else:
             LOGGER.debug(message)
+
+    def _log_command_failure(
+        self,
+        label: str,
+        result: subprocess.CompletedProcess[str],
+        max_lines: int = 100,
+    ) -> None:
+        """Log command output when a command fails in verbose mode.
+
+        Shows the last N lines of combined stdout/stderr to help debug failures.
+        Output is emitted via stream_handler if available, or logged directly.
+
+        Args:
+            label: Label for the command (e.g., "testing.command").
+            result: Completed process result with captured output.
+            max_lines: Maximum number of lines to show (default 100).
+        """
+        if not self._verbose:
+            return
+
+        # Combine stdout and stderr, preferring stderr for errors
+        output = ""
+        if result.stderr and result.stderr.strip():
+            output = result.stderr.strip()
+        if result.stdout and result.stdout.strip():
+            if output:
+                output = f"{result.stdout.strip()}\n\n--- stderr ---\n{output}"
+            else:
+                output = result.stdout.strip()
+
+        if not output:
+            return
+
+        # Truncate to last N lines
+        lines = output.splitlines()
+        if len(lines) > max_lines:
+            truncated_lines = lines[-max_lines:]
+            output = (
+                f"... (showing last {max_lines} of {len(lines)} lines)\n"
+                + "\n".join(truncated_lines)
+            )
+        else:
+            output = "\n".join(lines)
+
+        # Emit via stream handler if available
+        if self._stream_handler:
+            self._stream_handler.emit(
+                StreamEvent(
+                    tool_name=label,
+                    stream_type=StreamType.STDERR,
+                    content=f"\n=== Output from failed command ===\n{output}\n{'=' * 35}\n",
+                )
+            )
+        else:
+            # Fall back to logging
+            LOGGER.info(f"{label} output:\n{output}")
 
     def _context_with_domain_excludes(
         self,
@@ -355,6 +418,8 @@ class DomainRunner:
             # Custom command overrides plugin-based execution
             result = self._run_shell_command(command, "lint_command")
             issues = self._parse_command_output(result, ToolDomain.LINTING, command)
+            if result.returncode != 0:
+                self._log_command_failure("lint_command", result)
             self._run_post_command(post_command, "post_lint_command")
             return issues
 
@@ -426,6 +491,8 @@ class DomainRunner:
         if command:
             result = self._run_shell_command(command, "formatting_command")
             issues = self._parse_command_output(result, ToolDomain.FORMATTING, command)
+            if result.returncode != 0:
+                self._log_command_failure("formatting_command", result)
             self._run_post_command(post_command, "post_formatting_command")
             return issues
 
@@ -496,6 +563,8 @@ class DomainRunner:
             issues = self._parse_command_output(
                 result, ToolDomain.TYPE_CHECKING, command
             )
+            if result.returncode != 0:
+                self._log_command_failure("type_check_command", result)
             self._run_post_command(post_command, "post_type_check_command")
             return issues
 
@@ -563,6 +632,7 @@ class DomainRunner:
                 f"{label} failed (exit code {pre_result.returncode}): "
                 f"{pre_result.stderr.strip()[:200] if pre_result.stderr else ''}"
             )
+            self._log_command_failure(label, pre_result)
 
     def _run_post_command(self, post_command: Optional[str], label: str) -> None:
         """Run a post-command if provided and log any failures.
@@ -579,6 +649,7 @@ class DomainRunner:
                 f"{label} failed (exit code {post_result.returncode}): "
                 f"{post_result.stderr.strip()[:200] if post_result.stderr else ''}"
             )
+            self._log_command_failure(label, post_result)
 
     def _parse_command_output(
         self,
@@ -625,8 +696,8 @@ class DomainRunner:
 
         # Fall back to plain text (create issue from non-zero exit)
         if result.returncode != 0:
-            stderr_snippet = result.stderr.strip()[:500] if result.stderr else ""
-            stdout_snippet = stdout[:500] if stdout else ""
+            stderr_snippet = result.stderr.strip()[:2000] if result.stderr else ""
+            stdout_snippet = stdout[:2000] if stdout else ""
             output = stderr_snippet or stdout_snippet or "Command failed"
             issues.append(
                 UnifiedIssue(
@@ -890,8 +961,8 @@ class DomainRunner:
 
             if result.returncode != 0:
                 # Non-zero exit code means test failures
-                stderr_snippet = result.stderr.strip()[:500] if result.stderr else ""
-                stdout_snippet = result.stdout.strip()[:500] if result.stdout else ""
+                stderr_snippet = result.stderr.strip()[:2000] if result.stderr else ""
+                stdout_snippet = result.stdout.strip()[:2000] if result.stdout else ""
                 output = stderr_snippet or stdout_snippet or "Test command failed"
                 issues.append(
                     UnifiedIssue(
@@ -907,6 +978,7 @@ class DomainRunner:
                 self._log(
                     "info", f"testing.command: FAILED (exit code {result.returncode})"
                 )
+                self._log_command_failure("testing.command", result)
             else:
                 self._log("info", "testing.command: PASSED")
 
@@ -1004,8 +1076,8 @@ class DomainRunner:
 
             if result.returncode != 0:
                 # Non-zero exit code means coverage failure (below threshold or error)
-                stderr_snippet = result.stderr.strip()[:500] if result.stderr else ""
-                stdout_snippet = result.stdout.strip()[:500] if result.stdout else ""
+                stderr_snippet = result.stderr.strip()[:2000] if result.stderr else ""
+                stdout_snippet = result.stdout.strip()[:2000] if result.stdout else ""
                 output = stderr_snippet or stdout_snippet or "Coverage command failed"
                 issues.append(
                     UnifiedIssue(
@@ -1021,6 +1093,7 @@ class DomainRunner:
                 self._log(
                     "info", f"coverage_command: FAILED (exit code {result.returncode})"
                 )
+                self._log_command_failure("coverage_command", result)
             else:
                 self._log("info", "coverage_command: PASSED")
 
