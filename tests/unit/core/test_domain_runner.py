@@ -1449,6 +1449,81 @@ class TestCoverageCommand:
         # Issues should be copied to the result
         assert len(issues) == 1
 
+    def test_coverage_result_set_on_original_context_with_exclude_patterns(
+        self, tmp_path: Path
+    ) -> None:
+        """Coverage result must be set on original context even when exclude_patterns are provided.
+
+        When exclude_patterns are provided, _context_with_domain_excludes creates a copy
+        of the context. The coverage_result must be copied back to the original context
+        so the caller can access it. This regression test ensures the fix works.
+        """
+        from lucidshark.core.models import ScanContext
+
+        runner = _make_runner(tmp_path)
+        # Use a real ScanContext to test the dataclasses.replace() behavior
+        context = ScanContext(
+            project_root=tmp_path, paths=[tmp_path], enabled_domains=[]
+        )
+
+        with patch("lucidshark.core.domain_runner.subprocess.run") as mock_run:
+            mock_run.return_value = _completed(returncode=0, stdout="Coverage: 90%")
+            runner.run_coverage(
+                context,
+                command="coverage run",
+                threshold=80.0,
+                exclude_patterns=["**/test_*.py"],  # This triggers context copy
+            )
+
+        # The coverage_result must be set on the ORIGINAL context, not just the copy
+        assert context.coverage_result is not None
+        assert context.coverage_result.threshold == 80.0
+        assert context.coverage_result.tool == "custom"
+
+    def test_coverage_result_set_on_original_context_with_plugin(
+        self, tmp_path: Path
+    ) -> None:
+        """Coverage result from plugin must be set on original context with exclude_patterns.
+
+        Tests the plugin-based coverage path (not custom command) to ensure the
+        coverage_result is copied back to the original context when a copy is created.
+        """
+        from lucidshark.core.models import ScanContext
+        from lucidshark.plugins.coverage.base import CoverageResult
+
+        runner = _make_runner(tmp_path)
+        context = ScanContext(
+            project_root=tmp_path, paths=[tmp_path], enabled_domains=[]
+        )
+
+        # Create a mock coverage result
+        mock_result = CoverageResult(
+            total_lines=100,
+            covered_lines=85,
+            threshold=80.0,
+            tool="mock_plugin",
+        )
+
+        # Mock the plugin discovery and execution
+        mock_plugin_instance = MagicMock()
+        mock_plugin_instance.measure_coverage.return_value = mock_result
+        mock_plugin_class = MagicMock(return_value=mock_plugin_instance)
+
+        with patch(
+            "lucidshark.plugins.coverage.discover_coverage_plugins",
+            return_value={"mock_plugin": mock_plugin_class},
+        ):
+            runner.run_coverage(
+                context,
+                threshold=80.0,
+                exclude_patterns=["**/test_*.py"],  # This triggers context copy
+            )
+
+        # The coverage_result must be set on the ORIGINAL context
+        assert context.coverage_result is not None
+        assert context.coverage_result.tool == "mock_plugin"
+        assert context.coverage_result.percentage == 85.0
+
 
 # ---------------------------------------------------------------------------
 # TestPreCommand — pre_command support for all domains

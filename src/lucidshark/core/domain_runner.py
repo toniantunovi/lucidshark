@@ -1063,6 +1063,10 @@ class DomainRunner:
         Returns:
             List of coverage issues.
         """
+        # Save reference to original context - _context_with_domain_excludes may
+        # return a copy when exclude_patterns are provided, but we need to set
+        # coverage_result on the original context for the caller to access it
+        original_context = context
         context = self._context_with_domain_excludes(context, exclude_patterns)
         from lucidshark.core.models import Severity, ToolDomain
 
@@ -1114,6 +1118,9 @@ class DomainRunner:
                 )
 
             self._run_post_command(post_command, "post_coverage_command")
+            # Copy coverage_result back to original context if we created a copy
+            if original_context is not context:
+                original_context.coverage_result = context.coverage_result
             return issues
 
         # Fall through to plugin-based logic
@@ -1181,6 +1188,11 @@ class DomainRunner:
                     LOGGER.error(f"Coverage plugin {name} failed: {e}")
 
         self._run_post_command(post_command, "post_coverage_command")
+
+        # Copy coverage_result back to original context if we created a copy
+        if original_context is not context:
+            original_context.coverage_result = context.coverage_result
+
         return issues
 
     def run_duplication(
