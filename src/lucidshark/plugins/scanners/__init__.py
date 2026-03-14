@@ -10,6 +10,7 @@ from lucidshark.plugins.scanners.base import ScannerPlugin
 from lucidshark.plugins.scanners.trivy import TrivyScanner
 from lucidshark.plugins.scanners.opengrep import OpenGrepScanner
 from lucidshark.plugins.scanners.checkov import CheckovScanner
+from lucidshark.plugins.scanners.gosec import GosecScanner
 from lucidshark.plugins import SCANNER_ENTRY_POINT_GROUP
 from lucidshark.plugins.discovery import (
     discover_plugins,
@@ -53,6 +54,7 @@ __all__ = [
     "TrivyScanner",
     "OpenGrepScanner",
     "CheckovScanner",
+    "GosecScanner",
     "discover_scanner_plugins",
     "get_scanner_plugin",
     "list_available_scanners",

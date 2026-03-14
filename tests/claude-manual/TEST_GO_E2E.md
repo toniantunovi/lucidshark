@@ -13,7 +13,8 @@
 | Formatting | gofmt | `gofmt` |
 | Testing | go test | `go test` |
 | Coverage | go cover | `go test -coverprofile` |
-| SAST | OpenGrep | `opengrep` |
+| SAST (Go-specific) | gosec | `gosec` |
+| SAST (cross-language) | OpenGrep | `opengrep` |
 | SCA | Trivy | `trivy` |
 | Duplication | Duplo | `duplo` |
 
@@ -27,6 +28,7 @@
 uname -a
 go version
 golangci-lint --version 2>/dev/null || echo "golangci-lint not installed"
+gosec -version 2>/dev/null || echo "gosec not installed"
 gofmt -e /dev/null 2>&1 && echo "gofmt available" || echo "gofmt not available"
 git --version
 echo "Disk space:" && df -h .
@@ -681,7 +683,7 @@ domains:
     tools: [trivy]
   sast:
     enabled: true
-    tools: [opengrep]
+    tools: [gosec, opengrep]
 exclude_patterns:
   - "vendor/**"
   - ".git/**"
@@ -1018,23 +1020,95 @@ lucidshark scan --duplication --all-files --format json
 - [ ] Respects `min_lines: 4` config
 - [ ] Go files properly detected as language "go" by duplo
 
-### 4.7 SAST (OpenGrep)
+### 4.7 SAST — gosec (Go-Specific)
 
-#### 4.7.1 CLI — SAST Domain
+#### 4.7.1 CLI — SAST Domain (gosec should run automatically for Go projects)
 ```bash
 lucidshark scan --sast --all-files --format json
 ```
 
-**Verify and record which of these are detected:**
-- [ ] SQL injection in `handler.go` (string concatenation in SQL query)
-- [ ] Command injection via `exec.Command("sh", "-c", cmd)` in `handler.go`
-- [ ] Weak crypto via `md5.Sum()` for password in `handler.go`
-- [ ] Hardcoded secrets (`APIKey`, `DatabasePassword`) in `handler.go`
-- [ ] Path traversal (unsanitized user input in filepath) in `handler.go`
-- [ ] Unvalidated redirect in `handler.go`
-- [ ] SSRF via `http.Get(url)` with user input in `handler.go`
-- [ ] Insecure file permissions (`0777`) in `handler.go`
-- [ ] Each SAST issue has CWE and/or OWASP references
+**Verify gosec findings — record which of these are detected:**
+- [ ] SQL injection in `handler.go` — G201/G202 (string concatenation in SQL query)
+- [ ] Command injection in `handler.go` — G204 (`exec.Command("sh", "-c", cmd)`)
+- [ ] Weak crypto in `handler.go` — G401 (`md5.Sum()` for password hashing)
+- [ ] Hardcoded secrets in `handler.go` — G101 (`APIKey`, `DatabasePassword`)
+- [ ] Path traversal in `handler.go` — G304 (unsanitized user input in filepath)
+- [ ] SSRF in `handler.go` — G107 (`http.Get(url)` with user input)
+- [ ] Insecure file permissions in `handler.go` — G306 (`0777`)
+- [ ] Net/http serve without timeouts — G114 (if applicable)
+- [ ] Each gosec issue has:
+  - [ ] `source_tool` = "gosec"
+  - [ ] Issue ID starts with `gosec-`
+  - [ ] CWE reference in metadata (e.g., `metadata.cwe.id`)
+  - [ ] Confidence rating in metadata (`HIGH`, `MEDIUM`, or `LOW`)
+  - [ ] Severity mapped correctly (`HIGH`, `MEDIUM`, or `LOW`)
+
+#### 4.7.2 CLI — Verify gosec vs OpenGrep Both Run
+```bash
+lucidshark scan --sast --all-files --format json > /tmp/sast-scan.json
+python3 -c "
+import json
+with open('/tmp/sast-scan.json') as f:
+    data = json.load(f)
+issues = data.get('issues', [])
+gosec_issues = [i for i in issues if i.get('source_tool') == 'gosec']
+opengrep_issues = [i for i in issues if i.get('source_tool') == 'opengrep']
+print(f'Gosec issues: {len(gosec_issues)}')
+print(f'OpenGrep issues: {len(opengrep_issues)}')
+print(f'Total SAST issues: {len(issues)}')
+for i in gosec_issues[:5]:
+    print(f'  gosec: {i.get(\"rule_id\")} - {i.get(\"title\", \"\")[:60]}')
+for i in opengrep_issues[:5]:
+    print(f'  opengrep: {i.get(\"rule_id\")} - {i.get(\"title\", \"\")[:60]}')
+"
+```
+
+**Verify:**
+- [ ] Both gosec AND OpenGrep produce results (defense in depth)
+- [ ] Gosec issues have `gosec-` prefixed IDs
+- [ ] OpenGrep issues have `opengrep-` prefixed IDs
+- [ ] Gosec finds Go-specific issues (G-prefixed rule IDs)
+- [ ] Some overlap expected (both detect SQL injection, command injection, etc.)
+
+#### 4.7.3 CLI — gosec CWE Mapping
+```bash
+lucidshark scan --sast --all-files --format json > /tmp/sast-cwe.json
+python3 -c "
+import json
+with open('/tmp/sast-cwe.json') as f:
+    data = json.load(f)
+gosec_issues = [i for i in data.get('issues', []) if i.get('source_tool') == 'gosec']
+for i in gosec_issues:
+    meta = i.get('metadata', {})
+    cwe = meta.get('cwe', {})
+    print(f'{i.get(\"rule_id\")}: CWE-{cwe.get(\"id\", \"none\")} conf={meta.get(\"confidence\", \"?\")} sev={i.get(\"severity\")}')
+"
+```
+
+**Verify:**
+- [ ] Most gosec issues have CWE IDs (e.g., CWE-89 for SQL injection, CWE-78 for command injection)
+- [ ] CWE URLs point to valid mitre.org definitions
+- [ ] Confidence levels are present (HIGH, MEDIUM, LOW)
+
+### 4.7b SAST — OpenGrep (Cross-Language)
+
+#### 4.7b.1 CLI — OpenGrep Also Runs
+OpenGrep should also produce findings for the Go project:
+
+```bash
+lucidshark scan --sast --all-files --format json > /tmp/sast-all.json
+python3 -c "
+import json
+with open('/tmp/sast-all.json') as f:
+    data = json.load(f)
+opengrep_issues = [i for i in data.get('issues', []) if i.get('source_tool') == 'opengrep']
+print(f'OpenGrep SAST issues: {len(opengrep_issues)}')
+"
+```
+
+**Verify:**
+- [ ] OpenGrep finds at least some issues
+- [ ] OWASP references present where applicable
 
 ### 4.8 SCA (Trivy)
 
@@ -1285,7 +1359,7 @@ For EACH call, verify:
 - [ ] Issues returned with proper structure (file_path, line, severity, message)
 - [ ] No errors or crashes
 - [ ] Results consistent with CLI results for same domain
-- [ ] Go tools used (golangci_lint, go_vet, gofmt, go_test, go_cover)
+- [ ] Go tools used (golangci_lint, go_vet, gofmt, go_test, go_cover, gosec)
 
 #### 5.1.2 Scan — All Domains
 ```
@@ -1777,7 +1851,7 @@ Write the report with this structure:
 **Installation Methods Tested:** install.sh, pip
 **Go Version:** (from `go version`)
 **Platform:** (from `uname -a`)
-**Tool Versions:** golangci-lint X.Y.Z, gofmt (bundled with Go), go vet (bundled with Go), OpenGrep X.Y.Z, Trivy X.Y.Z, Duplo X.Y.Z
+**Tool Versions:** golangci-lint X.Y.Z, gofmt (bundled with Go), go vet (bundled with Go), gosec X.Y.Z, OpenGrep X.Y.Z, Trivy X.Y.Z, Duplo X.Y.Z
 
 ---
 
@@ -1802,7 +1876,9 @@ Write the report with this structure:
 ### Testing (go test)
 ### Coverage (go cover)
 ### Duplication (Duplo)
-### SAST (OpenGrep)
+### SAST — gosec (Go-specific)
+### SAST — OpenGrep (cross-language)
+### gosec vs OpenGrep Overlap Analysis
 ### SCA (Trivy)
 
 ## MCP Tool Results

@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **gosec** Go-specific SAST scanner plugin — inspects Go AST for 30+ security rule categories (SQL injection, command injection, weak crypto, hardcoded credentials, file permissions, SSRF, etc.)
+  - Managed binary: auto-downloaded from GitHub releases on first use (version 2.21.4), cached at `.lucidshark/bin/gosec/{version}/`
+  - CWE-mapped findings with confidence ratings (HIGH/MEDIUM/LOW)
+  - Supports `// nosec` annotations for suppressing known false positives
+  - Runs alongside OpenGrep for defense-in-depth (both produce SAST findings with tool-prefixed issue IDs)
+  - Requires Go toolchain; auto-skips for non-Go projects
+
 ## [0.6.0] - 2026-03-14
 
 ### Added

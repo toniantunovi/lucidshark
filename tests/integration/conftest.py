@@ -34,6 +34,7 @@ from lucidshark.plugins.linters.golangci_lint import GoLangCILintLinter
 from lucidshark.plugins.type_checkers.go_vet import GoVetChecker
 from lucidshark.plugins.test_runners.go_test import GoTestRunner
 from lucidshark.plugins.formatters.gofmt import GofmtFormatter
+from lucidshark.plugins.scanners.gosec import GosecScanner
 
 
 def _ensure_trivy_downloaded() -> bool:
@@ -744,9 +745,29 @@ def _is_gofmt_available() -> bool:
     return shutil.which("gofmt") is not None
 
 
+def _ensure_gosec_downloaded() -> bool:
+    """Ensure gosec binary is downloaded. Returns True if available."""
+    root = Path(__file__).parent.parent.parent
+    scanner = GosecScanner(project_root=root)
+    try:
+        scanner.ensure_binary()
+        return True
+    except Exception:
+        return False
+
+
+def _is_gosec_in_path() -> bool:
+    """Check if gosec is in PATH or ~/go/bin/."""
+    if shutil.which("gosec") is not None:
+        return True
+    gobin = Path.home() / "go" / "bin" / "gosec"
+    return gobin.exists()
+
+
 _go_available_flag = _is_go_available()
 _golangci_lint_available_flag = _is_golangci_lint_available()
 _gofmt_available_flag = _is_gofmt_available()
+_gosec_available = _ensure_gosec_downloaded() or _is_gosec_in_path()
 
 
 # Pytest markers for Go tools
@@ -758,6 +779,11 @@ golangci_lint_available = pytest.mark.skipif(
 
 gofmt_available = pytest.mark.skipif(
     not _gofmt_available_flag, reason="gofmt not available"
+)
+
+gosec_available = pytest.mark.skipif(
+    not _gosec_available,
+    reason="Gosec binary not available and could not be downloaded",
 )
 
 
@@ -788,3 +814,21 @@ def go_test_runner(project_root: Path) -> GoTestRunner:
 def gofmt_formatter(project_root: Path) -> GofmtFormatter:
     """Return a GofmtFormatter instance."""
     return GofmtFormatter(project_root=project_root)
+
+
+# =============================================================================
+# Gosec scanner fixtures
+# =============================================================================
+
+
+@pytest.fixture(scope="session")
+def gosec_scanner() -> GosecScanner:
+    """Return a GosecScanner instance (session-scoped for performance)."""
+    root = Path(__file__).parent.parent.parent
+    return GosecScanner(project_root=root)
+
+
+@pytest.fixture(scope="session")
+def ensure_gosec_binary(gosec_scanner: GosecScanner) -> Path:
+    """Ensure gosec binary is downloaded and return its path."""
+    return gosec_scanner.ensure_binary()

@@ -13,9 +13,11 @@ from lucidshark.plugins.go_utils import (
     find_go,
     find_gofmt,
     find_golangci_lint,
+    find_gosec,
     generate_issue_id,
     get_go_version,
     get_golangci_lint_version,
+    get_gosec_version,
     has_go_mod,
     parse_go_error_position,
 )
@@ -119,6 +121,140 @@ class TestFindGolangciLint:
         ):
             with pytest.raises(FileNotFoundError, match="go install"):
                 find_golangci_lint()
+
+
+# ---------------------------------------------------------------------------
+# find_gosec
+# ---------------------------------------------------------------------------
+
+
+class TestFindGosec:
+    """Tests for find_gosec function."""
+
+    def test_finds_on_system_path(self) -> None:
+        """Return PATH version when available."""
+        with patch(
+            "lucidshark.plugins.go_utils.shutil.which",
+            return_value="/usr/bin/gosec",
+        ):
+            result = find_gosec()
+
+        assert result == Path("/usr/bin/gosec")
+
+    def test_falls_back_to_gobin(self) -> None:
+        """Fall back to ~/go/bin/gosec when not on PATH."""
+        fake_home = Path("/fakehome")
+        expected = fake_home / "go" / "bin" / "gosec"
+
+        with (
+            patch("lucidshark.plugins.go_utils.shutil.which", return_value=None),
+            patch("lucidshark.plugins.go_utils.Path.home", return_value=fake_home),
+            patch("lucidshark.plugins.go_utils.Path.exists", return_value=True),
+        ):
+            result = find_gosec()
+
+        assert result == expected
+
+    def test_prefers_path_over_gobin(self) -> None:
+        """Prefer the PATH version over ~/go/bin."""
+        with patch(
+            "lucidshark.plugins.go_utils.shutil.which",
+            return_value="/usr/local/bin/gosec",
+        ):
+            result = find_gosec()
+
+        assert result == Path("/usr/local/bin/gosec")
+
+    def test_raises_when_not_found(self) -> None:
+        """Raise FileNotFoundError when neither PATH nor GOBIN has it."""
+        with (
+            patch("lucidshark.plugins.go_utils.shutil.which", return_value=None),
+            patch(
+                "lucidshark.plugins.go_utils.Path.home", return_value=Path("/fakehome")
+            ),
+            patch("lucidshark.plugins.go_utils.Path.exists", return_value=False),
+        ):
+            with pytest.raises(FileNotFoundError):
+                find_gosec()
+
+    def test_error_message_contains_install_instructions(self) -> None:
+        """Error message includes install command and URL."""
+        with (
+            patch("lucidshark.plugins.go_utils.shutil.which", return_value=None),
+            patch(
+                "lucidshark.plugins.go_utils.Path.home", return_value=Path("/fakehome")
+            ),
+            patch("lucidshark.plugins.go_utils.Path.exists", return_value=False),
+        ):
+            with pytest.raises(FileNotFoundError, match="go install"):
+                find_gosec()
+
+
+# ---------------------------------------------------------------------------
+# get_gosec_version
+# ---------------------------------------------------------------------------
+
+
+class TestGetGosecVersion:
+    """Tests for get_gosec_version function."""
+
+    def test_returns_version_string(self) -> None:
+        """Return stdout when gosec -version succeeds."""
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "Version: 2.21.4\nGit tag: v2.21.4\n"
+
+        with (
+            patch(
+                "lucidshark.plugins.go_utils.find_gosec",
+                return_value=Path("/usr/bin/gosec"),
+            ),
+            patch(
+                "lucidshark.plugins.go_utils.subprocess.run", return_value=mock_result
+            ),
+        ):
+            version = get_gosec_version()
+
+        assert version == "Version: 2.21.4\nGit tag: v2.21.4"
+
+    def test_returns_unknown_when_not_found(self) -> None:
+        """Return 'unknown' when find_gosec raises FileNotFoundError."""
+        with patch(
+            "lucidshark.plugins.go_utils.find_gosec",
+            side_effect=FileNotFoundError("not found"),
+        ):
+            assert get_gosec_version() == "unknown"
+
+    def test_returns_unknown_on_failure(self) -> None:
+        """Return 'unknown' when subprocess fails."""
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+
+        with (
+            patch(
+                "lucidshark.plugins.go_utils.find_gosec",
+                return_value=Path("/usr/bin/gosec"),
+            ),
+            patch(
+                "lucidshark.plugins.go_utils.subprocess.run", return_value=mock_result
+            ),
+        ):
+            assert get_gosec_version() == "unknown"
+
+    def test_returns_unknown_on_timeout(self) -> None:
+        """Return 'unknown' when subprocess times out."""
+        with (
+            patch(
+                "lucidshark.plugins.go_utils.find_gosec",
+                return_value=Path("/usr/bin/gosec"),
+            ),
+            patch(
+                "lucidshark.plugins.go_utils.subprocess.run",
+                side_effect=subprocess.TimeoutExpired("gosec", 30),
+            ),
+        ):
+            assert get_gosec_version() == "unknown"
 
 
 # ---------------------------------------------------------------------------

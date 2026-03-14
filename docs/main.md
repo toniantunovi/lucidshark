@@ -15,7 +15,7 @@ The trust gap manifests in several ways:
 Developers currently address this through manual review and fragmented tooling:
 
 - Run ESLint, then Ruff, then mypy separately
-- Run security scanners (Trivy, Semgrep) as an afterthought
+- Run security scanners (Trivy, Semgrep/OpenGrep, gosec) as an afterthought
 - Copy-paste error messages back to the AI for fixes
 - Repeat until the code passes all checks
 
@@ -88,7 +88,7 @@ A single configuration file controls:
 | **Linting** | Ruff, ESLint, Biome, Clippy, Checkstyle, PMD, golangci-lint | Style, code smells, bug detection |
 | **Formatting** | Ruff Format, Prettier, rustfmt, google-java-format, gofmt | Code formatting, whitespace style |
 | **Type Checking** | mypy, TypeScript, Pyright, SpotBugs (managed), cargo check, go vet | Type errors, static analysis bugs |
-| **Security** | Trivy, OpenGrep, Checkov | Vulnerabilities, misconfigurations |
+| **Security** | Trivy, OpenGrep, gosec (Go), Checkov | Vulnerabilities, misconfigurations |
 | **Testing** | pytest, Jest, Vitest, Maven/Gradle, cargo test, go test | Test failures |
 | **Coverage** | coverage.py, Istanbul, Vitest, JaCoCo, Tarpaulin, go cover | Coverage gaps |
 | **Duplication** | Duplo | Code clones, duplicate blocks |
@@ -122,7 +122,7 @@ LucidShark focuses on orchestration and integration, not reimplementing tools:
 
 LucidShark does **not** implement:
 - Custom linting rules (uses ESLint, Ruff, etc.)
-- Custom security scanning (uses Trivy, OpenGrep, etc.)
+- Custom security scanning (uses Trivy, OpenGrep, gosec, etc.)
 - Custom test runners (uses pytest, Jest, Vitest, etc.)
 
 It orchestrates existing best-in-class tools.
@@ -204,7 +204,7 @@ Detected: Python 3.11, FastAPI, pytest
 
 ? Linter: [Ruff (recommended)] / Flake8 / Skip
 ? Type checker: [mypy (recommended)] / Pyright / Skip
-? Security scanner: [Trivy + OpenGrep (recommended)] / Trivy only / Skip
+? Security scanner: [Trivy + OpenGrep + gosec (recommended)] / Trivy only / Skip
 ? Test runner: [pytest (detected)] / Skip
 ? Coverage threshold: [80%] / Custom / Skip
 ```
@@ -363,7 +363,7 @@ LucidShark scans only changed files (uncommitted changes) by default. Use `--all
 | **Linting** | ⚠️ Partial | Ruff/ESLint/Biome/Checkstyle/PMD support file args; Clippy is workspace-wide; golangci-lint runs workspace-wide (`./...`) |
 | **Formatting** | ⚠️ Partial | Ruff Format/Prettier support file args; rustfmt/google-java-format project-wide; gofmt supports file args |
 | **Type Checking** | ⚠️ Partial | mypy/pyright yes; tsc/SpotBugs/cargo check always full; go vet runs package-wide (`./...`) |
-| **SAST** | ✅ Full | OpenGrep scans only changed/specified files |
+| **SAST** | ✅ Full | OpenGrep and gosec scan only changed/specified files |
 | **SCA** | ❌ None | Trivy dependency scan always project-wide |
 | **IaC** | ❌ None | Checkov always project-wide |
 | **Testing** | ⚠️ Partial | pytest/Jest/Vitest/Playwright yes; Karma/Maven/cargo test project-wide; go test runs package-wide (`./...`) |
@@ -703,6 +703,7 @@ Support tool-native inline ignores:
 - Ruff: `# noqa: E501`
 - ESLint: `// eslint-disable-next-line`
 - OpenGrep: `# nosemgrep`
+- gosec: `// nosec G401` (Go)
 - Checkov: `# checkov:skip=CKV_AWS_1`
 
 #### 5.4.4 Issue Ignoring (`ignore_issues`)
@@ -835,7 +836,7 @@ Running pipeline...
 Installation uses:
 - pip for Python tools (ruff, mypy, coverage)
 - npm for JS tools (eslint, typescript) - only if package.json exists
-- Direct binary download for standalone tools (trivy, opengrep)
+- Direct binary download for standalone tools (trivy, opengrep, gosec)
 
 #### 5.5.2 Version Pinning
 

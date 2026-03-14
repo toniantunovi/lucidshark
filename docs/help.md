@@ -90,7 +90,7 @@ Run the quality/security pipeline. By default, scans only changed files (uncommi
 | `--type-checking` | type_checking | Static type analysis (mypy, pyright, TypeScript, SpotBugs, cargo check, go vet) |
 | `--formatting` | formatting | Code formatting (Ruff Format, Prettier, rustfmt, google-java-format, gofmt) |
 | `--sca` | sca | Dependency vulnerability scanning (Trivy) |
-| `--sast` | sast | Code security patterns (OpenGrep) |
+| `--sast` | sast | Code security patterns (OpenGrep, gosec for Go) |
 | `--iac` | iac | Infrastructure-as-Code scanning (Checkov) |
 | `--container` | container | Container image scanning (Trivy) |
 | `--testing` | testing | Run test suite (pytest, Jest, Vitest, Karma, Playwright, Maven, cargo test, go test) |
@@ -258,7 +258,7 @@ Run health checks on the LucidShark setup and environment. Checks configuration,
 
 **Checks performed:**
 - Configuration file exists and is valid
-- Security tools installed (trivy, opengrep, checkov)
+- Security tools installed (trivy, opengrep, gosec, checkov)
 - Common linters/type checkers available (ruff, mypy, pyright)
 - Python version (requires 3.10+)
 - Git repository detected
@@ -479,7 +479,7 @@ Run quality checks on the codebase or specific files. Supports partial scanning 
 | `linting` | ⚠️ Partial support | Ruff/ESLint/Biome/golangci-lint support file args; Clippy is workspace-wide |
 | `type_checking` | ⚠️ Partial support | mypy/pyright support file args; tsc/SpotBugs/cargo check/go vet scan full project |
 | `formatting` | ⚠️ Partial support | Ruff Format/Prettier/gofmt support file args; rustfmt takes individual files only |
-| `sast` | ✅ Full support | OpenGrep scans only specified/changed files |
+| `sast` | ✅ Full support | OpenGrep and gosec scan only specified/changed files |
 | `sca` | ❌ Project-wide only | Trivy dependency scan is inherently project-wide |
 | `iac` | ❌ Project-wide only | Checkov scans entire project |
 | `testing` | ⚠️ Partial support | pytest/Jest/Vitest/Playwright support file args; Karma/Maven/cargo test/go test are project-wide |
@@ -614,7 +614,7 @@ Get current LucidShark status and configuration.
 {
   "project_root": "/path/to/project",
   "available_tools": {
-    "scanners": ["trivy", "opengrep", "checkov"],
+    "scanners": ["trivy", "opengrep", "gosec", "checkov"],
     "linters": ["ruff", "eslint", "biome", "clippy", "pmd", "golangci_lint"],
     "formatters": ["ruff_format", "prettier", "rustfmt", "google_java_format", "gofmt"],
     "type_checkers": ["mypy", "pyright", "typescript", "spotbugs", "cargo_check", "go_vet"],
@@ -676,7 +676,7 @@ autoconfigure()
 | Rust | clippy | rustfmt | cargo_check | cargo | tarpaulin |
 | Go | golangci_lint | gofmt | go_vet | go_test | go_cover |
 
-**Security tools** (always recommended for all languages): trivy (SCA) + opengrep (SAST)
+**Security tools** (always recommended for all languages): trivy (SCA) + opengrep (SAST) + gosec (SAST, Go-specific)
 
 **Response format:**
 ```json
@@ -1022,6 +1022,7 @@ The following tools are **automatically downloaded** by LucidShark and do not re
 |------|--------|-------------|
 | `trivy` | Security (SCA, Container) | Vulnerability scanner for dependencies and containers |
 | `opengrep` | Security (SAST) | Static analysis for code security patterns |
+| `gosec` | Security (SAST) | Go-specific security scanner with CWE-mapped rules |
 | `checkov` | Security (IaC) | Infrastructure-as-Code security scanner |
 | `duplo` | Duplication | Code duplication detection |
 | `pmd` | Linting (Java) | Bug detection, design issues, complexity analysis |
@@ -1094,7 +1095,7 @@ The following tools are configured but not installed:
 
 Please install the missing tools and try again.
 
-Note: Security tools (trivy, opengrep, checkov), duplo, pmd, checkstyle,
+Note: Security tools (trivy, opengrep, gosec, checkov), duplo, pmd, checkstyle,
 and spotbugs are downloaded automatically - no manual installation required.
 ```
 
@@ -1262,7 +1263,7 @@ exclude:
 
 #### Security Only (Any Language)
 
-Dependency vulnerability scanning (Trivy SCA) and code security patterns (OpenGrep SAST). No language-specific tools needed.
+Dependency vulnerability scanning (Trivy SCA) and code security patterns (OpenGrep SAST, gosec for Go). No language-specific tools needed.
 
 ```yaml
 version: 1
@@ -1783,7 +1784,7 @@ LucidShark scans only changed files (uncommitted changes) by default. This is th
 | Before commit | Full scan | `scan(domains=["all"], all_files=true)` |
 | Security audit | Full scan | `scan(domains=["sca", "sast", "iac"], all_files=true)` |
 
-**Note:** SCA (dependency scanning) always runs project-wide. SAST (OpenGrep) and most other tools scan only changed files by default.
+**Note:** SCA (dependency scanning) always runs project-wide. SAST (OpenGrep, gosec) and most other tools scan only changed files by default.
 
 ### Domain Selection Guidelines
 
@@ -1850,9 +1851,10 @@ All linting tools support the `files` parameter for partial scanning, except Cli
 |------|---------|--------------|
 | Trivy | SCA (dependencies), Container images | ❌ No (project-wide) |
 | OpenGrep | SAST (code patterns) | ✅ Yes |
+| gosec | SAST (Go-specific) | ✅ Yes (Go projects only) |
 | Checkov | IaC (Terraform, K8s, CloudFormation) | ❌ No (project-wide) |
 
-**Note:** OpenGrep (SAST) supports partial scanning and will scan only changed files by default. Trivy (SCA) and Checkov (IaC) always scan the entire project - dependency analysis requires full project context.
+**Note:** OpenGrep (SAST) and gosec (Go SAST) support partial scanning and will scan only changed files by default. Trivy (SCA) and Checkov (IaC) always scan the entire project - dependency analysis requires full project context.
 
 ### Testing
 

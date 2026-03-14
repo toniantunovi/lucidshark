@@ -88,7 +88,7 @@ lucidshark scan --all --base-branch origin/main
 
 See [Incremental Scanning](docs/incremental-scanning.md) for threshold scopes, CI integration, and advanced usage.
 
-**Note:** LucidShark runs in **strict mode** by default — all configured tools must run successfully. If a tool is missing, not applicable, or fails to execute, the scan fails with a HIGH severity issue and fix suggestions. Security tools (trivy, opengrep, checkov), duplo, PMD, Checkstyle, and SpotBugs are downloaded automatically.
+**Note:** LucidShark runs in **strict mode** by default — all configured tools must run successfully. If a tool is missing, not applicable, or fails to execute, the scan fails with a HIGH severity issue and fix suggestions. Security tools (trivy, opengrep, gosec, checkov), duplo, PMD, Checkstyle, and SpotBugs are downloaded automatically.
 
 ### Example Output
 
@@ -163,7 +163,7 @@ For detailed per-language tool coverage, configuration examples, and detection i
 | **Linting** | Ruff, ESLint, Biome, Clippy, Checkstyle, PMD, golangci-lint | Style issues, code smells, bug detection |
 | **Formatting** | Ruff Format, Prettier, rustfmt, google-java-format, gofmt | Code formatting, whitespace style |
 | **Type Checking** | mypy, Pyright, TypeScript (tsc), SpotBugs (managed), cargo check, go vet | Type errors, static analysis bugs |
-| **Security (SAST)** | OpenGrep | Code vulnerabilities |
+| **Security (SAST)** | OpenGrep, gosec (Go) | Code vulnerabilities |
 | **Security (SCA)** | Trivy | Dependency vulnerabilities |
 | **Security (IaC)** | Checkov | Infrastructure misconfigurations |
 | **Security (Container)** | Trivy | Container image vulnerabilities |
@@ -213,6 +213,7 @@ pipeline:
     tools:
       - { name: trivy, domains: [sca, container] }
       - { name: opengrep, domains: [sast] }
+      - { name: gosec, domains: [sast] }   # Go-specific SAST (auto-detected)
   testing:
     enabled: true
     command: "make test"            # Optional: custom command overrides plugin-based runner

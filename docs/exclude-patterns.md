@@ -78,6 +78,7 @@ LucidShark applies exclude patterns in two layers:
 | Type Checking | SpotBugs | Pre-filtered by LucidShark (only scans compiled class directories) |
 | Security | Trivy | `--skip-dirs` (directory patterns), `--skip-files` (file patterns) |
 | Security | OpenGrep | `--exclude` |
+| Security | gosec | `-exclude-dir` (comma-separated directories); `// nosec` for inline suppression |
 | Security | Checkov | `--skip-path` (glob patterns are converted to regex) |
 | Linting | Clippy | Project-wide (Cargo workspace); no file-level exclude support |
 | Type Checking | cargo check | Project-wide (Cargo workspace); no file-level exclude support |
@@ -397,6 +398,26 @@ Suppress all rules on a line:
 
 ```python
 eval(user_input)  # nosemgrep
+```
+
+#### gosec (Go SAST)
+
+Suppress a specific rule:
+
+```go
+h := md5.New() // nosec G401
+```
+
+Suppress all rules on a line:
+
+```go
+exec.Command(userInput) // nosec
+```
+
+Suppress with justification:
+
+```go
+h := md5.New() // nosec G401 -- required for legacy compatibility
 ```
 
 #### Checkov (IaC)
@@ -778,6 +799,7 @@ Some tools have their own configuration files that LucidShark respects:
 | SpotBugs | SpotBugs filter XML files |
 | Clippy | `clippy.toml`, `.clippy.toml` |
 | golangci-lint | `.golangci.yml`, `.golangci.yaml`, `.golangci.toml`, `.golangci.json` |
+| gosec | `// nosec` inline comments; no config file |
 | Trivy | `.trivyignore` |
 | Checkov | `.checkov.yml` |
 | pytest | `pytest.ini`, `pyproject.toml`, `setup.cfg` |

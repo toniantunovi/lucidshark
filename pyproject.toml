@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lucidshark"
-version = "0.6.1"
+version = "0.6.2"
 description = "LucidShark - The trust layer for AI-assisted development"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -24,6 +24,7 @@ keywords = [
   "trivy",
   "semgrep",
   "checkov",
+  "gosec",
   "cli",
   "mcp",
   "ai",
@@ -96,6 +97,7 @@ pmd = "lucidshark.plugins.linters.pmd:PmdLinter"
 trivy = "lucidshark.plugins.scanners.trivy:TrivyScanner"
 opengrep = "lucidshark.plugins.scanners.opengrep:OpenGrepScanner"
 checkov = "lucidshark.plugins.scanners.checkov:CheckovScanner"
+gosec = "lucidshark.plugins.scanners.gosec:GosecScanner"
 
 [project.entry-points."lucidshark.reporters"]
 ai = "lucidshark.plugins.reporters.ai_reporter:AIReporter"
@@ -166,6 +168,7 @@ markers = [
 trivy = "0.69.3"
 opengrep = "1.16.3"
 checkov = "3.2.508"
+gosec = "2.21.4"
 # Java tools
 pmd = "7.22.0"
 checkstyle = "13.3.0"

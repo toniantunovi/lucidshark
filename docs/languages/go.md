@@ -21,7 +21,8 @@ Go projects are fully supported with linting, type checking, testing, coverage, 
 | **Type Checking** | go vet | Compiler diagnostics + vet analyzers; ships with Go |
 | **Testing** | go test | Built-in Go test runner with `-json` output |
 | **Coverage** | go cover | Parses coverprofile format; ships with Go |
-| **Security (SAST)** | OpenGrep | Go-specific vulnerability rules |
+| **Security (SAST)** | gosec | Go-specific SAST; CWE-mapped rules for crypto, injection, permissions |
+| **Security (SAST)** | OpenGrep | Language-agnostic vulnerability rules (also covers Go) |
 | **Security (SCA)** | Trivy | Scans `go.sum`, `go.mod` |
 | **Duplication** | Duplo | Scans `.go` files |
 
@@ -132,9 +133,53 @@ pipeline:
 
 ## Security
 
-Security tools (OpenGrep, Trivy, Checkov) are language-agnostic. See the domain-specific sections in the [main documentation](../main.md) for details.
+### SAST: gosec (Go-specific)
+
+**Tool: [gosec](https://github.com/securego/gosec)**
+
+gosec is a Go-specific security scanner that inspects Go source code for security problems by scanning the Go AST. It provides deeper Go-specific vulnerability detection than language-agnostic SAST tools.
+
+- Scans Go AST for 30+ security rule categories
+- CWE-mapped findings with confidence ratings
+- Auto-downloaded binary from GitHub releases (no manual install needed)
+- Supports `// nosec` annotations for suppressing known false positives
+
+**Rule categories:**
+
+| Category | Rules | Examples |
+|----------|-------|---------|
+| **Credentials & secrets** | G101 | Hard-coded passwords, API keys |
+| **SQL injection** | G201, G202 | String formatting/concatenation in SQL |
+| **Command injection** | G204 | User input in `exec.Command` |
+| **XSS / template injection** | G203 | Unescaped data in HTML templates |
+| **Cryptography** | G401--G404, G501--G505 | Weak crypto (MD5, DES, RC4), insecure TLS, `math/rand` |
+| **File permissions** | G301--G307 | Overly permissive file/directory modes |
+| **Network** | G102, G107, G108, G112, G114 | Bind to all interfaces, SSRF, slowloris |
+| **Memory safety** | G601, G602 | Loop variable aliasing, slice bounds |
+
+**Severity mapping:** Gosec severity maps directly to LucidShark severity:
+
+- **High** -- `HIGH` severity findings (SQL injection, command injection, hardcoded creds)
+- **Medium** -- `MEDIUM` severity findings (weak crypto, file permissions)
+- **Low** -- `LOW` severity findings (import blocklist)
+
+```yaml
+pipeline:
+  security:
+    enabled: true
+    tools:
+      - { name: gosec, domains: [sast] }
+```
+
+### SAST: OpenGrep (language-agnostic)
+
+OpenGrep also provides Go SAST coverage with its auto-detected rule sets. When both gosec and OpenGrep are enabled, both will run, providing defense-in-depth. Issue IDs are tool-prefixed (`gosec-*` vs `opengrep-*`) so findings are not deduplicated between tools.
+
+### SCA: Trivy
 
 Trivy SCA scans these Go manifests: `go.sum`, `go.mod`.
+
+See the domain-specific sections in the [main documentation](../main.md) for details on OpenGrep, Trivy, and Checkov.
 
 ## Duplication
 
@@ -155,11 +200,13 @@ pipeline:
 | go vet | 300s | Operates on packages; large module graphs can be slow |
 | go test | 600s | Test suites can be inherently slow (integration tests, etc.) |
 | gofmt | 120s | Pure formatting; fastest of the four |
+| gosec | 300s | Scans Go AST; large codebases need headroom |
 
 ## Prerequisites
 
 - **Go 1.16+** required (for `go vet -json` output)
 - **golangci-lint**: `go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest`
+- **gosec**: Auto-downloaded by LucidShark, or install manually: `go install github.com/securego/gosec/v2/cmd/gosec@latest`
 - **gofmt**, **go vet**, **go test**, **go cover** ship with Go (no separate installation)
 
 ## Example Configuration
@@ -194,6 +241,7 @@ pipeline:
     enabled: true
     tools:
       - { name: trivy, domains: [sca] }
+      - { name: gosec, domains: [sast] }
       - { name: opengrep, domains: [sast] }
   duplication:
     enabled: true

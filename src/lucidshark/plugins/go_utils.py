@@ -103,6 +103,59 @@ def get_go_version() -> str:
     return "unknown"
 
 
+def find_gosec() -> Path:
+    """Find gosec binary.
+
+    Checks:
+    1. System PATH
+    2. ~/go/bin/ (default GOBIN)
+
+    Returns:
+        Path to gosec binary.
+
+    Raises:
+        FileNotFoundError: If gosec is not found.
+    """
+    # Check system PATH
+    binary = shutil.which("gosec")
+    if binary:
+        return Path(binary)
+
+    # Check ~/go/bin/
+    gobin = Path.home() / "go" / "bin" / "gosec"
+    if gobin.exists():
+        return gobin
+
+    raise FileNotFoundError(
+        "gosec not found. Install with:\n"
+        "  go install github.com/securego/gosec/v2/cmd/gosec@latest\n"
+        "  or download from: https://github.com/securego/gosec/releases"
+    )
+
+
+def get_gosec_version() -> str:
+    """Get gosec version string.
+
+    Returns:
+        Version string or "unknown".
+    """
+    try:
+        binary = find_gosec()
+        result = subprocess.run(
+            [str(binary), "-version"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=30,
+        )
+        if result.returncode == 0:
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return "unknown"
+
+
 def get_golangci_lint_version() -> str:
     """Get golangci-lint version string.
 

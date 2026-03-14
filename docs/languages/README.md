@@ -18,7 +18,7 @@ LucidShark supports 15 programming languages with varying levels of tool coverag
 | **Linting** | [Ruff](python.md#linting), [ESLint](typescript.md#linting), [Biome](javascript.md#linting), [Clippy](rust.md#linting), [Checkstyle](java.md#linting), [PMD](java.md#pmd), [golangci-lint](go.md#linting) | Python, JS/TS, Rust, Java, Go |
 | **Formatting** | [Ruff Format](python.md#formatting), [Prettier](javascript.md#formatting), [google-java-format](java.md#formatting), [rustfmt](rust.md#formatting), [gofmt](go.md#formatting) | Python, JS/TS, Java, Rust, Go |
 | **Type Checking** | [mypy](python.md#type-checking), [Pyright](python.md#type-checking), [tsc](typescript.md#type-checking), [SpotBugs](java.md#type-checking), [cargo check](rust.md#type-checking), [go vet](go.md#type-checking) | Python, TypeScript, Java, Rust, Go |
-| **Security (SAST)** | OpenGrep | All languages |
+| **Security (SAST)** | OpenGrep, [gosec](go.md#security) (Go) | All languages (gosec is Go-specific) |
 | **Security (SCA)** | Trivy | All languages with package manifests |
 | **Security (IaC)** | Checkov | Language-agnostic (Terraform, K8s, CloudFormation, etc.) |
 | **Security (Container)** | Trivy | Language-agnostic (Dockerfile, container images) |
