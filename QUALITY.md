@@ -1,36 +1,36 @@
 # Repository Quality Overview
 
-> **Branch:** main | **Updated:** 2026-03-13 | **Commit:** `41bec5d`
+> **Branch:** main | **Updated:** 2026-03-14 | **Commit:** `ee5357f`
 
-## Health Score: 9.1 / 10  █████████░
+## Health Score: 9.1 / 10  █████████░ ↑ +0.0
 
 | Domain | Status | Issues | Trend |
 |--------|--------|--------|-------|
 | Linting | ✓ Pass | 0 | → |
 | Type Checking | ✓ Pass | 0 | → |
-| Formatting | ⚠ Warn | 3 | → |
+| Formatting | ✓ Pass | 0 | ↑ -3.0 |
 | Testing | ✓ Pass | 0 | → |
 | SCA | ✓ Pass | 0 | → |
 | SAST | ✓ Pass | 0 | → |
 | Coverage | ✓ Pass | 0 | → |
-| Duplication | ✓ Pass | 73 | → |
+| Duplication | ✓ Pass | 81 | ↓ +8.0 |
 
 ## Issues by Severity
 
 - 🔴 **Critical:** 0
 - 🟠 **High:** 0
 - 🟡 **Medium:** 0
-- 🔵 **Low:** 76
+- 🔵 **Low:** 81
 
 ## Top Files by Issues
 
 | File | Issues |
 |------|--------|
-| `src/lucidshark/plugins/linters/biome.py` | 9 |
+| `src/lucidshark/plugins/linters/biome.py` | 10 |
 | `src/lucidshark/plugins/coverage/istanbul.py` | 6 |
 | `src/lucidshark/plugins/test_runners/jest.py` | 6 |
+| `src/lucidshark/plugins/go_utils.py` | 5 |
 | `src/lucidshark/plugins/linters/eslint.py` | 5 |
-| `src/lucidshark/plugins/test_runners/karma.py` | 5 |
 
 ## Security Summary
 
@@ -41,13 +41,13 @@
 
 ## Test Coverage
 
-**82.7%** ████████░░
+**83.4%** ████████░░ ↑ +0.8%
 
 ## Score Trend
 
 ```
 Score: 9.1 → 9.1 → 9.1 → 9.1 → 9.1
-       03-11   03-13   03-13   03-13   03-13
+       03-13   03-13   03-13   03-13   03-13
 ```
 
 ---
