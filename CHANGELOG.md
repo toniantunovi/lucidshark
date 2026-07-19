@@ -7,8 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.9] - 2026-07-19
+
 ### Changed
 - **Telemetry simplified to 3 events** — `scan_completed`, `init_completed`, `autoconfigure_initiated`. Removed per-command tracking. `scan_completed` now includes the effective config and scan results from the same data source as reporters. See `lucidshark help` for full transparency documentation
+- **Updated managed security scanners and language tools** — Trivy 0.69.3 to 0.72.0, OpenGrep 1.16.5 to 1.25.0, Checkov 3.2.513 to 3.3.8, gosec 2.25.0 to 2.28.0, PMD 7.23.0 to 7.26.0, Checkstyle 13.3.0 to 13.8.0, SpotBugs 4.9.8 to 4.10.3
+- **Refreshed Python dependencies** — bumped runtime dependencies to latest, including security-relevant updates (cryptography, certifi, urllib3, requests, idna) and major upgrades (mypy 2.x, starlette 1.x, anthropic, openai, langchain stack), resolving all open Dependabot alerts on the root manifest
 
 ### Fixed
 - **Security scanner telemetry tracking** — `DomainRunner.run_security()` now correctly tracks executed scanners, fixing missing tools in scan metadata
