@@ -832,13 +832,13 @@ LucidShark pins versions for tools it downloads directly (security scanners and 
 # pyproject.toml
 [tool.lucidshark.tools]
 # Security scanners
-trivy = "0.69.3"
-opengrep = "1.16.5"
-checkov = "3.2.513"
+trivy = "0.72.0"
+opengrep = "1.25.0"
+checkov = "3.3.8"
 # Java tools
-pmd = "7.23.0"
-checkstyle = "13.3.0"
-spotbugs = "4.9.8"
+pmd = "7.26.0"
+checkstyle = "13.8.0"
+spotbugs = "4.10.3"
 # Duplication detection
 duplo = "0.2.0"
 ```
