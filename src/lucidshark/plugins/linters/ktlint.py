@@ -106,9 +106,11 @@ class KtlintLinter(LinterPlugin):
 
     def _download_binary(self, dest_dir: Path) -> None:
         """Download ktlint JAR from GitHub releases."""
+        # The release asset is named plain "ktlint": a self-executable fat JAR
+        # that "java -jar" accepts. There is no versioned .jar asset.
         url = (
             f"https://github.com/pinterest/ktlint/releases/download/"
-            f"{self._version}/ktlint-{self._version}.jar"
+            f"{self._version}/ktlint"
         )
 
         LOGGER.debug(f"Downloading from {url}")

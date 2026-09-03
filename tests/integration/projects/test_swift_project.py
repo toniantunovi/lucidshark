@@ -134,7 +134,7 @@ class TestSwiftCoverage:
 
     def test_swift_measures_coverage(self, swift_project: Path) -> None:
         """Test that swift coverage is measured."""
-        result = run_lucidshark(swift_project, domains=["coverage"])
+        result = run_lucidshark(swift_project, domains=["testing", "coverage"])
 
         # Scan should complete
         assert result.exit_code in (0, 1)

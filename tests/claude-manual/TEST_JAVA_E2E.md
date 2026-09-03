@@ -1288,7 +1288,7 @@ mv lucidshark.yml.bak lucidshark.yml
 
 **Verify:**
 - [ ] Checkstyle auto-detected for Java project
-- [ ] Checkstyle JAR auto-downloaded to `.lucidshark/bin/checkstyle/13.3.0/`
+- [ ] Checkstyle JAR auto-downloaded to `.lucidshark/bin/checkstyle/14.1.0/`
 - [ ] Finds unused imports in `Main.java`  -  `java.util.Map`, `java.util.HashMap`
 - [ ] Finds star import in `Main.java`  -  `java.io.*`
 - [ ] Finds naming violation: `Do_Something` method name
@@ -1332,7 +1332,7 @@ for i in pmd_issues[:10]:
 ```
 
 **Verify:**
-- [ ] PMD JAR auto-downloaded to `.lucidshark/bin/pmd/7.23.0/`
+- [ ] PMD JAR auto-downloaded to `.lucidshark/bin/pmd/7.27.0/`
 - [ ] Finds empty if block in `Main.java` (`Do_Something` method)
 - [ ] Finds empty catch block in `Main.java` (`riskyOperation` method)
 - [ ] Finds string concatenation in loop (InefficientStringConcatenation) in `processData`
@@ -1387,7 +1387,7 @@ echo "Exit code: $?"
 ```
 
 **Verify:**
-- [ ] SpotBugs JAR auto-downloaded to `.lucidshark/bin/spotbugs/4.9.8/`
+- [ ] SpotBugs JAR auto-downloaded to `.lucidshark/bin/spotbugs/4.10.4/`
 - [ ] Detects compiled classes in `target/classes/`
 - [ ] Finds null dereference in `UserService.getFirstUser()`  -  NP_ALWAYS_NULL
 - [ ] Finds equals without hashCode in `UserService`  -  HE_EQUALS_NO_HASHCODE
@@ -2441,7 +2441,7 @@ rm -rf .lucidshark/bin/
 ### 9.3 Corrupted Cache
 ```bash
 # Corrupt a cached JAR
-echo "corrupted" > .lucidshark/bin/checkstyle/13.3.0/checkstyle-13.3.0-all.jar 2>/dev/null || true
+echo "corrupted" > .lucidshark/bin/checkstyle/14.1.0/checkstyle-14.1.0-all.jar 2>/dev/null || true
 ./lucidshark scan --linting --all-files --format json
 echo "Exit code: $?"
 ```
