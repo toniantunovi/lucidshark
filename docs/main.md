@@ -815,7 +815,7 @@ Tools are installed automatically when needed:
 ```bash
 $ lucidshark scan
 Installing ruff 0.8.0... done
-Installing trivy 0.58.0... done
+Installing trivy 0.74.0... done
 Running pipeline...
 ```
 
@@ -832,13 +832,17 @@ LucidShark pins versions for tools it downloads directly (security scanners and 
 # pyproject.toml
 [tool.lucidshark.tools]
 # Security scanners
-trivy = "0.72.0"
-opengrep = "1.25.0"
-checkov = "3.3.8"
+trivy = "0.74.0"
+opengrep = "1.29.0"
+checkov = "3.3.16"
+gosec = "2.29.0"
 # Java tools
-pmd = "7.26.0"
-checkstyle = "13.8.0"
-spotbugs = "4.10.3"
+pmd = "7.27.0"
+checkstyle = "14.1.0"
+spotbugs = "4.10.4"
+# Kotlin tools
+ktlint = "1.8.0"
+detekt = "1.23.8"
 # Duplication detection
 duplo = "0.2.0"
 ```

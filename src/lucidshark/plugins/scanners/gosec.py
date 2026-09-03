@@ -38,7 +38,7 @@ from lucidshark.plugins.scanners.base import ScannerPlugin
 LOGGER = get_logger(__name__)
 
 # Default version from pyproject.toml [tool.lucidshark.tools]
-DEFAULT_VERSION = get_tool_version("gosec", default="2.21.4")
+DEFAULT_VERSION = get_tool_version("gosec")
 
 # Gosec severity mapping to unified severity
 # Gosec uses: HIGH, MEDIUM, LOW
