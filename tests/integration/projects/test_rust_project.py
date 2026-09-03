@@ -131,7 +131,7 @@ class TestRustCoverage:
 
     def test_tarpaulin_measures_coverage(self, rust_project_compiled: Path) -> None:
         """Test that tarpaulin measures code coverage."""
-        result = run_lucidshark(rust_project_compiled, domains=["coverage"])
+        result = run_lucidshark(rust_project_compiled, domains=["testing", "coverage"])
 
         # Scan should complete
         assert result.exit_code in (0, 1)

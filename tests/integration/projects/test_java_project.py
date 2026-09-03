@@ -130,7 +130,7 @@ class TestJavaCoverage:
 
     def test_jacoco_measures_coverage(self, java_project_with_deps: Path) -> None:
         """Test that JaCoCo measures code coverage."""
-        result = run_lucidshark(java_project_with_deps, domains=["coverage"])
+        result = run_lucidshark(java_project_with_deps, domains=["testing", "coverage"])
 
         # Scan should complete
         assert result.exit_code in (0, 1)
