@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-04
+
+### Changed
+- **Updated managed security scanners and language tools**: Trivy 0.72.0 to 0.74.0, OpenGrep 1.25.0 to 1.29.0, Checkov 3.3.8 to 3.3.16, gosec 2.28.0 to 2.29.0, PMD 7.26.0 to 7.27.0, Checkstyle 13.8.0 to 14.1.0, SpotBugs 4.10.3 to 4.10.4. Checkstyle 14 is a major upgrade, so Java projects may see a different set of findings (#127)
+- **Refreshed Python dependencies**: 36 packages bumped, resolved as a set against Python 3.10, including cryptography 49.0.0 to 50.0.1, certifi, idna and charset-normalizer, plus major upgrades to anthropic 1.x, openai 3.x and starlette 1.6. `mcp` is held at 1.29.1 because 2.x rewrote the low-level server API and needs an MCP server migration (#127)
+- **Pinned ruff and pyinstaller**: both floated on `>=` in `requirements-dev.txt` and resolved to latest on every fresh CI install, so builds broke on days nothing changed. ruff is pinned to 0.15.22 and PyInstaller to 6.21.0 (#127)
+
+### Fixed
+- **ktlint was never downloadable**: the plugin requested a `ktlint-{version}.jar` release asset that upstream has never published, so every ktlint download returned 404, at the pinned version and at every version before it. It now fetches the correct `ktlint` asset, a self-executable fat JAR (#127)
+- **gosec ignored the configured version pin**: a stale inline default of 2.21.4 sat behind `get_tool_version("gosec", default=...)`, a third version pin separate from `pyproject.toml` and the bootstrap fallbacks. gosec now resolves from the pin like every other plugin (#127)
+- **Integration tests could not run**: `integration-tests.yml` installed the package and dev requirements but never `requirements.txt`, and since `pyproject.toml` declares no `[project].dependencies`, the runtime dependencies were simply absent. Three project integration tests also asserted on a coverage-only scan, which is now rejected because coverage requires testing to produce the files it reads (#127)
+
 ## [0.7.9] - 2026-07-19
 
 ### Changed
