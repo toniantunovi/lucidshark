@@ -48,8 +48,10 @@ jobs:
           ./dist/lucidshark --verbose scan --all --all-files --format summary
 
   # Build standalone binaries for all platforms
-  # Build Linux binaries in a Debian 11 container (glibc 2.31) for broad compatibility.
+  # Build Linux binaries in a Debian 12 container (glibc 2.36) for broad compatibility.
   # This avoids requiring glibc 2.38+ which ubuntu-latest (24.04) would produce.
+  # Debian 11 was used until 0.8.1, but its security pool no longer serves the
+  # point-release .debs the image indexes, so apt-get install 404s on every build.
   build-binaries:
     needs: [quality-check]
     strategy:
@@ -60,12 +62,12 @@ jobs:
             target: linux-amd64
             artifact_name: lucidshark
             asset_name: lucidshark-linux-amd64
-            container: python:3.11-slim-bullseye
+            container: python:3.11-slim-bookworm
           - os: ubuntu-24.04-arm
             target: linux-arm64
             artifact_name: lucidshark
             asset_name: lucidshark-linux-arm64
-            container: python:3.11-slim-bullseye
+            container: python:3.11-slim-bookworm
           - os: macos-15-intel
             target: darwin-amd64
             artifact_name: lucidshark
