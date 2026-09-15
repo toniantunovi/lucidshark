@@ -568,7 +568,7 @@ class TestCoverageResultEmptyScope:
             threshold=70.0,
             files={
                 "src/app/service.py": FileCoverage(
-                    file_path="src/app/service.py",
+                    file_path=Path("src/app/service.py"),
                     total_lines=100,
                     covered_lines=80,
                 )
