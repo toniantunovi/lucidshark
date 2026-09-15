@@ -123,6 +123,7 @@ class CoverageResult:
             covered_lines=self.covered_lines,
             missing_lines=self.missing_lines,
             passed=self.passed,
+            scope_is_empty=self.scope_is_empty,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -138,6 +139,7 @@ class CoverageResult:
             "covered_lines": self.covered_lines,
             "missing_lines": self.missing_lines,
             "passed": self.passed,
+            "scope_is_empty": self.scope_is_empty,
         }
 
     def filter_to_changed_files(

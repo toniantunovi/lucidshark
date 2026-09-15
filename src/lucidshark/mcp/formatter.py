@@ -149,14 +149,18 @@ class InstructionFormatter:
                     threshold = coverage_result.threshold
                     passed = coverage_result.passed
                     status = "pass" if passed else "fail"
-                    status_display = (
-                        f"{pct:.1f}% coverage (threshold: {threshold:.0f}%)"
-                    )
+                    if coverage_result.scope_is_empty:
+                        status_display = "No measurable lines in changed files"
+                    else:
+                        status_display = (
+                            f"{pct:.1f}% coverage (threshold: {threshold:.0f}%)"
+                        )
                     domain_status[domain] = {
                         "status": status,
                         "display": status_display,
                         "coverage_percent": round(pct, 2),
                         "threshold": threshold,
+                        "scope_is_empty": coverage_result.scope_is_empty,
                     }
                     continue
 

@@ -339,6 +339,10 @@ class CoverageSummary:
     covered_lines: int = 0
     missing_lines: int = 0
     passed: bool = True
+    # True when results were filtered to changed files and none of them were
+    # measurable. The percentage is 0.0 because that is what an empty set
+    # computes to, not because nothing is covered -- report it as such.
+    scope_is_empty: bool = False
 
 
 @dataclass

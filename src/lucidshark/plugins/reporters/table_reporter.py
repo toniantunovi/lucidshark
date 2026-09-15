@@ -101,9 +101,14 @@ class TableReporter(ReporterPlugin):
         if result.coverage_summary:
             cs = result.coverage_summary
             status = "PASSED" if cs.passed else "FAILED"
-            lines.append(
-                f"Coverage: {cs.coverage_percentage:.1f}% (threshold: {cs.threshold}%) - {status}"
-            )
+            if cs.scope_is_empty:
+                lines.append(
+                    f"Coverage: no measurable lines in changed files - {status}"
+                )
+            else:
+                lines.append(
+                    f"Coverage: {cs.coverage_percentage:.1f}% (threshold: {cs.threshold}%) - {status}"
+                )
 
         # Duplication summary
         if result.duplication_summary:

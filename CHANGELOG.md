@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
-- **`--base-branch` failed coverage when every changed file was excluded**: filtering coverage to the changed files produced an empty set, and an empty set was indistinguishable from a coverage run that collected nothing, so it reported 0.0% and failed the threshold while the tests passed. A project whose `coverage.exclude` patterns cover the changed paths failed every such PR. A filtered result now records that it narrowed a run that did have data, and an empty scope passes instead. A run that genuinely measured nothing still fails, unfiltered or filtered
+- **`--base-branch` failed coverage when every changed file was excluded**: filtering coverage to the changed files produced an empty set, and an empty set was indistinguishable from a coverage run that collected nothing, so it reported 0.0% and failed the threshold while the tests passed. A project whose `coverage.exclude` patterns cover the changed paths failed every such PR. A filtered result now records that it narrowed a run that did have data, and an empty scope passes instead. A run that genuinely measured nothing still fails, unfiltered or filtered. An empty scope is also reported as "no measurable lines" rather than 0.0%, which previously read as a broken build sitting next to a passing test suite
 
 ## [0.8.1] - 2026-09-15
 
