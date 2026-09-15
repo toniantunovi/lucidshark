@@ -167,6 +167,48 @@ class TestSummaryFormatSummary:
         text = "\n".join(lines)
         assert "Coverage: 60.0% (FAILED)" in text
 
+    def test_coverage_summary_empty_scope(self, reporter: SummaryReporter) -> None:
+        """An empty scope must not read as 0.0% next to PASSED."""
+        result = ScanResult(
+            coverage_summary=CoverageSummary(
+                coverage_percentage=0.0,
+                threshold=70.0,
+                total_lines=0,
+                covered_lines=0,
+                missing_lines=0,
+                passed=True,
+                scope_is_empty=True,
+            )
+        )
+        lines = reporter._format_summary(result)
+        text = "\n".join(lines)
+        assert "Coverage: no measurable lines (PASSED)" in text
+        assert "Threshold: 70.0%" in text
+        assert "No changed file is measured for coverage" in text
+        assert "Coverage: 0.0%" not in text
+        assert "0/0 covered" not in text
+
+    def test_coverage_summary_zero_percent_is_still_shown(
+        self, reporter: SummaryReporter
+    ) -> None:
+        """Genuinely uncovered code still reports 0.0%, not 'no measurable lines'."""
+        result = ScanResult(
+            coverage_summary=CoverageSummary(
+                coverage_percentage=0.0,
+                threshold=70.0,
+                total_lines=500,
+                covered_lines=0,
+                missing_lines=500,
+                passed=False,
+                scope_is_empty=False,
+            )
+        )
+        lines = reporter._format_summary(result)
+        text = "\n".join(lines)
+        assert "Coverage: 0.0% (FAILED)" in text
+        assert "Lines: 0/500 covered" in text
+        assert "no measurable lines" not in text
+
     def test_duplication_summary_passed(self, reporter: SummaryReporter) -> None:
         result = ScanResult(
             duplication_summary=DuplicationSummary(

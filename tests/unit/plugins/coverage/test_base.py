@@ -504,3 +504,83 @@ class TestCoverageResultFilterToChangedFiles:
         # Should be a new instance
         assert filtered is not result
         assert filtered.files is not result.files
+
+
+class TestCoverageResultEmptyScope:
+    """An empty changed-file scope is not the same as coverage never running."""
+
+    def test_unfiltered_no_data_still_fails(self) -> None:
+        """A run that measured nothing must keep failing the build."""
+        result = CoverageResult(threshold=0.0)
+
+        assert result.scope_is_empty is False
+        assert result.passed is False
+
+    def test_filtered_empty_scope_passes(self) -> None:
+        """Nothing in scope to measure: there is no threshold to hold it to."""
+        result = CoverageResult(
+            threshold=70.0,
+            filtered=True,
+            source_had_data=True,
+        )
+
+        assert result.has_data is False
+        assert result.scope_is_empty is True
+        assert result.passed is True
+
+    def test_filtered_but_source_had_no_data_fails(self) -> None:
+        """Filtering a broken run must not launder it into a pass."""
+        result = CoverageResult(
+            threshold=70.0,
+            filtered=True,
+            source_had_data=False,
+        )
+
+        assert result.scope_is_empty is False
+        assert result.passed is False
+
+    def test_filtered_with_data_still_checks_threshold(self) -> None:
+        """Files in scope are held to the threshold as before."""
+        below = CoverageResult(
+            total_lines=100,
+            covered_lines=10,
+            threshold=70.0,
+            filtered=True,
+            source_had_data=True,
+        )
+        above = CoverageResult(
+            total_lines=100,
+            covered_lines=90,
+            threshold=70.0,
+            filtered=True,
+            source_had_data=True,
+        )
+
+        assert below.scope_is_empty is False
+        assert below.passed is False
+        assert above.passed is True
+
+    def test_filter_marks_result_and_records_source(self, tmp_path: Path) -> None:
+        """filter_to_changed_files records that it narrowed a run that had data."""
+        source = CoverageResult(
+            total_lines=100,
+            covered_lines=80,
+            threshold=70.0,
+            files={
+                "src/app/service.py": FileCoverage(
+                    file_path=Path("src/app/service.py"),
+                    total_lines=100,
+                    covered_lines=80,
+                )
+            },
+        )
+
+        filtered = source.filter_to_changed_files(
+            [tmp_path / "src" / "other" / "excluded.py"], tmp_path
+        )
+
+        assert filtered.filtered is True
+        assert filtered.source_had_data is True
+        assert filtered.has_data is False
+        assert filtered.scope_is_empty is True
+        assert filtered.passed is True

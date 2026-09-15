@@ -63,9 +63,19 @@ class SummaryReporter(ReporterPlugin):
         if result.coverage_summary:
             cs = result.coverage_summary
             status = "PASSED" if cs.passed else "FAILED"
-            lines.append(f"\nCoverage: {cs.coverage_percentage:.1f}% ({status})")
-            lines.append(f"  Threshold: {cs.threshold}%")
-            lines.append(f"  Lines: {cs.covered_lines}/{cs.total_lines} covered")
+            if cs.scope_is_empty:
+                # 0.0% here is an empty set, not uncovered code. Saying "0.0%"
+                # next to "PASSED" reads like a broken build.
+                lines.append(f"\nCoverage: no measurable lines ({status})")
+                lines.append(f"  Threshold: {cs.threshold}%")
+                lines.append(
+                    "  No changed file is measured for coverage "
+                    "(all excluded or not instrumented)"
+                )
+            else:
+                lines.append(f"\nCoverage: {cs.coverage_percentage:.1f}% ({status})")
+                lines.append(f"  Threshold: {cs.threshold}%")
+                lines.append(f"  Lines: {cs.covered_lines}/{cs.total_lines} covered")
 
         # Duplication summary
         if result.duplication_summary:
