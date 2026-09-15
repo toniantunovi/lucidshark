@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 import queue
 import subprocess
+import sys
 import threading
 from contextlib import contextmanager
 from pathlib import Path
@@ -19,6 +20,89 @@ from lucidshark.core.streaming import (
     StreamHandler,
     StreamType,
 )
+
+
+# PyInstaller's onefile bootloader prepends the extraction directory
+# (``sys._MEIPASS``) to the dynamic loader search path and stashes the
+# pre-launch value in ``<VAR>_ORIG``. Child processes inherit the modified
+# path, so a spawned tool can load one of our bundled libraries instead of the
+# system copy. When the bundled build is older this breaks the tool outright --
+# e.g. ``/bin/sh`` aborting with "symbol lookup error: undefined symbol:
+# rl_trim_arg_from_keyseq" because bash resolved our libreadline.so.8 rather
+# than the newer one in /usr/lib.
+#
+# The bundle ships several libraries whose SONAME matches a system one
+# (libreadline.so.8, libtinfo.so.6, libz.so.1, libgcc_s.so.1, ...), so this is
+# not specific to readline. Restoring the original search path for children
+# fixes all of them at once.
+_LOADER_PATH_VARS = (
+    "LD_LIBRARY_PATH",
+    "DYLD_LIBRARY_PATH",
+    "DYLD_FRAMEWORK_PATH",
+)
+
+
+def sanitize_loader_env(
+    env: Optional[Dict[str, str]] = None,
+) -> Dict[str, str]:
+    """Return a copy of ``env`` with PyInstaller's loader paths undone.
+
+    Safe to call when not running from a frozen binary: the environment is
+    copied but otherwise left alone.
+
+    Args:
+        env: Environment to sanitize. Defaults to ``os.environ``.
+
+    Returns:
+        A new mapping suitable for passing as ``subprocess(env=...)``.
+    """
+    result = dict(os.environ if env is None else env)
+
+    meipass = getattr(sys, "_MEIPASS", None)
+    if not meipass:
+        return result
+
+    for var in _LOADER_PATH_VARS:
+        original = result.pop(f"{var}_ORIG", None)
+        if original is not None:
+            # The bootloader recorded what was there before it ran.
+            result[var] = original
+        elif var in result:
+            # No record to restore from, so drop just our own entry and keep
+            # anything the user had set.
+            kept = [
+                entry
+                for entry in result[var].split(os.pathsep)
+                if entry and os.path.normpath(entry) != os.path.normpath(meipass)
+            ]
+            result[var] = os.pathsep.join(kept)
+
+        # An empty value is not the same as unset for some loaders; drop it.
+        if not result.get(var):
+            result.pop(var, None)
+
+    return result
+
+
+def restore_loader_env() -> None:
+    """Undo PyInstaller's loader-path changes in ``os.environ`` in place.
+
+    Call once at startup so every subprocess spawned later inherits a clean
+    search path, including the many call sites that do not pass ``env=``
+    explicitly.
+
+    This does not affect libraries the current process loads: glibc reads
+    ``LD_LIBRARY_PATH`` once at startup, and our own bundled libraries are
+    found via the executable's RUNPATH rather than the environment.
+    """
+    sanitized = sanitize_loader_env()
+
+    for var in _LOADER_PATH_VARS:
+        if var in sanitized:
+            os.environ[var] = sanitized[var]
+        else:
+            os.environ.pop(var, None)
+        os.environ.pop(f"{var}_ORIG", None)
 
 
 def run_with_streaming(
@@ -54,6 +138,7 @@ def run_with_streaming(
     """
     handler = stream_handler or NullStreamHandler()
     cwd_str = str(cwd)
+    env = sanitize_loader_env()
 
     # If no streaming requested, use simple subprocess.run for efficiency
     if isinstance(handler, NullStreamHandler):
@@ -65,6 +150,7 @@ def run_with_streaming(
             errors="replace",
             cwd=cwd_str,
             timeout=timeout,
+            env=env,
         )
 
     # Streaming mode with Popen
@@ -83,6 +169,7 @@ def run_with_streaming(
                 encoding="utf-8",
                 errors="replace",
                 cwd=cwd_str,
+                env=env,
             ) as proc
         ):
             # Use a queue to collect output from both streams

@@ -17,6 +17,7 @@ from lucidshark.config import LucidSharkConfig
 from lucidshark.core.logging import get_logger
 from lucidshark.core.models import ScanContext, ScanDomain, UnifiedIssue
 from lucidshark.core.streaming import StreamEvent, StreamHandler, StreamType
+from lucidshark.core.subprocess_runner import sanitize_loader_env
 
 LOGGER = get_logger(__name__)
 
@@ -758,8 +759,10 @@ class DomainRunner:
         if node_bin.exists():
             extra_paths.append(str(node_bin))
 
-        # Build environment with extended PATH
-        env = os.environ.copy()
+        # Build environment with extended PATH. Start from a sanitized copy so
+        # the shell does not inherit PyInstaller's loader paths -- /bin/sh links
+        # readline and aborts if it resolves our older bundled copy.
+        env = sanitize_loader_env()
         if extra_paths:
             current_path = env.get("PATH", "")
             extended_path = os.pathsep.join(extra_paths + [current_path])

@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.1] - 2026-09-15
+
+### Fixed
+- **Custom `command`, `pre_command` and `post_command` failed in the frozen binary**: PyInstaller's bootloader prepends its extraction directory to `LD_LIBRARY_PATH` and child processes inherited it, so `/bin/sh` resolved the bundled `libreadline.so.8` instead of the system one and aborted before running anything (`symbol lookup error: undefined symbol: rl_trim_arg_from_keyseq` on distributions shipping a newer readline than the bundle). The reported exit code 127 looked like a genuine test failure. LucidShark now restores the pre-launch loader path for everything it spawns, which also covers the other bundled libraries whose SONAME shadows a system one (`libtinfo.so.6`, `libz.so.1`, `libgcc_s.so.1`, ...)
+
 ## [0.8.0] - 2026-09-04
 
 ### Changed

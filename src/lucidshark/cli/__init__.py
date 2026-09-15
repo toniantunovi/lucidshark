@@ -35,6 +35,13 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     Returns:
         Exit code.
     """
+    # Undo the dynamic-loader paths PyInstaller's bootloader injects, so every
+    # tool and shell command we spawn links against the system libraries rather
+    # than our bundled copies. No-op outside a frozen binary.
+    from lucidshark.core.subprocess_runner import restore_loader_env
+
+    restore_loader_env()
+
     # Phase B: Apply a pending auto-update before anything else.
     # Only active for PyInstaller frozen binaries (not development).
     from lucidshark import __version__
