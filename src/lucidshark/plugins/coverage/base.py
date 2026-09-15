@@ -60,6 +60,10 @@ class CoverageResult:
     files: Dict[str, FileCoverage] = field(default_factory=dict)
     issues: List[UnifiedIssue] = field(default_factory=list)
     tool: str = ""  # Name of the coverage tool that produced this result
+    # Set by filter_to_changed_files: whether this result is a narrowed view of
+    # a larger run, and whether that larger run had measured anything.
+    filtered: bool = False
+    source_had_data: bool = False
 
     @property
     def has_data(self) -> bool:
@@ -83,13 +87,27 @@ class CoverageResult:
         return (self.covered_lines / self.total_lines) * 100
 
     @property
+    def scope_is_empty(self) -> bool:
+        """Whether filtering left nothing measurable behind.
+
+        True only when this is a filtered view whose source did measure lines
+        but none of them survived the filter -- e.g. every changed file is
+        covered by an ``exclude`` pattern. That is "nothing in scope", which is
+        different from coverage never being collected at all.
+        """
+        return self.filtered and self.source_had_data and not self.has_data
+
+    @property
     def passed(self) -> bool:
         """Whether coverage meets the threshold.
 
-        Returns False if no data was measured (total_lines == 0).
+        Returns False if no data was measured (total_lines == 0), so a broken
+        or missing coverage run fails the build rather than passing silently.
+        The exception is a filtered result with an empty scope: the underlying
+        run did produce data, so there is no threshold to hold it to.
         """
         if not self.has_data:
-            return False
+            return self.scope_is_empty
         return self.percentage >= self.threshold
 
     def to_summary(self) -> CoverageSummary:
@@ -193,6 +211,8 @@ class CoverageResult:
             files=filtered_files,
             issues=[],  # Issues will be regenerated if coverage is below threshold
             tool=self.tool,
+            filtered=True,
+            source_had_data=self.has_data,
         )
 
 
