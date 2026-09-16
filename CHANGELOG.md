@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **scalafmt ran on every project, whatever the language**: `filter_plugins_by_language` reads the `PLUGIN_LANGUAGES` map rather than a plugin's own `languages` property, and treats a plugin absent from that map as having no language restriction. scalafmt was the only formatter missing from it, so a `--all` scan of a Java project selected a Scala formatter, found it was not installed, and failed the build as a mandatory tool skip — with every domain still reporting PASS, since a missing mandatory tool belongs to no domain and bypasses `fail_on`. scalafmt is now restricted to Scala, and a test asserts every discovered formatter is mapped so the next omission fails at test time rather than in a user's CI
+
 ## [0.8.3] - 2026-09-16
 
 ### Fixed

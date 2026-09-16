@@ -2028,3 +2028,43 @@ class TestLogCommandFailure:
             mock_logger.info.assert_called_once()
             call_args = mock_logger.info.call_args[0][0]
             assert "error output" in call_args
+
+
+class TestPluginLanguageCoverage:
+    """PLUGIN_LANGUAGES gates which plugins run, so an omission is silent."""
+
+    def test_every_formatter_declares_its_languages(self) -> None:
+        """A formatter missing from the map runs on every project.
+
+        filter_plugins_by_language reads PLUGIN_LANGUAGES, not the plugin's own
+        `languages` property, and treats an absent entry as "no restriction".
+        scalafmt was missing, so it was selected for Java projects, was not
+        installed, and failed the build as a mandatory tool skip.
+        """
+        from lucidshark.plugins.formatters import discover_formatter_plugins
+
+        unrestricted = sorted(
+            name
+            for name in discover_formatter_plugins()
+            if not PLUGIN_LANGUAGES.get(name)
+        )
+
+        assert unrestricted == [], (
+            f"formatters absent from PLUGIN_LANGUAGES run everywhere: {unrestricted}"
+        )
+
+    def test_scalafmt_is_not_selected_for_a_java_project(self) -> None:
+        """The regression itself: a Java project must not get a Scala formatter."""
+        from lucidshark.plugins.formatters import discover_formatter_plugins
+
+        selected = filter_plugins_by_language(discover_formatter_plugins(), ["java"])
+
+        assert "scalafmt" not in selected
+
+    def test_scalafmt_is_still_selected_for_a_scala_project(self) -> None:
+        """Restricting it must not stop it working where it belongs."""
+        from lucidshark.plugins.formatters import discover_formatter_plugins
+
+        selected = filter_plugins_by_language(discover_formatter_plugins(), ["scala"])
+
+        assert "scalafmt" in selected
