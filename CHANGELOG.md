@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-09-16
+
 ### Fixed
 - **A failing `fail_on` policy was invisible outside `--debug`**: the reason a domain tripped its threshold was written only to a debug log, so at normal verbosity a scan could print `DUPLICATION: PASS` for every domain and still exit non-zero, leaving CI red with nothing in the output to explain it. The two notions of "pass" differ — a domain can be within its own metric threshold while its `fail_on` rule still fails the build on the underlying issues — and only one of them was reported. The reason is now printed
 
