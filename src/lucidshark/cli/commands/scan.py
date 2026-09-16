@@ -136,7 +136,12 @@ class ScanCommand(Command):
                     return EXIT_ISSUES_FOUND
             else:
                 # Check per-domain thresholds from config
-                if self._check_domain_thresholds(result, config, args):
+                fail_reason = self._check_domain_thresholds(result, config, args)
+                if fail_reason:
+                    # A domain can report PASS on its own metric and still trip
+                    # its fail_on rule -- say which one, so a non-zero exit is
+                    # never contradicted by a report full of PASS.
+                    print(f"\nFailed fail_on policy: {fail_reason}", file=sys.stdout)
                     return EXIT_ISSUES_FOUND
 
             # Check for mandatory tool failures (always fail regardless of fail_on config)
@@ -910,9 +915,15 @@ class ScanCommand(Command):
         except Exception:
             pass
 
+    @staticmethod
+    def _fail(reason: str) -> str:
+        """Log why a domain failed its threshold and hand the reason back."""
+        LOGGER.debug(reason)
+        return reason
+
     def _check_domain_thresholds(
         self, result: ScanResult, config: LucidSharkConfig, args: Namespace
-    ) -> bool:
+    ) -> Optional[str]:
         """Check if any issues exceed their domain's fail_on threshold.
 
         Groups issues by domain and checks each against its configured threshold.
@@ -924,7 +935,9 @@ class ScanCommand(Command):
             args: CLI arguments for scope and base_branch.
 
         Returns:
-            True if any domain exceeds its threshold, False otherwise.
+            Why the first failing domain exceeded its threshold, or None if
+            every domain is within its threshold. The reason is surfaced to the
+            user so a non-zero exit is never unexplained.
         """
         from lucidshark.core.models import ScanDomain, ToolDomain
 
@@ -1009,10 +1022,9 @@ class ScanCommand(Command):
                 if threshold == "any":
                     # Check changed files first
                     if check_issues:
-                        LOGGER.debug(
+                        return self._fail(
                             f"Domain {domain_name}: {len(check_issues)} issues exceed 'any' threshold"
                         )
-                        return True
                     # For "both" scope, also check full issues even if changed files have none
                     if (
                         base_branch
@@ -1021,21 +1033,19 @@ class ScanCommand(Command):
                     ):
                         full_check = full_issues_by_domain[domain_name]
                         if full_check:
-                            LOGGER.debug(
+                            return self._fail(
                                 f"Domain {domain_name}: {len(full_check)} full project issues "
                                 f"exceed 'any' threshold (scope=both)"
                             )
-                            return True
                 elif threshold == "error":
                     # For linting/type_checking: fail on any HIGH severity (errors)
                     has_errors = any(
                         i.severity.value in ("high", "critical") for i in check_issues
                     )
                     if has_errors:
-                        LOGGER.debug(
+                        return self._fail(
                             f"Domain {domain_name}: issues exceed 'error' threshold"
                         )
-                        return True
                     # For "both" scope, also check full issues
                     if (
                         base_branch
@@ -1046,10 +1056,9 @@ class ScanCommand(Command):
                         if any(
                             i.severity.value in ("high", "critical") for i in full_check
                         ):
-                            LOGGER.debug(
+                            return self._fail(
                                 f"Domain {domain_name}: full project issues exceed 'error' threshold (scope=both)"
                             )
-                            return True
                 elif threshold == "none":
                     # Never fail
                     continue
@@ -1057,20 +1066,18 @@ class ScanCommand(Command):
                     # For duplication: fail if duplication exceeds configured threshold
                     if domain_name == "duplication" and result.duplication_summary:
                         if not result.duplication_summary.passed:
-                            LOGGER.debug(
+                            return self._fail(
                                 f"Domain {domain_name}: {result.duplication_summary.duplication_percent:.1f}% "
                                 f"exceeds configured threshold of {result.duplication_summary.threshold}%"
                             )
-                            return True
                 elif threshold == "below_threshold":
                     # For coverage: fail if coverage is below configured threshold
                     if domain_name == "coverage" and result.coverage_summary:
                         if not result.coverage_summary.passed:
-                            LOGGER.debug(
+                            return self._fail(
                                 f"Domain {domain_name}: {result.coverage_summary.coverage_percentage:.1f}% "
                                 f"is below configured threshold of {result.coverage_summary.threshold}%"
                             )
-                            return True
                 elif threshold.endswith("%"):
                     # Percentage threshold (used for duplication)
                     try:
@@ -1080,20 +1087,18 @@ class ScanCommand(Command):
                                 result.duplication_summary.duplication_percent
                                 > threshold_pct
                             ):
-                                LOGGER.debug(
+                                return self._fail(
                                     f"Domain {domain_name}: {result.duplication_summary.duplication_percent:.1f}% "
                                     f"exceeds '{threshold}' threshold"
                                 )
-                                return True
                     except ValueError:
                         LOGGER.warning(f"Invalid percentage threshold: {threshold}")
                 elif check_severity_threshold(domain_issues, threshold):
-                    LOGGER.debug(
+                    return self._fail(
                         f"Domain {domain_name}: issues exceed '{threshold}' threshold"
                     )
-                    return True
 
-        return False
+        return None
 
     def _dry_run(self, args: Namespace, config: LucidSharkConfig) -> int:
         """Show what would be scanned without executing.

@@ -710,40 +710,60 @@ class TestCheckDomainThresholds:
         config = _make_config(fail_on=None)
         result = ScanResult(issues=[_make_issue()])
         args = self._make_args()
-        assert self._cmd()._check_domain_thresholds(result, config, args) is False
+        assert self._cmd()._check_domain_thresholds(result, config, args) is None
+
+    def test_failure_reason_names_the_domain_and_threshold(self) -> None:
+        """A non-zero exit must be explainable without --debug."""
+        config = _make_config(fail_on=FailOnConfig(linting="any"))
+        result = ScanResult(issues=[_make_issue(domain=ToolDomain.LINTING)])
+        args = self._make_args()
+
+        reason = self._cmd()._check_domain_thresholds(result, config, args)
+
+        assert reason is not None
+        assert "linting" in reason
+        assert "any" in reason
+
+    def test_passing_domains_give_no_reason(self) -> None:
+        """No failure means no reason to show."""
+        config = _make_config(fail_on=FailOnConfig(linting="none"))
+        result = ScanResult(issues=[_make_issue(domain=ToolDomain.LINTING)])
+        args = self._make_args()
+
+        assert self._cmd()._check_domain_thresholds(result, config, args) is None
 
     def test_threshold_any_with_issues(self) -> None:
         config = _make_config(fail_on=FailOnConfig(linting="any"))
         result = ScanResult(issues=[_make_issue(domain=ToolDomain.LINTING)])
         args = self._make_args()
-        assert self._cmd()._check_domain_thresholds(result, config, args) is True
+        assert self._cmd()._check_domain_thresholds(result, config, args)
 
     def test_threshold_any_no_issues(self) -> None:
         config = _make_config(fail_on=FailOnConfig(linting="any"))
         result = ScanResult(issues=[])
         args = self._make_args()
-        assert self._cmd()._check_domain_thresholds(result, config, args) is False
+        assert self._cmd()._check_domain_thresholds(result, config, args) is None
 
     def test_threshold_error_with_high_severity(self) -> None:
         config = _make_config(fail_on=FailOnConfig(linting="error"))
         issue = _make_issue(domain=ToolDomain.LINTING, severity=Severity.HIGH)
         result = ScanResult(issues=[issue])
         args = self._make_args()
-        assert self._cmd()._check_domain_thresholds(result, config, args) is True
+        assert self._cmd()._check_domain_thresholds(result, config, args)
 
     def test_threshold_error_with_low_severity(self) -> None:
         config = _make_config(fail_on=FailOnConfig(linting="error"))
         issue = _make_issue(domain=ToolDomain.LINTING, severity=Severity.LOW)
         result = ScanResult(issues=[issue])
         args = self._make_args()
-        assert self._cmd()._check_domain_thresholds(result, config, args) is False
+        assert self._cmd()._check_domain_thresholds(result, config, args) is None
 
     def test_threshold_none_never_fails(self) -> None:
         config = _make_config(fail_on=FailOnConfig(linting="none"))
         issue = _make_issue(domain=ToolDomain.LINTING, severity=Severity.CRITICAL)
         result = ScanResult(issues=[issue])
         args = self._make_args()
-        assert self._cmd()._check_domain_thresholds(result, config, args) is False
+        assert self._cmd()._check_domain_thresholds(result, config, args) is None
 
     def test_threshold_above_threshold_duplication_fail(self) -> None:
         config = _make_config(fail_on=FailOnConfig(duplication="above_threshold"))
@@ -753,7 +773,7 @@ class TestCheckDomainThresholds:
             duplication_percent=15.0, threshold=10.0, passed=False
         )
         args = self._make_args()
-        assert self._cmd()._check_domain_thresholds(result, config, args) is True
+        assert self._cmd()._check_domain_thresholds(result, config, args)
 
     def test_threshold_above_threshold_duplication_pass(self) -> None:
         config = _make_config(fail_on=FailOnConfig(duplication="above_threshold"))
@@ -763,7 +783,7 @@ class TestCheckDomainThresholds:
             duplication_percent=5.0, threshold=10.0, passed=True
         )
         args = self._make_args()
-        assert self._cmd()._check_domain_thresholds(result, config, args) is False
+        assert self._cmd()._check_domain_thresholds(result, config, args) is None
 
     def test_threshold_below_threshold_coverage_fail(self) -> None:
         config = _make_config(fail_on=FailOnConfig(coverage="below_threshold"))
@@ -773,7 +793,7 @@ class TestCheckDomainThresholds:
             coverage_percentage=60.0, threshold=80.0, passed=False
         )
         args = self._make_args()
-        assert self._cmd()._check_domain_thresholds(result, config, args) is True
+        assert self._cmd()._check_domain_thresholds(result, config, args)
 
     def test_threshold_below_threshold_coverage_pass(self) -> None:
         config = _make_config(fail_on=FailOnConfig(coverage="below_threshold"))
@@ -783,7 +803,7 @@ class TestCheckDomainThresholds:
             coverage_percentage=90.0, threshold=80.0, passed=True
         )
         args = self._make_args()
-        assert self._cmd()._check_domain_thresholds(result, config, args) is False
+        assert self._cmd()._check_domain_thresholds(result, config, args) is None
 
     def test_threshold_percentage_duplication(self) -> None:
         config = _make_config(fail_on=FailOnConfig(duplication="5%"))
@@ -793,7 +813,7 @@ class TestCheckDomainThresholds:
             duplication_percent=8.0, threshold=5.0, passed=False
         )
         args = self._make_args()
-        assert self._cmd()._check_domain_thresholds(result, config, args) is True
+        assert self._cmd()._check_domain_thresholds(result, config, args)
 
     def test_threshold_percentage_duplication_under(self) -> None:
         config = _make_config(fail_on=FailOnConfig(duplication="10%"))
@@ -803,7 +823,7 @@ class TestCheckDomainThresholds:
             duplication_percent=3.0, threshold=10.0, passed=True
         )
         args = self._make_args()
-        assert self._cmd()._check_domain_thresholds(result, config, args) is False
+        assert self._cmd()._check_domain_thresholds(result, config, args) is None
 
     def test_threshold_invalid_percentage(self) -> None:
         config = _make_config(fail_on=FailOnConfig(duplication="abc%"))
@@ -811,7 +831,7 @@ class TestCheckDomainThresholds:
         result = ScanResult(issues=[issue])
         result.duplication_summary = DuplicationSummary()
         args = self._make_args()
-        assert self._cmd()._check_domain_thresholds(result, config, args) is False
+        assert self._cmd()._check_domain_thresholds(result, config, args) is None
 
     @patch("lucidshark.cli.commands.scan.check_severity_threshold", return_value=True)
     def test_threshold_severity_string(self, mock_check) -> None:
@@ -819,7 +839,7 @@ class TestCheckDomainThresholds:
         issue = _make_issue(domain=ScanDomain.SCA, severity=Severity.HIGH)
         result = ScanResult(issues=[issue])
         args = self._make_args()
-        assert self._cmd()._check_domain_thresholds(result, config, args) is True
+        assert self._cmd()._check_domain_thresholds(result, config, args)
 
     def test_scan_domain_maps_to_security(self) -> None:
         """SCA, CONTAINER, IAC, SAST issues all map to 'security' domain."""
@@ -833,7 +853,7 @@ class TestCheckDomainThresholds:
         ]:
             issue = _make_issue(domain=domain)
             result = ScanResult(issues=[issue])
-            assert self._cmd()._check_domain_thresholds(result, config, args) is True
+            assert self._cmd()._check_domain_thresholds(result, config, args)
 
     def test_coverage_below_threshold_fails_when_no_coverage_issue(self) -> None:
         """Regression: --base-branch filtering strips the coverage UnifiedIssue
@@ -847,7 +867,7 @@ class TestCheckDomainThresholds:
             coverage_percentage=51.8, threshold=80.0, passed=False
         )
         args = self._make_args(base_branch="origin/main")
-        assert self._cmd()._check_domain_thresholds(result, config, args) is True
+        assert self._cmd()._check_domain_thresholds(result, config, args)
 
     def test_duplication_above_threshold_fails_when_no_duplication_issue(
         self,
@@ -859,7 +879,7 @@ class TestCheckDomainThresholds:
             duplication_percent=15.0, threshold=10.0, passed=False
         )
         args = self._make_args(base_branch="origin/main")
-        assert self._cmd()._check_domain_thresholds(result, config, args) is True
+        assert self._cmd()._check_domain_thresholds(result, config, args)
 
 
 class TestDryRun:
@@ -1106,7 +1126,7 @@ class TestIgnoreIssuesIntegration:
             duplication_threshold_scope=None,
         )
         # Only ignored issues -> should not trigger threshold
-        assert cmd._check_domain_thresholds(result, config, args) is False
+        assert cmd._check_domain_thresholds(result, config, args) is None
 
     def test_mixed_ignored_and_active_in_domain_thresholds(self) -> None:
         """Mix of ignored and active issues - only active should trigger."""
@@ -1124,7 +1144,7 @@ class TestIgnoreIssuesIntegration:
             coverage_threshold_scope=None,
             duplication_threshold_scope=None,
         )
-        assert cmd._check_domain_thresholds(result, config, args) is True
+        assert cmd._check_domain_thresholds(result, config, args)
 
 
 class TestMandatoryToolFailures:
