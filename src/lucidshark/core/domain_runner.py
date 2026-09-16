@@ -98,6 +98,7 @@ PLUGIN_LANGUAGES: Dict[str, List[str]] = {
     "ruff_format": ["python"],
     "prettier": ["javascript", "typescript"],
     "rustfmt": ["rust"],
+    "scalafmt": ["scala"],
     "google_java_format": ["java"],
     "ktlint_format": ["kotlin"],
     "gofmt": ["go"],
