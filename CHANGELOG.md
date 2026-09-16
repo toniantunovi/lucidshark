@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Duplication reported a percentage from one population and a verdict from another**: with `threshold_scope` at `project` or `both` (the default), `passed` folds in the project-wide figure while the reported percentage stays scoped to the changed files. A PR adding no duplication to a project sitting above its threshold printed `Duplication: 0.0% (FAILED)` with `Blocks: 0, Lines: 0`, and the failure message read `0.0% exceeds configured threshold of 5.0%`. The number that actually failed never appeared at any verbosity. The project figure is now reported alongside the changed-files one, and the failure message names whichever population exceeded
+
 ## [0.8.3] - 2026-09-16
 
 ### Fixed

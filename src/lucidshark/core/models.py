@@ -357,6 +357,11 @@ class DuplicationSummary:
     threshold: float = 10.0  # Default max allowed duplication %
     passed: bool = True
     execution_failed: bool = False  # True if tool crashed during execution
+    # Set when threshold_scope is 'project' or 'both': the project-wide figure
+    # that contributed to `passed`, which the percentage above does not reflect
+    # because that one is scoped to the changed files.
+    project_duplication_percent: Optional[float] = None
+    project_passed: Optional[bool] = None
 
 
 @dataclass

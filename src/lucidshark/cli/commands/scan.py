@@ -702,6 +702,22 @@ class ScanCommand(Command):
                         dup_passed = context.duplication_result.passed
 
                     duplication_summary.passed = dup_passed
+
+                    # The verdict may come from the project while the figure
+                    # above is the changed-files one. Reporting 0.0% next to
+                    # FAILED, and never printing the number that actually
+                    # failed, is what makes the output unreadable -- so carry
+                    # the project figure alongside it.
+                    if (
+                        dup_scope in ("project", "both")
+                        and full_duplication_result is not None
+                    ):
+                        duplication_summary.project_duplication_percent = round(
+                            full_duplication_result.duplication_percent, 2
+                        )
+                        duplication_summary.project_passed = (
+                            full_duplication_result.passed
+                        )
             else:
                 LOGGER.warning(
                     f"No files changed since {base_branch}, showing full results"
@@ -1065,10 +1081,23 @@ class ScanCommand(Command):
                 elif threshold == "above_threshold":
                     # For duplication: fail if duplication exceeds configured threshold
                     if domain_name == "duplication" and result.duplication_summary:
-                        if not result.duplication_summary.passed:
+                        ds = result.duplication_summary
+                        if not ds.passed:
+                            # `passed` folds in the project figure under scope
+                            # 'project'/'both'. Name whichever number actually
+                            # exceeded, rather than the changed-files one that
+                            # may well be 0.0%.
+                            percent = ds.duplication_percent
+                            where = "changed files"
+                            if (
+                                percent <= ds.threshold
+                                and ds.project_duplication_percent is not None
+                            ):
+                                percent = ds.project_duplication_percent
+                                where = "project-wide"
                             return self._fail(
-                                f"Domain {domain_name}: {result.duplication_summary.duplication_percent:.1f}% "
-                                f"exceeds configured threshold of {result.duplication_summary.threshold}%"
+                                f"Domain {domain_name}: {percent:.1f}% {where} "
+                                f"exceeds configured threshold of {ds.threshold}%"
                             )
                 elif threshold == "below_threshold":
                     # For coverage: fail if coverage is below configured threshold
