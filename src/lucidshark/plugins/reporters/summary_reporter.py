@@ -86,6 +86,15 @@ class SummaryReporter(ReporterPlugin):
                 status = "PASSED" if ds.passed else "FAILED"
                 lines.append(f"\nDuplication: {ds.duplication_percent:.1f}% ({status})")
                 lines.append(f"  Threshold: {ds.threshold}%")
+                if ds.project_duplication_percent is not None:
+                    # The verdict includes the project figure, which the
+                    # percentage above does not reflect.
+                    project_status = "PASSED" if ds.project_passed else "FAILED"
+                    lines.append(
+                        f"  Project-wide: {ds.project_duplication_percent:.1f}% "
+                        f"({project_status}) - changed files above, "
+                        f"both must pass"
+                    )
                 lines.append(
                     f"  Blocks: {ds.duplicate_blocks}, Lines: {ds.duplicate_lines}"
                 )

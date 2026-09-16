@@ -209,6 +209,44 @@ class TestSummaryFormatSummary:
         assert "Lines: 0/500 covered" in text
         assert "no measurable lines" not in text
 
+    def test_duplication_reports_project_figure_when_it_drove_the_verdict(
+        self, reporter: SummaryReporter
+    ) -> None:
+        """0.0% next to FAILED must not be the whole story."""
+        result = ScanResult(
+            duplication_summary=DuplicationSummary(
+                duplication_percent=0.0,
+                threshold=5.0,
+                duplicate_blocks=0,
+                duplicate_lines=0,
+                passed=False,
+                project_duplication_percent=35.6,
+                project_passed=False,
+            )
+        )
+        lines = reporter._format_summary(result)
+        text = "\n".join(lines)
+        assert "Duplication: 0.0% (FAILED)" in text
+        assert "Project-wide: 35.6% (FAILED)" in text
+
+    def test_duplication_omits_project_line_for_changed_scope(
+        self, reporter: SummaryReporter
+    ) -> None:
+        """Under scope 'changed' there is no second figure to report."""
+        result = ScanResult(
+            duplication_summary=DuplicationSummary(
+                duplication_percent=2.0,
+                threshold=5.0,
+                duplicate_blocks=1,
+                duplicate_lines=9,
+                passed=True,
+            )
+        )
+        lines = reporter._format_summary(result)
+        text = "\n".join(lines)
+        assert "Duplication: 2.0% (PASSED)" in text
+        assert "Project-wide" not in text
+
     def test_duplication_summary_passed(self, reporter: SummaryReporter) -> None:
         result = ScanResult(
             duplication_summary=DuplicationSummary(
