@@ -1,8 +1,8 @@
 pytest>=9.0.2
 pytest-cov>=7.0.0
 pytest-asyncio>=0.23.0
-coverage>=7.0
-ruff==0.15.22
+coverage>=7.16.1
+ruff==0.16.7
 mypy>=1.0
-pyright>=1.1
-pyinstaller==6.21.0
+pyright>=1.1.414
+pyinstaller==6.22.3
