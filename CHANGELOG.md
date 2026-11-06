@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **Every download is now integrity-checked**: previously the install script, the self-updater and all ten managed tool downloads (Trivy, OpenGrep, Checkov, gosec, PMD, Checkstyle, SpotBugs, ktlint, detekt, duplo) trusted whatever HTTPS returned. Now:
+  - Tool downloads are verified against SHA-256 pins shipped inside LucidShark for each exact version, asset and platform (`bootstrap/checksums.py`, 24 pins). A mismatch is rejected before anything is written, and a URL without a pin is refused before any network access.
+  - `scripts/update_tool_checksums.py` regenerates the pins. It captures the URLs from the plugins themselves and cross-checks each hash against the digest GitHub recorded at upload. A unit test fails when a tool version or asset name changes without re-pinning.
+  - Releases publish `SHA256SUMS` and a signed build provenance attestation for every binary.
+  - `install.sh` verifies the binary against `SHA256SUMS` before making it executable. `--insecure-skip-checksum` exists only for installing releases that predate the checksum file.
+  - The self-updater only stages an update whose hash matches the release's `SHA256SUMS`, and skips releases without one. The hash is recorded with the staged binary and checked again before the update is applied.
+
+### Fixed
+- **Vulnerable dependency pins**: PyJWT 2.13.0 to 2.15.0 (CVE-2026-102268 and others), urllib3 2.7.0 to 2.8.0, mcp 1.29.1 to 1.30.0, certifi 2026.7.22 to 2026.10.18. These CVEs were published after 0.8.4 and failed the `security: high` gate on every CI run.
+
 ## [0.8.4] - 2026-09-16
 
 ### Fixed

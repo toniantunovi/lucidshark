@@ -37,6 +37,7 @@ GITHUB_API_LATEST = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest
 
 # Cache settings
 CHECK_INTERVAL_SECONDS = 86400  # 24 hours
+SHA256SUMS_ASSET = "SHA256SUMS"  # checksum file published with every release
 UPDATE_CHECK_FILE = "update_check.json"
 PENDING_UPDATE_DIR = "pending-update"
 PENDING_VERSION_FILE = "version.json"
@@ -118,6 +119,7 @@ def apply_pending_update(cache_dir: Path, current_version: str) -> Optional[str]
         with open(version_file, "r") as f:
             meta = json.load(f)
         new_version = meta.get("version", "")
+        expected_sha256 = meta.get("sha256", "")
     except Exception:
         _cleanup_pending(pending_dir)
         return None
@@ -135,6 +137,19 @@ def apply_pending_update(cache_dir: Path, current_version: str) -> Optional[str]
     # Validate: file is executable
     if not os.access(pending_binary, os.X_OK):
         LOGGER.debug("Pending update binary not executable, discarding")
+        _cleanup_pending(pending_dir)
+        return None
+
+    # Validate: still matches the SHA-256 verified at download time. Staged
+    # binaries without a recorded hash predate verification and are discarded.
+    try:
+        from lucidshark.bootstrap.download import verify_sha256
+
+        if not expected_sha256:
+            raise ValueError("no recorded sha256")
+        verify_sha256(pending_binary.read_bytes(), expected_sha256, str(pending_binary))
+    except Exception as e:
+        LOGGER.debug(f"Pending update failed verification, discarding: {e}")
         _cleanup_pending(pending_dir)
         return None
 
@@ -249,6 +264,36 @@ def check_for_update(
     return None
 
 
+def parse_sha256sums(text: str) -> Dict[str, str]:
+    """Parse ``sha256sum`` output into {filename: lowercase hex digest}."""
+    result: Dict[str, str] = {}
+    for line in text.splitlines():
+        parts = line.strip().split()
+        if len(parts) != 2:
+            continue
+        digest, name = parts[0].lower(), parts[1].lstrip("*")
+        if len(digest) == 64 and all(c in "0123456789abcdef" for c in digest):
+            result[name] = digest
+    return result
+
+
+def fetch_release_sha256(download_url: str) -> Optional[str]:
+    """Return the SHA-256 published in the release's SHA256SUMS for this asset.
+
+    Returns None when the release has no SHA256SUMS or no entry for the asset.
+    """
+    from lucidshark.bootstrap.download import secure_urlopen
+
+    base, asset_name = download_url.rsplit("/", 1)
+    try:
+        with secure_urlopen(f"{base}/{SHA256SUMS_ASSET}", timeout=30) as resp:
+            text = resp.read().decode("utf-8", errors="replace")
+    except Exception as e:
+        LOGGER.debug(f"Could not fetch {SHA256SUMS_ASSET}: {e}")
+        return None
+    return parse_sha256sums(text).get(asset_name)
+
+
 def download_pending_update(
     cache_dir: Path,
     download_url: str,
@@ -258,13 +303,20 @@ def download_pending_update(
 
     Returns True on success, False on any error.
     """
-    from lucidshark.bootstrap.download import download_file
+    from lucidshark.bootstrap.download import download_file, verify_sha256
 
     pending_dir = cache_dir / PENDING_UPDATE_DIR
     pending_binary = pending_dir / "lucidshark"
     version_file = pending_dir / PENDING_VERSION_FILE
 
     try:
+        # Resolve the expected hash before downloading anything. A release
+        # without a SHA256SUMS entry for this asset is never installed.
+        expected_sha256 = fetch_release_sha256(download_url)
+        if expected_sha256 is None:
+            LOGGER.debug(f"No SHA256SUMS entry for {download_url}; skipping update")
+            return False
+
         pending_dir.mkdir(parents=True, exist_ok=True)
 
         # Download to a temp file first, then rename into place
@@ -276,6 +328,9 @@ def download_pending_update(
             tmp.unlink(missing_ok=True)
             return False
 
+        # Validate integrity (raises on mismatch; cleaned up below)
+        verify_sha256(tmp.read_bytes(), expected_sha256, download_url)
+
         # Make executable and move into place
         os.chmod(tmp, 0o755)  # nosemgrep: insecure-file-permissions
         os.rename(tmp, pending_binary)
@@ -285,6 +340,7 @@ def download_pending_update(
             "version": version,
             "downloaded_at": datetime.now(timezone.utc).isoformat(),
             "url": download_url,
+            "sha256": expected_sha256,
         }
         with open(version_file, "w") as f:
             json.dump(meta, f)

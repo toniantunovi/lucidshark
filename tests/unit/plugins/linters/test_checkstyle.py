@@ -189,8 +189,8 @@ class TestCheckstyleDownloadBinary:
             mock_response.__exit__ = MagicMock(return_value=False)
 
             with patch(
-                "lucidshark.plugins.linters.checkstyle.secure_urlopen",
-                return_value=mock_response,
+                "lucidshark.plugins.linters.checkstyle.download_verified",
+                return_value=mock_response.read.return_value,
             ):
                 linter._download_binary(dest_dir)
 
@@ -199,7 +199,7 @@ class TestCheckstyleDownloadBinary:
             assert jar_path.exists()
 
     def test_download_cleans_up_temp_on_network_error(self) -> None:
-        """Verify temp file is cleaned up when secure_urlopen raises."""
+        """Verify temp file is cleaned up when the download raises."""
         from urllib.error import URLError
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -207,7 +207,7 @@ class TestCheckstyleDownloadBinary:
             dest_dir = Path(tmpdir) / "dest"
 
             with patch(
-                "lucidshark.plugins.linters.checkstyle.secure_urlopen",
+                "lucidshark.plugins.linters.checkstyle.download_verified",
                 side_effect=URLError("connection refused"),
             ):
                 with pytest.raises(URLError):
@@ -227,8 +227,8 @@ class TestCheckstyleDownloadBinary:
             mock_response.__exit__ = MagicMock(return_value=False)
 
             with patch(
-                "lucidshark.plugins.linters.checkstyle.secure_urlopen",
-                return_value=mock_response,
+                "lucidshark.plugins.linters.checkstyle.download_verified",
+                return_value=mock_response.read.return_value,
             ) as mock_urlopen:
                 linter._download_binary(dest_dir)
 

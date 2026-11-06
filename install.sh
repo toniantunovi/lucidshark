@@ -6,14 +6,16 @@
 #   curl -fsSL https://raw.githubusercontent.com/toniantunovi/lucidshark/main/install.sh | bash
 #
 # Or with options:
-#   curl -fsSL https://raw.githubusercontent.com/toniantunovi/lucidshark/main/install.sh | bash -s -- --version v0.5.17
+#   curl -fsSL https://raw.githubusercontent.com/toniantunovi/lucidshark/main/install.sh | bash -s -- --version v0.8.5
 
 set -euo pipefail
 
 # Configuration
 REPO="toniantunovi/lucidshark"
 BINARY_NAME="lucidshark"
+SUMS_NAME="SHA256SUMS"
 TMP_FILE=""
+TMP_SUMS=""
 
 # Colors for output
 RED='\033[0;31m'
@@ -76,9 +78,43 @@ download() {
     fi
 }
 
+# Print the SHA-256 of a file using whichever tool the system has
+sha256_of() {
+    local file="$1"
+    if command -v sha256sum &> /dev/null; then
+        sha256sum "$file" | awk '{print $1}'
+    elif command -v shasum &> /dev/null; then
+        shasum -a 256 "$file" | awk '{print $1}'
+    elif command -v openssl &> /dev/null; then
+        openssl dgst -sha256 -r "$file" | awk '{print $1}'
+    else
+        error "No SHA-256 tool found (need sha256sum, shasum or openssl)."
+    fi
+}
+
+# Verify a downloaded binary against the release's SHA256SUMS file
+verify_checksum() {
+    local file="$1"
+    local sums_file="$2"
+    local asset="$3"
+    local expected actual
+
+    expected="$(awk -v name="$asset" '{n=$2; sub(/^\*/, "", n)} n == name {print tolower($1); exit}' "$sums_file")"
+    if [[ ! "$expected" =~ ^[0-9a-f]{64}$ ]]; then
+        error "${SUMS_NAME} has no entry for ${asset}. Refusing to install an unverified binary."
+    fi
+
+    actual="$(sha256_of "$file")"
+    if [[ "$actual" != "$expected" ]]; then
+        error "Checksum mismatch for ${asset}: expected ${expected}, got ${actual}. The download was discarded."
+    fi
+    success "Checksum verified (SHA-256 ${actual})"
+}
+
 # Main installation function
 main() {
     local version=""
+    local skip_checksum=false
 
     # Parse arguments
     while [[ $# -gt 0 ]]; do
@@ -87,14 +123,20 @@ main() {
                 version="$2"
                 shift 2
                 ;;
+            --insecure-skip-checksum)
+                skip_checksum=true
+                shift
+                ;;
             --help|-h)
                 echo "LucidShark Installer"
                 echo ""
                 echo "Usage: install.sh [OPTIONS]"
                 echo ""
                 echo "Options:"
-                echo "  --version, -v    Install specific version (e.g., v0.5.17)"
-                echo "  --help, -h       Show this help message"
+                echo "  --version, -v              Install specific version (e.g., v0.8.5)"
+                echo "  --insecure-skip-checksum   Skip SHA-256 verification (only for releases"
+                echo "                             published before SHA256SUMS existed)"
+                echo "  --help, -h                 Show this help message"
                 exit 0
                 ;;
             *)
@@ -142,12 +184,25 @@ main() {
 
     info "Downloading ${binary_name}..."
 
-    # Create temp file for download
+    # Create temp files for download
     TMP_FILE="$(mktemp)"
-    trap 'rm -f "$TMP_FILE"' EXIT
+    TMP_SUMS="$(mktemp)"
+    trap 'rm -f "$TMP_FILE" "$TMP_SUMS"' EXIT
 
     if ! download "$download_url" "$TMP_FILE"; then
         error "Failed to download binary from: $download_url"
+    fi
+
+    # Verify integrity before the binary is ever made executable
+    if [[ "$skip_checksum" == true ]]; then
+        warn "WARNING: --insecure-skip-checksum given, installing WITHOUT integrity verification."
+    else
+        local sums_url="https://github.com/${REPO}/releases/download/${version}/${SUMS_NAME}"
+        info "Verifying checksum..."
+        if ! download "$sums_url" "$TMP_SUMS"; then
+            error "Could not download ${SUMS_NAME} for ${version}. Releases before checksums were published need --insecure-skip-checksum."
+        fi
+        verify_checksum "$TMP_FILE" "$TMP_SUMS" "$binary_name"
     fi
 
     # Install binary

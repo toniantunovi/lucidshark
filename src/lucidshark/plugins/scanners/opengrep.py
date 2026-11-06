@@ -15,7 +15,7 @@ from lucidshark.core.models import (
     SkipReason,
     UnifiedIssue,
 )
-from lucidshark.bootstrap.download import secure_urlopen
+from lucidshark.bootstrap.download import download_verified
 from lucidshark.bootstrap.paths import LucidsharkPaths
 from lucidshark.bootstrap.platform import get_platform_info
 from lucidshark.bootstrap.validation import (
@@ -139,8 +139,7 @@ class OpenGrepScanner(ScannerPlugin):
 
         # Download binary directly (not an archive)
         try:
-            with secure_urlopen(url) as response:  # nosec B310 nosemgrep
-                binary_path.write_bytes(response.read())
+            binary_path.write_bytes(download_verified(url))
 
             binary_path.chmod(0o755)
 

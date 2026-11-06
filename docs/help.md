@@ -12,6 +12,8 @@ curl -fsSL https://raw.githubusercontent.com/toniantunovi/lucidshark/main/instal
 
 **Note:** LucidShark installs as a project-local `./lucidshark` binary. Always use `./lucidshark` to ensure you're running the project-specific version.
 
+The installer verifies the binary against the release's `SHA256SUMS` before installing it and aborts on mismatch. Releases published before checksums existed (0.8.4 and earlier) can only be installed with `--insecure-skip-checksum`. Every scanner or tool binary LucidShark downloads later is checked against a SHA-256 pinned inside LucidShark.
+
 ### Recommended Setup
 
 ```bash

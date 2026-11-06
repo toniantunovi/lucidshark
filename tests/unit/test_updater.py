@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import stat
@@ -12,7 +13,11 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from lucidshark.updater import (
+    fetch_release_sha256,
+    parse_sha256sums,
     CHECK_INTERVAL_SECONDS,
     MIN_BINARY_SIZE,
     PENDING_UPDATE_DIR,
@@ -301,12 +306,47 @@ class TestCheckForUpdate:
 # ---------------------------------------------------------------------------
 
 
+GOOD_BINARY = b"\x00" * (MIN_BINARY_SIZE + 1)
+GOOD_SHA256 = hashlib.sha256(GOOD_BINARY).hexdigest()
+
+
 class TestDownloadPendingUpdate:
     """Tests for download_pending_update."""
 
+    @pytest.fixture(autouse=True)
+    def _pinned_hash(self):  # type: ignore[no-untyped-def]
+        with patch(
+            "lucidshark.updater.fetch_release_sha256", return_value=GOOD_SHA256
+        ) as m:
+            self.fetch_mock = m
+            yield
+
+    def test_rejects_hash_mismatch(self, tmp_path: Path) -> None:
+        def fake_download(_url: str, dest: Path, timeout: float = 60.0) -> None:
+            dest.write_bytes(b"\x01" * (MIN_BINARY_SIZE + 1))  # tampered
+
+        with patch(
+            "lucidshark.bootstrap.download.download_file", side_effect=fake_download
+        ):
+            result = download_pending_update(
+                tmp_path, "https://example.com/lucidshark", "0.8.0"
+            )
+        assert result is False
+        assert not (tmp_path / PENDING_UPDATE_DIR).exists()
+
+    def test_skips_release_without_checksum(self, tmp_path: Path) -> None:
+        self.fetch_mock.return_value = None
+        download = MagicMock()
+        with patch("lucidshark.bootstrap.download.download_file", download):
+            result = download_pending_update(
+                tmp_path, "https://example.com/lucidshark", "0.8.0"
+            )
+        assert result is False
+        download.assert_not_called()
+
     def test_successful_download(self, tmp_path: Path) -> None:
         def fake_download(_url: str, dest: Path, timeout: float = 60.0) -> None:
-            dest.write_bytes(b"\x00" * (MIN_BINARY_SIZE + 1))
+            dest.write_bytes(GOOD_BINARY)
 
         with patch(
             "lucidshark.bootstrap.download.download_file", side_effect=fake_download
@@ -324,6 +364,7 @@ class TestDownloadPendingUpdate:
         meta = json.loads(version_file.read_text())
         assert meta["version"] == "0.8.0"
         assert meta["url"] == "https://example.com/lucidshark"
+        assert meta["sha256"] == GOOD_SHA256
 
     def test_rejects_too_small_download(self, tmp_path: Path) -> None:
         def fake_download(_url: str, dest: Path, timeout: float = 60.0) -> None:
@@ -393,19 +434,38 @@ class TestApplyPendingUpdate:
         version: str = "0.8.0",
         binary_size: int = MIN_BINARY_SIZE + 1,
         executable: bool = True,
+        sha256: str | None = "auto",
     ) -> Path:
         """Create a staged pending update in cache_dir."""
         pending_dir = cache_dir / PENDING_UPDATE_DIR
         pending_dir.mkdir(parents=True, exist_ok=True)
 
         binary = pending_dir / "lucidshark"
-        binary.write_bytes(b"\x00" * binary_size)
+        content = b"\x00" * binary_size
+        binary.write_bytes(content)
         if executable:
             binary.chmod(binary.stat().st_mode | stat.S_IXUSR)
 
+        meta: dict[str, Any] = {"version": version}
+        if sha256 == "auto":
+            meta["sha256"] = hashlib.sha256(content).hexdigest()
+        elif sha256 is not None:
+            meta["sha256"] = sha256
         version_file = pending_dir / PENDING_VERSION_FILE
-        version_file.write_text(json.dumps({"version": version}))
+        version_file.write_text(json.dumps(meta))
         return pending_dir
+
+    def test_discards_staged_update_without_recorded_hash(self, tmp_path: Path) -> None:
+        pending_dir = self._stage_pending_update(tmp_path, sha256=None)
+        assert apply_pending_update(tmp_path, "0.7.0") is None
+        assert not pending_dir.exists()
+
+    def test_discards_staged_update_modified_after_download(
+        self, tmp_path: Path
+    ) -> None:
+        pending_dir = self._stage_pending_update(tmp_path, sha256="0" * 64)
+        assert apply_pending_update(tmp_path, "0.7.0") is None
+        assert not pending_dir.exists()
 
     def test_returns_none_when_no_pending_update(self, tmp_path: Path) -> None:
         result = apply_pending_update(tmp_path, "0.7.0")
@@ -651,19 +711,38 @@ class TestCheckAndApplyUpdate:
         version: str = "0.8.0",
         binary_size: int = MIN_BINARY_SIZE + 1,
         executable: bool = True,
+        sha256: str | None = "auto",
     ) -> Path:
         """Create a staged pending update in cache_dir."""
         pending_dir = cache_dir / PENDING_UPDATE_DIR
         pending_dir.mkdir(parents=True, exist_ok=True)
 
         binary = pending_dir / "lucidshark"
-        binary.write_bytes(b"\x00" * binary_size)
+        content = b"\x00" * binary_size
+        binary.write_bytes(content)
         if executable:
             binary.chmod(binary.stat().st_mode | stat.S_IXUSR)
 
+        meta: dict[str, Any] = {"version": version}
+        if sha256 == "auto":
+            meta["sha256"] = hashlib.sha256(content).hexdigest()
+        elif sha256 is not None:
+            meta["sha256"] = sha256
         version_file = pending_dir / PENDING_VERSION_FILE
-        version_file.write_text(json.dumps({"version": version}))
+        version_file.write_text(json.dumps(meta))
         return pending_dir
+
+    def test_discards_staged_update_without_recorded_hash(self, tmp_path: Path) -> None:
+        pending_dir = self._stage_pending_update(tmp_path, sha256=None)
+        assert apply_pending_update(tmp_path, "0.7.0") is None
+        assert not pending_dir.exists()
+
+    def test_discards_staged_update_modified_after_download(
+        self, tmp_path: Path
+    ) -> None:
+        pending_dir = self._stage_pending_update(tmp_path, sha256="0" * 64)
+        assert apply_pending_update(tmp_path, "0.7.0") is None
+        assert not pending_dir.exists()
 
     def test_applies_pending_update_without_checking_github(
         self, tmp_path: Path
@@ -1003,3 +1082,60 @@ class TestMaybeCheckApplyAndReexec:
                 side_effect=RuntimeError("boom"),
             ):
                 maybe_check_apply_and_reexec("0.7.0")
+
+
+# ---------------------------------------------------------------------------
+# SHA256SUMS parsing and lookup
+# ---------------------------------------------------------------------------
+
+
+class TestReleaseChecksums:
+    """Tests for parse_sha256sums and fetch_release_sha256."""
+
+    SUMS = (
+        f"{'a' * 64}  lucidshark-linux-amd64\n"
+        f"{'B' * 64} *lucidshark-darwin-arm64\n"
+        "garbage line\n"
+        "short  lucidshark-linux-arm64\n"
+    )
+
+    def _resp(self, body: bytes) -> MagicMock:
+        resp = MagicMock()
+        resp.read.return_value = body
+        resp.__enter__ = lambda s: s
+        resp.__exit__ = MagicMock(return_value=False)
+        return resp
+
+    def test_parse(self) -> None:
+        assert parse_sha256sums(self.SUMS) == {
+            "lucidshark-linux-amd64": "a" * 64,
+            "lucidshark-darwin-arm64": "b" * 64,
+        }
+
+    def test_fetch_uses_sums_next_to_asset(self) -> None:
+        url = "https://github.com/o/r/releases/download/v1.0.0/lucidshark-linux-amd64"
+        with patch(
+            "lucidshark.bootstrap.download.secure_urlopen",
+            return_value=self._resp(self.SUMS.encode()),
+        ) as m:
+            assert fetch_release_sha256(url) == "a" * 64
+        assert m.call_args[0][0] == (
+            "https://github.com/o/r/releases/download/v1.0.0/SHA256SUMS"
+        )
+
+    def test_fetch_missing_entry(self) -> None:
+        url = "https://github.com/o/r/releases/download/v1.0.0/lucidshark-linux-arm64"
+        with patch(
+            "lucidshark.bootstrap.download.secure_urlopen",
+            return_value=self._resp(self.SUMS.encode()),
+        ):
+            assert fetch_release_sha256(url) is None
+
+    def test_fetch_network_error(self) -> None:
+        with patch(
+            "lucidshark.bootstrap.download.secure_urlopen",
+            side_effect=OSError("404"),
+        ):
+            assert (
+                fetch_release_sha256("https://x.test/v1/lucidshark-linux-amd64") is None
+            )
