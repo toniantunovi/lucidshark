@@ -7,8 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-07
+
 ### Removed
-- **Telemetry**: the anonymous PostHog usage analytics (`scan_completed`, `init_completed`, `autoconfigure_initiated`) are gone, along with the `posthog` dependency and the `LUCIDSHARK_TELEMETRY` / `DO_NOT_TRACK` / `~/.lucidshark/telemetry-optout` opt-outs. LucidShark no longer sends any data. Existing `~/.lucidshark/anonymous-id` files are unused and can be deleted
+- **Telemetry**: the anonymous PostHog usage analytics (`scan_completed`, `init_completed`, `autoconfigure_initiated`) are gone, along with the `posthog` dependency and the `LUCIDSHARK_TELEMETRY` / `DO_NOT_TRACK` / `~/.lucidshark/telemetry-optout` opt-outs. LucidShark no longer sends any data. Existing `~/.lucidshark/anonymous-id` files are unused and can be deleted (#155)
 
 ## [0.8.6] - 2026-11-07
 
