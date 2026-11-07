@@ -9,65 +9,65 @@ from __future__ import annotations
 from typing import Dict
 
 PINNED_SHA256: Dict[str, str] = {
-    "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-64bit.tar.gz": (
-        "2ae6fe3ee734b7fdf11335663e18c75ea12dccc76062f09f164a3b0f8be4371a"
+    "https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_Linux-64bit.tar.gz": (
+        "bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf"
     ),
-    "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_Linux-ARM64.tar.gz": (
-        "b94ce1976bbf3c15b514b605ee88be7c6d94a29be2302847ff01cb794d47aad5"
+    "https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_Linux-ARM64.tar.gz": (
+        "ab9d51f86e6a5fb936f605faff6b593ac51bc378fff4d3e8b9d58358b9c367c3"
     ),
-    "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_macOS-64bit.tar.gz": (
-        "472816f6888dda689d075c30254d4210b4d1035acf365aa72332f584c2f60485"
+    "https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_macOS-64bit.tar.gz": (
+        "e08bb9ea449ecf66c6bfb03cbb8697c503ff33d35fc585c9747e3eaeb7ed4c7b"
     ),
-    "https://github.com/aquasecurity/trivy/releases/download/v0.74.0/trivy_0.74.0_macOS-ARM64.tar.gz": (
-        "1caada5e0e2091909357c7525d3aa76f4b660b13821bc143b190c7483e31cc11"
+    "https://github.com/aquasecurity/trivy/releases/download/v0.76.2/trivy_0.76.2_macOS-ARM64.tar.gz": (
+        "ae7ea358326960406b703c77b2ac490190797d80b306b5b50c2a27221da0a5b8"
     ),
-    "https://github.com/bridgecrewio/checkov/releases/download/3.3.16/checkov_darwin_X86_64.zip": (
-        "fd5f8c999baf2204660dd2ff6ce3718d9eeb8263b77596144f2792652ad55284"
+    "https://github.com/bridgecrewio/checkov/releases/download/3.3.20/checkov_darwin_X86_64.zip": (
+        "31c907f5b6f5713804cd4f380b14bb13b6f0e7cda5f1c655fccbd78422e8ea8a"
     ),
-    "https://github.com/bridgecrewio/checkov/releases/download/3.3.16/checkov_linux_X86_64.zip": (
-        "2c7b6cbe7a32d8463248ea8a9919410c9947a85ea56592a8bcc4b70f5d559601"
+    "https://github.com/bridgecrewio/checkov/releases/download/3.3.20/checkov_linux_X86_64.zip": (
+        "4e630ff1f25ebb5de9d7adbfe90a869e8356e25f80f4ab456d6fb273358b4e67"
     ),
-    "https://github.com/bridgecrewio/checkov/releases/download/3.3.16/checkov_linux_arm64.zip": (
-        "6de0dd6ae9189efb22b5affd637f5386873d8088cc3121c0cc433805d9c4c175"
+    "https://github.com/bridgecrewio/checkov/releases/download/3.3.20/checkov_linux_arm64.zip": (
+        "8cc71b2c8937584017d19b3effa1eb2936c0eeefb06e2e261f71b3a4f90e68cb"
     ),
-    "https://github.com/checkstyle/checkstyle/releases/download/checkstyle-14.1.0/checkstyle-14.1.0-all.jar": (
-        "51e2bc7fed1bb56808aa39045f655a316194997acd24bac5195253dcf342b380"
+    "https://github.com/checkstyle/checkstyle/releases/download/checkstyle-14.4.0/checkstyle-14.4.0-all.jar": (
+        "c0a521e54eabd1ece4ff7bd84cf231b012615745ed3aa4fb27ab0ca73097250c"
     ),
     "https://github.com/detekt/detekt/releases/download/v1.23.8/detekt-cli-1.23.8-all.jar": (
         "2ce2ff952e150baf28a29cda70a363b0340b3e81a55f43e51ec5edffc3d066c1"
     ),
-    "https://github.com/opengrep/opengrep/releases/download/v1.29.0/opengrep_manylinux_aarch64": (
-        "db3cda6e6e53251a3874e62b7c8493c281508480b3f3b4db554be41583b21174"
+    "https://github.com/opengrep/opengrep/releases/download/v1.33.1/opengrep_manylinux_aarch64": (
+        "d1433f63a90b8bc0b6ad4b498a13b372b856ce9a754a43484ba4920fe2d76dcf"
     ),
-    "https://github.com/opengrep/opengrep/releases/download/v1.29.0/opengrep_manylinux_x86": (
-        "3365ef49d04893e01338d85d9bbd49b2bd5261ad4c9c0df0a6a0f8d44232ae13"
+    "https://github.com/opengrep/opengrep/releases/download/v1.33.1/opengrep_manylinux_x86": (
+        "46e8133cc490f9f50518061590ce2f6be5a08afaeda034471c0ceda4b3899808"
     ),
-    "https://github.com/opengrep/opengrep/releases/download/v1.29.0/opengrep_osx_arm64": (
-        "dacc12a24e95b22c8b1ab55be1777b6eb877a922c5571a95b9a8de30f3963438"
+    "https://github.com/opengrep/opengrep/releases/download/v1.33.1/opengrep_osx_arm64": (
+        "a17c1881bb40e3214266a7a291cf4f2ae3bc56c1715628b5712d2ec816bc3e2d"
     ),
-    "https://github.com/opengrep/opengrep/releases/download/v1.29.0/opengrep_osx_x86": (
-        "7173bd701491b58e1d1f62c24470ca0be124ecd63885c4d6293cbf71fd706508"
+    "https://github.com/opengrep/opengrep/releases/download/v1.33.1/opengrep_osx_x86": (
+        "c3bd18e0d898d44e28419d95dad57c8928bb46ab32889a0ee1f72a87ad9627af"
     ),
     "https://github.com/pinterest/ktlint/releases/download/1.8.0/ktlint": (
         "a3fd620207d5c40da6ca789b95e7f823c54e854b7fade7f613e91096a3706d75"
     ),
-    "https://github.com/pmd/pmd/releases/download/pmd_releases/7.27.0/pmd-dist-7.27.0-bin.zip": (
-        "4ae396ffaf2b0d3ef0b73a10b2925e77066f73d57a4ce9078c60e7302bcddec9"
+    "https://github.com/pmd/pmd/releases/download/pmd_releases/7.29.0/pmd-dist-7.29.0-bin.zip": (
+        "d27177c185b837fa57f097e482d1253468aa035379c5eb2671fa0a279109b179"
     ),
-    "https://github.com/securego/gosec/releases/download/v2.29.0/gosec_2.29.0_darwin_amd64.tar.gz": (
-        "a48152c3c009988f1750b6508316339c8b55076d24b1a958789e30ea2a21794c"
+    "https://github.com/securego/gosec/releases/download/v2.30.0/gosec_2.30.0_darwin_amd64.tar.gz": (
+        "1b10b496954791f4b57448722f0cb93c0fa4aba24e9d286c0459dfde593e0898"
     ),
-    "https://github.com/securego/gosec/releases/download/v2.29.0/gosec_2.29.0_darwin_arm64.tar.gz": (
-        "7ab6a92c1983b7cb9df12b3ac20fb270afa43cfa12a143c354edae3109c763e5"
+    "https://github.com/securego/gosec/releases/download/v2.30.0/gosec_2.30.0_darwin_arm64.tar.gz": (
+        "cac8c480673fc179798402b6d86efc12b6bcf11c18bcf377fda02cc55846dd97"
     ),
-    "https://github.com/securego/gosec/releases/download/v2.29.0/gosec_2.29.0_linux_amd64.tar.gz": (
-        "6431b119741c1f4a50fdfcf94e782e16b9e642afc8c7fa9b5d39d48bf3003095"
+    "https://github.com/securego/gosec/releases/download/v2.30.0/gosec_2.30.0_linux_amd64.tar.gz": (
+        "3fcce2c4e802ff4169217874602a7df355e9a37bcb6ffaa34b08f3d5f336cdfb"
     ),
-    "https://github.com/securego/gosec/releases/download/v2.29.0/gosec_2.29.0_linux_arm64.tar.gz": (
-        "c71244ec8d37488fd479d0d26990968fee03ece48b305d8224ac0c1ebd66e87c"
+    "https://github.com/securego/gosec/releases/download/v2.30.0/gosec_2.30.0_linux_arm64.tar.gz": (
+        "0867994920453070a5d6a713e35921a3058473e5c3bf777fdd5a2d6f95313fda"
     ),
-    "https://github.com/spotbugs/spotbugs/releases/download/4.10.4/spotbugs-4.10.4.zip": (
-        "771c8702beb2b4b6aa20df87ea85f22fda7280c7ce36fce4077b7b3c076d1e14"
+    "https://github.com/spotbugs/spotbugs/releases/download/4.10.5/spotbugs-4.10.5.zip": (
+        "f8eb9cf4ac8e1b29b3e29567541eef3f30b3bf49ff3880670a7963092cd8a859"
     ),
     "https://github.com/toniantunovi/lucidshark-duplo/releases/download/v0.2.0/lucidshark-duplo-linux-aarch64.tar.gz": (
         "1e509820936f85323c1794629f31707dcea4a7305556a126b059bec968d14d49"

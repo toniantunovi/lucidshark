@@ -148,10 +148,18 @@ def _open(url: str, accept: Optional[str] = None):
 
 
 def sha256_of_url(url: str) -> str:
+    from urllib.error import HTTPError
+
     h = hashlib.sha256()
-    with _open(url) as resp:
-        for chunk in iter(lambda: resp.read(1 << 20), b""):
-            h.update(chunk)
+    try:
+        with _open(url) as resp:
+            for chunk in iter(lambda: resp.read(1 << 20), b""):
+                h.update(chunk)
+    except HTTPError as e:
+        raise SystemExit(
+            f"HTTP {e.code} for {url}\n"
+            "The asset is missing upstream: the plugin's asset template or the pinned version needs changing."
+        ) from e
     return h.hexdigest()
 
 
