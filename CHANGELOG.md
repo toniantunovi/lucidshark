@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The self-updater only stages an update whose hash matches the release's `SHA256SUMS`, and skips releases without one. The hash is recorded with the staged binary and checked again before the update is applied.
 
 ### Fixed
+- **`--format json` and `--format sarif` output was invalid whenever a `fail_on` policy failed**: since 0.8.3 the `Failed fail_on policy: ...` reason was printed to stdout after the report, so anything parsing the report (CI tooling, the integration test harness) got a JSON decode error and saw zero issues. The reason now goes to stderr.
 - **Vulnerable dependency pins**: PyJWT 2.13.0 to 2.15.0 (CVE-2026-102268 and others), urllib3 2.7.0 to 2.8.0, mcp 1.29.1 to 1.30.0, certifi 2026.7.22 to 2026.10.18. These CVEs were published after 0.8.4 and failed the `security: high` gate on every CI run.
 
 ## [0.8.4] - 2026-09-16

@@ -140,8 +140,10 @@ class ScanCommand(Command):
                 if fail_reason:
                     # A domain can report PASS on its own metric and still trip
                     # its fail_on rule -- say which one, so a non-zero exit is
-                    # never contradicted by a report full of PASS.
-                    print(f"\nFailed fail_on policy: {fail_reason}", file=sys.stdout)
+                    # never contradicted by a report full of PASS. Written to
+                    # stderr: stdout carries the report, and anything appended
+                    # there makes --format json/sarif unparseable.
+                    print(f"\nFailed fail_on policy: {fail_reason}", file=sys.stderr)
                     return EXIT_ISSUES_FOUND
 
             # Check for mandatory tool failures (always fail regardless of fail_on config)
