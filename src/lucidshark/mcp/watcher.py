@@ -165,7 +165,6 @@ class LucidSharkFileWatcher:
             result = await self.executor.scan(
                 domains=["all"],
                 files=relative_files,
-                _emit_telemetry=False,
             )
 
             # Add file list to result

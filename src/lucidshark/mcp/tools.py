@@ -104,7 +104,6 @@ class MCPToolExecutor:
         on_progress: Optional[
             Callable[[Dict[str, Any]], Coroutine[Any, Any, None]]
         ] = None,
-        _emit_telemetry: bool = True,
     ) -> Dict[str, Any]:
         """Execute scan and return AI-formatted results.
 
@@ -154,10 +153,6 @@ class MCPToolExecutor:
                 "blocking": True,
                 "total_issues": 0,
             }
-
-        import time
-
-        scan_start = time.monotonic()
 
         # Validate configured tools are available
         validation_result = self._validate_tools(enabled_domains)
@@ -519,43 +514,6 @@ class MCPToolExecutor:
                     context.duplication_result.to_dict()
                 )
 
-        # Track telemetry using ScanResult — same data source as reporters.
-        # Only emit for top-level scan calls (not check_file or watcher).
-        if _emit_telemetry:
-            try:
-                from lucidshark.core.models import ScanMetadata, ScanResult
-                from lucidshark.telemetry import track_scan_completed
-
-                import time as _time
-
-                duration_ms = int((_time.monotonic() - scan_start) * 1000)
-                telemetry_result = ScanResult(issues=all_issues)
-                telemetry_result.summary = telemetry_result.compute_summary()
-                if context.coverage_result is not None:
-                    telemetry_result.coverage_summary = (
-                        context.coverage_result.to_summary()
-                    )
-                if context.duplication_result is not None:
-                    telemetry_result.duplication_summary = (
-                        context.duplication_result.to_summary()
-                    )
-                telemetry_result.metadata = ScanMetadata(
-                    lucidshark_version="",
-                    scan_started_at="",
-                    scan_finished_at="",
-                    duration_ms=duration_ms,
-                    project_root="",
-                    executed_domains=[d.value for d in enabled_domains],
-                    scanners_used=list(context.tools_executed),
-                    all_files=all_files,
-                    total_issues=telemetry_result.summary.total,
-                )
-                track_scan_completed(
-                    config=self.config, result=telemetry_result, source="mcp"
-                )
-            except Exception:
-                pass
-
         return formatted_result
 
     async def check_file(self, file_path: str) -> Dict[str, Any]:
@@ -575,7 +533,7 @@ class MCPToolExecutor:
         language = detect_language(path)
         domains = get_domains_for_language(language)
 
-        return await self.scan(domains, files=[file_path], _emit_telemetry=False)
+        return await self.scan(domains, files=[file_path])
 
     async def get_fix_instructions(self, issue_id: str) -> Dict[str, Any]:
         """Get detailed fix instructions for an issue.
@@ -741,13 +699,6 @@ class MCPToolExecutor:
         Returns:
             Instructions and guidance for configuration generation.
         """
-        try:
-            from lucidshark.telemetry import track_autoconfigure_initiated
-
-            track_autoconfigure_initiated()
-        except Exception:
-            pass
-
         return {
             "instructions": (
                 "Follow these steps: Analyze the codebase, ask 1-2 quick questions if needed, "

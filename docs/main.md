@@ -1909,7 +1909,6 @@ pipeline:
 - [x] Comprehensive documentation (README, spec, LLM help, exclude patterns, roadmap)
 - [ ] Plugin SDK for third-party tools
 - [ ] Performance optimization (caching, incremental checks)
-- [ ] Telemetry (opt-in, anonymized)
 - [ ] Error handling hardening
 
 **Milestone**: v1.0 release
