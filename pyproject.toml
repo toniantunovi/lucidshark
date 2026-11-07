@@ -1,12 +1,63 @@
-# LucidShark Configuration
-# This file is used for development tooling configuration only.
-# LucidShark is distributed as a standalone binary via install.sh
+# LucidShark packaging configuration.
+# LucidShark ships both as a standalone binary (install.sh, PyInstaller) and as
+# a PyPI package (pip install lucidshark / uvx lucidshark). The version is read
+# from lucidshark.__version__, which the release commit bumps before tagging.
 
-# Minimal project config for development (pip install -e .)
 [project]
 name = "lucidshark"
-version = "0.0.0-dev"
+dynamic = ["version"]
+description = "Unified code quality and security scanner for AI-assisted development: lint, types, SAST, SCA, tests, coverage."
+readme = "README.md"
 requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Toni Antunovic" }]
+keywords = [
+    "code-quality",
+    "linter",
+    "security",
+    "sast",
+    "sca",
+    "static-analysis",
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "claude-code",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Testing",
+    "Typing :: Typed",
+]
+dependencies = [
+    "certifi>=2024.2.2",
+    "defusedxml>=0.7.1",
+    "mcp>=1.25,<2",
+    "pathspec>=0.12",
+    "PyYAML>=6.0",
+    "tomli>=2.0; python_version < '3.11'",
+    "watchdog>=4.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/toniantunovi/lucidshark"
+Repository = "https://github.com/toniantunovi/lucidshark"
+Issues = "https://github.com/toniantunovi/lucidshark/issues"
+Changelog = "https://github.com/toniantunovi/lucidshark/blob/main/CHANGELOG.md"
+
+[project.scripts]
+lucidshark = "lucidshark.cli:main"
 
 # Entry points for plugin discovery
 [project.entry-points."lucidshark.linters"]
@@ -102,13 +153,17 @@ rubocop_format = "lucidshark.plugins.formatters.rubocop_format:RubocopFormatter"
 php_cs_fixer = "lucidshark.plugins.formatters.php_cs_fixer:PhpCsFixerFormatter"
 
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = { attr = "lucidshark.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
+"lucidshark" = ["py.typed"]
 "lucidshark.data" = ["*.xml", "*.md"]
 "lucidshark.data.templates" = ["*.yml"]
 

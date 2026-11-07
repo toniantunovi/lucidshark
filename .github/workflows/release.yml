@@ -12,8 +12,34 @@ env:
   PYTHON_VERSION: "3.11"
 
 jobs:
+  # Fail fast if the tag, lucidshark.__version__ and server.json disagree.
+  # The PyPI version is read from __version__ and the MCP Registry entry from
+  # server.json, so a drift would publish mismatched artifacts.
+  verify-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Check tag matches __version__ and server.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          pkg=$(python3 -c "import ast,pathlib; t=ast.parse(pathlib.Path('src/lucidshark/__init__.py').read_text()); print(next(n.value.value for n in t.body if isinstance(n, ast.Assign) and any(getattr(x, 'id', '') == '__version__' for x in n.targets)))")
+          srv=$(jq -r '.version' server.json)
+          srv_pkgs=$(jq -r '[.packages[].version] | unique | join(",")' server.json)
+          echo "tag=$tag __version__=$pkg server.json=$srv packages=$srv_pkgs"
+          if [ "$tag" != "$pkg" ] || [ "$tag" != "$srv" ] || [ "$tag" != "$srv_pkgs" ]; then
+            echo "::error::Tag v$tag does not match __version__ ($pkg) / server.json ($srv, packages $srv_pkgs)"
+            exit 1
+          fi
+
   # Run quality checks (includes tests) across platforms before releasing
   quality-check:
+    needs: [verify-version]
     strategy:
       fail-fast: false
       matrix:
@@ -251,3 +277,122 @@ jobs:
             | Checkov | ${{ steps.versions.outputs.checkov }} |
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Build the sdist and wheel that go to PyPI. The version comes from
+  # lucidshark.__version__ (pyproject.toml declares it dynamic).
+  build-python-dist:
+    needs: [verify-version]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build sdist and wheel
+        run: |
+          python -m pip install --upgrade pip build twine
+          python -m build
+          python -m twine check --strict dist/*
+
+      - name: Smoke test the wheel
+        run: |
+          python -m venv /tmp/wheel-venv
+          /tmp/wheel-venv/bin/pip install dist/*.whl
+          test "$(/tmp/wheel-venv/bin/lucidshark --version)" = "${GITHUB_REF_NAME#v}"
+          /tmp/wheel-venv/bin/lucidshark help > /dev/null
+
+      - name: Upload Python distributions
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-dist
+          path: dist/
+          if-no-files-found: error
+
+  # Publish to PyPI with Trusted Publishing (OIDC, no API token). Runs only
+  # after the GitHub Release exists, because PyPI versions are immutable and
+  # a half-failed release should not leave a PyPI upload behind.
+  publish-pypi:
+    needs: [build-python-dist, create-release]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/lucidshark
+    permissions:
+      contents: read
+      id-token: write  # mandatory for PyPI Trusted Publishing
+
+    steps:
+      - name: Download Python distributions
+        uses: actions/download-artifact@v8
+        with:
+          name: python-dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+
+  # Publish server.json to the official MCP Registry. The registry validates
+  # PyPI ownership by looking for the mcp-name marker in the package's long
+  # description, so this must run after the PyPI upload is visible.
+  # Flow: https://github.com/modelcontextprotocol/registry/blob/main/docs/modelcontextprotocol-io/github-actions.mdx
+  publish-mcp-registry:
+    needs: [publish-pypi]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # GitHub OIDC login to the MCP Registry
+    env:
+      MCP_PUBLISHER_VERSION: v1.8.1
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Wait for the PyPI release to be visible
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          for i in $(seq 1 30); do
+            if curl --fail --silent --output /dev/null "https://pypi.org/pypi/lucidshark/${version}/json"; then
+              echo "lucidshark ${version} is on PyPI"
+              exit 0
+            fi
+            echo "Waiting for PyPI (${i}/30)..."
+            sleep 10
+          done
+          echo "::error::lucidshark ${version} did not appear on PyPI"
+          exit 1
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Download and verify mcp-publisher
+        shell: bash
+        run: |
+          set -euo pipefail
+          os=$(uname -s | tr '[:upper:]' '[:lower:]')
+          arch=$(uname -m | sed -e 's/x86_64/amd64/' -e 's/aarch64/arm64/')
+          archive="mcp-publisher_${os}_${arch}.tar.gz"
+          base_url="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}"
+          curl --fail --location --silent --show-error --output "$archive" "${base_url}/${archive}"
+          curl --fail --location --silent --show-error --output "${archive}.sigstore.json" "${base_url}/${archive}.sigstore.json"
+          cosign verify-blob \
+            --bundle "${archive}.sigstore.json" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
+            "$archive"
+          tar xzf "$archive" mcp-publisher
+          rm -f "$archive" "${archive}.sigstore.json"
+
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server to MCP Registry
+        run: ./mcp-publisher publish
