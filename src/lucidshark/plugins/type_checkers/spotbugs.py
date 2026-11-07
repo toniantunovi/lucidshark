@@ -21,7 +21,7 @@ from typing import List, Optional
 import defusedxml.ElementTree as ET  # type: ignore[import-untyped]
 from xml.etree.ElementTree import Element
 
-from lucidshark.bootstrap.download import secure_urlopen
+from lucidshark.bootstrap.download import download_verified
 from lucidshark.bootstrap.paths import LucidsharkPaths
 from lucidshark.bootstrap.versions import get_tool_version
 from lucidshark.core.logging import get_logger
@@ -179,8 +179,7 @@ class SpotBugsChecker(TypeCheckerPlugin):
         tmp_file = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
         tmp_path = Path(tmp_file.name)
         try:
-            with secure_urlopen(url) as response:  # nosec B310 nosemgrep
-                tmp_file.write(response.read())
+            tmp_file.write(download_verified(url))
             tmp_file.close()
 
             # Extract zip safely (prevent path traversal)

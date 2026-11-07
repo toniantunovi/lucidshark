@@ -252,8 +252,8 @@ class TestPmdDownloadBinary:
             mock_response.__exit__ = MagicMock(return_value=False)
 
             with patch(
-                "lucidshark.plugins.linters.pmd.secure_urlopen",
-                return_value=mock_response,
+                "lucidshark.plugins.linters.pmd.download_verified",
+                return_value=mock_response.read.return_value,
             ):
                 linter._download_binary(dest_dir)
 
@@ -286,14 +286,14 @@ class TestPmdDownloadBinary:
             mock_response.__exit__ = MagicMock(return_value=False)
 
             with patch(
-                "lucidshark.plugins.linters.pmd.secure_urlopen",
-                return_value=mock_response,
+                "lucidshark.plugins.linters.pmd.download_verified",
+                return_value=mock_response.read.return_value,
             ):
                 with pytest.raises(ValueError, match="Path traversal detected"):
                     linter._download_binary(dest_dir)
 
     def test_download_cleans_up_temp_on_network_error(self) -> None:
-        """Verify temp zip is cleaned up when secure_urlopen raises."""
+        """Verify temp zip is cleaned up when the download raises."""
         from urllib.error import URLError
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -301,7 +301,7 @@ class TestPmdDownloadBinary:
             dest_dir = Path(tmpdir) / "dest"
 
             with patch(
-                "lucidshark.plugins.linters.pmd.secure_urlopen",
+                "lucidshark.plugins.linters.pmd.download_verified",
                 side_effect=URLError("connection refused"),
             ):
                 with pytest.raises(URLError):
@@ -323,8 +323,8 @@ class TestPmdDownloadBinary:
             mock_response.__exit__ = MagicMock(return_value=False)
 
             with patch(
-                "lucidshark.plugins.linters.pmd.secure_urlopen",
-                return_value=mock_response,
+                "lucidshark.plugins.linters.pmd.download_verified",
+                return_value=mock_response.read.return_value,
             ):
                 with pytest.raises(Exception):
                     linter._download_binary(dest_dir)
@@ -349,8 +349,8 @@ class TestPmdDownloadBinary:
             mock_response.__exit__ = MagicMock(return_value=False)
 
             with patch(
-                "lucidshark.plugins.linters.pmd.secure_urlopen",
-                return_value=mock_response,
+                "lucidshark.plugins.linters.pmd.download_verified",
+                return_value=mock_response.read.return_value,
             ):
                 # Should not raise  -  the caller (ensure_binary) checks for the path
                 linter._download_binary(dest_dir)

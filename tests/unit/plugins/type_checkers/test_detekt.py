@@ -189,8 +189,8 @@ class TestDetektDownloadBinary:
             mock_response.__exit__ = MagicMock(return_value=False)
 
             with patch(
-                "lucidshark.plugins.type_checkers.detekt.secure_urlopen",
-                return_value=mock_response,
+                "lucidshark.plugins.type_checkers.detekt.download_verified",
+                return_value=mock_response.read.return_value,
             ):
                 checker._download_binary(dest_dir)
 
@@ -234,13 +234,13 @@ class TestDetektDownloadBinary:
             mock_response.__exit__ = MagicMock(return_value=False)
 
             with patch(
-                "lucidshark.plugins.type_checkers.detekt.secure_urlopen",
-                return_value=mock_response,
+                "lucidshark.plugins.type_checkers.detekt.download_verified",
+                return_value=mock_response.read.return_value,
             ) as mock_urlopen:
                 dest_dir = Path(tmpdir) / "dest"
                 checker._download_binary(dest_dir)
 
-                # Verify the URL passed to secure_urlopen
+                # Verify the URL passed to download_verified
                 call_args = mock_urlopen.call_args[0][0]
                 assert call_args.startswith("https://github.com/")
 

@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import List, Optional
 import pathspec
 
-from lucidshark.bootstrap.download import secure_urlopen
+from lucidshark.bootstrap.download import download_verified
 from lucidshark.bootstrap.paths import LucidsharkPaths
 from lucidshark.bootstrap.platform import get_platform_info
 from lucidshark.bootstrap.validation import (
@@ -516,8 +516,7 @@ class DuploPlugin(DuplicationPlugin):
         tmp_path = Path(tmp_file.name)
 
         try:
-            with secure_urlopen(url) as response:  # nosec B310 nosemgrep
-                tmp_file.write(response.read())
+            tmp_file.write(download_verified(url))
             tmp_file.close()
 
             # Extract tarball safely (prevent path traversal)

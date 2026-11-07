@@ -206,7 +206,7 @@ class TestGosecDownloadBinary:
         with patch("lucidshark.plugins.scanners.gosec.get_platform_info") as mock_pi:
             mock_pi.return_value = MagicMock(os="linux", arch="amd64")
             with patch(
-                "lucidshark.plugins.scanners.gosec.secure_urlopen",
+                "lucidshark.plugins.scanners.gosec.download_verified",
                 side_effect=Exception("network error"),
             ):
                 with pytest.raises(Exception, match="network error"):

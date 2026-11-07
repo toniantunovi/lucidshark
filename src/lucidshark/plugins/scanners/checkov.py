@@ -17,7 +17,7 @@ from lucidshark.core.models import (
     SkipReason,
     UnifiedIssue,
 )
-from lucidshark.bootstrap.download import secure_urlopen
+from lucidshark.bootstrap.download import download_verified
 from lucidshark.bootstrap.paths import LucidsharkPaths
 from lucidshark.bootstrap.platform import get_platform_info
 from lucidshark.bootstrap.validation import (
@@ -174,8 +174,7 @@ class CheckovScanner(ScannerPlugin):
         tmp_file = tempfile.NamedTemporaryFile(suffix=".zip", delete=False)
         tmp_path = Path(tmp_file.name)
         try:
-            with secure_urlopen(url) as response:  # nosec B310 nosemgrep
-                tmp_file.write(response.read())
+            tmp_file.write(download_verified(url))
             tmp_file.close()
 
             with zipfile.ZipFile(tmp_path, "r") as zf:

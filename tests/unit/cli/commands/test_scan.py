@@ -264,6 +264,29 @@ class TestScanCommandExecute:
 
     @patch.object(ScanCommand, "_run_scan")
     @patch("lucidshark.cli.commands.scan.get_reporter_plugin")
+    @patch.object(
+        ScanCommand,
+        "_check_domain_thresholds",
+        return_value="Domain linting: issues exceed 'error' threshold",
+    )
+    def test_fail_on_reason_goes_to_stderr_not_report_stream(
+        self, mock_check, mock_get_reporter, mock_run_scan, tmp_path: Path, capsys
+    ) -> None:
+        """stdout carries the JSON/SARIF report; the reason must not corrupt it."""
+        mock_run_scan.return_value = ScanResult(issues=[_make_issue()])
+        mock_get_reporter.return_value = MagicMock()
+
+        result = ScanCommand(version="1.0.0").execute(
+            _make_args(tmp_path), _make_config()
+        )
+
+        assert result == EXIT_ISSUES_FOUND
+        captured = capsys.readouterr()
+        assert "Failed fail_on policy" not in captured.out
+        assert "Failed fail_on policy: Domain linting" in captured.err
+
+    @patch.object(ScanCommand, "_run_scan")
+    @patch("lucidshark.cli.commands.scan.get_reporter_plugin")
     @patch.object(ScanCommand, "_check_domain_thresholds", return_value=False)
     def test_execute_domain_thresholds_pass(
         self, mock_check, mock_get_reporter, mock_run_scan, tmp_path: Path

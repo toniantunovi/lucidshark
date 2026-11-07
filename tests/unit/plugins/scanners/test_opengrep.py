@@ -154,7 +154,7 @@ class TestOpenGrepDownloadBinary:
         with patch("lucidshark.plugins.scanners.opengrep.get_platform_info") as mock_pi:
             mock_pi.return_value = MagicMock(os="linux", arch="amd64")
             with patch(
-                "lucidshark.plugins.scanners.opengrep.secure_urlopen",
+                "lucidshark.plugins.scanners.opengrep.download_verified",
                 side_effect=Exception("network error"),
             ):
                 with pytest.raises(RuntimeError, match="Failed to download"):
