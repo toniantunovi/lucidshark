@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.5] - 2026-11-07
+
 ### Security
 - **Every download is now integrity-checked**: previously the install script, the self-updater and all ten managed tool downloads (Trivy, OpenGrep, Checkov, gosec, PMD, Checkstyle, SpotBugs, ktlint, detekt, duplo) trusted whatever HTTPS returned. Now:
   - Tool downloads are verified against SHA-256 pins shipped inside LucidShark for each exact version, asset and platform (`bootstrap/checksums.py`, 24 pins). A mismatch is rejected before anything is written, and a URL without a pin is refused before any network access.
