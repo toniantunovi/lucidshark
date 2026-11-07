@@ -99,9 +99,6 @@ class ScanCommand(Command):
             # Cache scan results for overview command
             self._save_scan_cache(args, result)
 
-            # Track anonymous telemetry
-            self._track_telemetry(config, result)
-
             # Determine output format: CLI > config > default (json)
             if args.format:
                 output_format = args.format
@@ -901,21 +898,6 @@ class ScanCommand(Command):
             LOGGER.debug(f"Saved scan results to {cache_path}")
         except (OSError, TypeError) as e:
             LOGGER.debug(f"Could not save scan cache: {e}")
-
-    def _track_telemetry(self, config: LucidSharkConfig, result: ScanResult) -> None:
-        """Send anonymous telemetry for the completed scan.
-
-        Passes config and ScanResult directly — the same objects that
-        reporters receive — so telemetry fields stay consistent with output.
-
-        Never raises or blocks the CLI.
-        """
-        try:
-            from lucidshark.telemetry import track_scan_completed
-
-            track_scan_completed(config=config, result=result, source="cli")
-        except Exception:
-            pass
 
     @staticmethod
     def _fail(reason: str) -> str:
