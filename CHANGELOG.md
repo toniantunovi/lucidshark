@@ -7,8 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.6] - 2026-11-07
+
 ### Changed
-- **Managed tools updated**: Trivy 0.74.0 to 0.76.2, OpenGrep 1.29.0 to 1.33.1, Checkov 3.3.16 to 3.3.20, gosec 2.29.0 to 2.30.0, PMD 7.27.0 to 7.29.0, Checkstyle 14.1.0 to 14.4.0, SpotBugs 4.10.4 to 4.10.5. ktlint, detekt and duplo were already at latest. SHA-256 pins regenerated. Checkov is held at 3.3.20 because every release since 3.3.21 dropped the `linux_arm64` binary
+- **Managed tools updated**: Trivy 0.74.0 to 0.76.2, OpenGrep 1.29.0 to 1.33.1, Checkov 3.3.16 to 3.3.20, gosec 2.29.0 to 2.30.0, PMD 7.27.0 to 7.29.0, Checkstyle 14.1.0 to 14.4.0, SpotBugs 4.10.4 to 4.10.5. ktlint, detekt and duplo were already at latest. SHA-256 pins regenerated (#153). Checkov is held at 3.3.20 because every release since 3.3.21 dropped the `linux_arm64` binary
 - **Python dependencies refreshed**: 45 pins, resolved together on Python 3.10, including cryptography, certifi, idna, starlette, PyJWT and pydantic. `mcp` stays on 1.x
 - **GitHub Actions**: checkout, setup-python, setup-node and codecov-action v6 to v7
 
