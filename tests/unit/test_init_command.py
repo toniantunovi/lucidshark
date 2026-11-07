@@ -7,10 +7,16 @@ from argparse import Namespace
 from pathlib import Path
 from unittest.mock import patch
 
+import yaml
 
 from lucidshark.cli.commands.init import (
+    AIDER_CONF_START_MARKER,
+    AIDER_LINT_ARGS,
     InitCommand,
+    LUCIDSHARK_CURSOR_RULE_CONTENT,
     LUCIDSHARK_MCP_ARGS,
+    LUCIDSHARK_WINDSURF_RULE_CONTENT,
+    WINDSURF_GLOBAL_MCP_CONFIG,
     LUCIDSHARK_SKILL_CONTENT,
     LUCIDSHARK_CLAUDE_MD_SECTION,
     LUCIDSHARK_HOOKS_CONFIG,
@@ -1196,3 +1202,370 @@ class TestConfigGeneration:
                 cmd.execute(args)
 
         assert not (tmp_path / "lucidshark.yml").exists()
+
+
+def _tool_args(**overrides) -> Namespace:
+    """Build init args with every tool flag off unless overridden."""
+    values = dict(
+        claude_code=False,
+        cursor=False,
+        windsurf=False,
+        aider=False,
+        all_tools=False,
+        dry_run=False,
+        force=False,
+        remove=False,
+        no_config=True,
+    )
+    values.update(overrides)
+    return Namespace(**values)
+
+
+def _run_init(tmp_path: Path, args: Namespace, lucidshark_path=None) -> int:
+    """Run init in tmp_path with a fixed lucidshark executable path."""
+    cmd = InitCommand(version="1.0.0")
+    with patch.object(Path, "cwd", return_value=tmp_path):
+        with patch.object(cmd, "_find_lucidshark_path", return_value=lucidshark_path):
+            return cmd.execute(args)
+
+
+class TestToolSelection:
+    """Tests for choosing which AI tools init configures."""
+
+    def test_no_flags_selects_claude_code_only(self) -> None:
+        assert InitCommand._selected_tools(Namespace()) == ["claude_code"]
+
+    def test_flags_combine_in_setup_order(self) -> None:
+        args = _tool_args(aider=True, cursor=True)
+        assert InitCommand._selected_tools(args) == ["cursor", "aider"]
+
+    def test_all_tools_selects_everything(self) -> None:
+        args = _tool_args(all_tools=True)
+        assert InitCommand._selected_tools(args) == [
+            "claude_code",
+            "cursor",
+            "windsurf",
+            "aider",
+        ]
+
+    def test_tool_flag_skips_claude_code(self, tmp_path: Path) -> None:
+        assert _run_init(tmp_path, _tool_args(cursor=True)) == EXIT_SUCCESS
+        assert not (tmp_path / ".mcp.json").exists()
+        assert not (tmp_path / ".claude").exists()
+        assert (tmp_path / ".cursor" / "mcp.json").exists()
+
+    def test_all_tools_creates_every_file(self, tmp_path: Path) -> None:
+        assert _run_init(tmp_path, _tool_args(all_tools=True)) == EXIT_SUCCESS
+        for rel in (
+            ".mcp.json",
+            ".claude/CLAUDE.md",
+            ".cursor/mcp.json",
+            ".cursor/rules/lucidshark.mdc",
+            ".windsurf/rules/lucidshark.md",
+            ".aider.conf.yml",
+            "CONVENTIONS.md",
+        ):
+            assert (tmp_path / rel).exists(), rel
+
+    def test_parser_accepts_tool_flags(self) -> None:
+        from lucidshark.cli.arguments import build_parser
+
+        args = build_parser().parse_args(
+            ["init", "--cursor", "--windsurf", "--aider", "--claude-code"]
+        )
+        assert args.cursor and args.windsurf and args.aider and args.claude_code
+        assert not args.all_tools
+        assert build_parser().parse_args(["init", "--all-tools"]).all_tools
+
+    def test_parser_defaults_to_no_tool_flags(self) -> None:
+        from lucidshark.cli.arguments import build_parser
+
+        args = build_parser().parse_args(["init"])
+        assert InitCommand._selected_tools(args) == ["claude_code"]
+
+
+class TestSetupCursor:
+    """Tests for Cursor setup."""
+
+    def test_creates_mcp_config_and_rule(self, tmp_path: Path) -> None:
+        assert _run_init(tmp_path, _tool_args(cursor=True)) == EXIT_SUCCESS
+
+        config = json.loads((tmp_path / ".cursor" / "mcp.json").read_text())
+        assert config["mcpServers"]["lucidshark"] == {
+            "command": "lucidshark",
+            "args": LUCIDSHARK_MCP_ARGS,
+        }
+        rule = (tmp_path / ".cursor" / "rules" / "lucidshark.mdc").read_text()
+        assert rule == LUCIDSHARK_CURSOR_RULE_CONTENT
+        assert rule.startswith("---\ndescription: ")
+        assert "alwaysApply: true\n---\n" in rule
+        assert "mcp__lucidshark__" not in rule
+        assert "lucidshark `scan` MCP tool" in rule
+
+    def test_rerun_is_idempotent(self, tmp_path: Path, capsys) -> None:
+        _run_init(tmp_path, _tool_args(cursor=True))
+        mcp_before = (tmp_path / ".cursor" / "mcp.json").read_text()
+        rule_path = tmp_path / ".cursor" / "rules" / "lucidshark.mdc"
+        rule_path.write_text("user edited", encoding="utf-8")
+        capsys.readouterr()
+
+        assert _run_init(tmp_path, _tool_args(cursor=True)) == EXIT_SUCCESS
+
+        assert (tmp_path / ".cursor" / "mcp.json").read_text() == mcp_before
+        assert rule_path.read_text() == "user edited"
+        assert "already" in capsys.readouterr().out
+
+    def test_force_overwrites_rule(self, tmp_path: Path) -> None:
+        _run_init(tmp_path, _tool_args(cursor=True))
+        rule_path = tmp_path / ".cursor" / "rules" / "lucidshark.mdc"
+        rule_path.write_text("stale", encoding="utf-8")
+
+        _run_init(tmp_path, _tool_args(cursor=True, force=True))
+
+        assert rule_path.read_text() == LUCIDSHARK_CURSOR_RULE_CONTENT
+
+    def test_merges_into_existing_mcp_config(self, tmp_path: Path) -> None:
+        config_path = tmp_path / ".cursor" / "mcp.json"
+        config_path.parent.mkdir()
+        config_path.write_text(
+            json.dumps({"mcpServers": {"other": {"command": "other"}}, "x": 1})
+        )
+
+        _run_init(tmp_path, _tool_args(cursor=True))
+
+        config = json.loads(config_path.read_text())
+        assert config["x"] == 1
+        assert config["mcpServers"]["other"] == {"command": "other"}
+        assert "lucidshark" in config["mcpServers"]
+
+    def test_remove_keeps_user_content(self, tmp_path: Path) -> None:
+        config_path = tmp_path / ".cursor" / "mcp.json"
+        config_path.parent.mkdir()
+        config_path.write_text(
+            json.dumps({"mcpServers": {"other": {"command": "other"}}})
+        )
+        user_rule = tmp_path / ".cursor" / "rules" / "mine.mdc"
+        _run_init(tmp_path, _tool_args(cursor=True))
+        user_rule.write_text("mine", encoding="utf-8")
+
+        assert _run_init(tmp_path, _tool_args(cursor=True, remove=True)) == 0
+
+        config = json.loads(config_path.read_text())
+        assert config == {"mcpServers": {"other": {"command": "other"}}}
+        assert not (tmp_path / ".cursor" / "rules" / "lucidshark.mdc").exists()
+        assert user_rule.read_text() == "mine"
+
+    def test_remove_cleans_empty_rules_dir(self, tmp_path: Path) -> None:
+        _run_init(tmp_path, _tool_args(cursor=True))
+        _run_init(tmp_path, _tool_args(cursor=True, remove=True))
+        assert not (tmp_path / ".cursor" / "rules").exists()
+
+    def test_dry_run_writes_nothing(self, tmp_path: Path, capsys) -> None:
+        assert _run_init(tmp_path, _tool_args(cursor=True, dry_run=True)) == 0
+        assert not (tmp_path / ".cursor").exists()
+        out = capsys.readouterr().out
+        assert "Would write" in out
+        assert "Would create Cursor rule" in out
+
+    def test_dry_run_remove_keeps_files(self, tmp_path: Path, capsys) -> None:
+        _run_init(tmp_path, _tool_args(cursor=True))
+        _run_init(tmp_path, _tool_args(cursor=True, remove=True, dry_run=True))
+        assert (tmp_path / ".cursor" / "rules" / "lucidshark.mdc").exists()
+        assert "Would remove" in capsys.readouterr().out
+
+
+class TestSetupWindsurf:
+    """Tests for Windsurf setup."""
+
+    def test_creates_rule_and_prints_snippet(self, tmp_path: Path, capsys) -> None:
+        assert _run_init(tmp_path, _tool_args(windsurf=True)) == EXIT_SUCCESS
+
+        rule = (tmp_path / ".windsurf" / "rules" / "lucidshark.md").read_text()
+        assert rule == LUCIDSHARK_WINDSURF_RULE_CONTENT
+        assert rule.startswith("---\ntrigger: always_on\n---\n")
+        out = capsys.readouterr().out
+        assert WINDSURF_GLOBAL_MCP_CONFIG in out
+        assert '"lucidshark"' in out
+        assert str(tmp_path) in out
+
+    def test_never_writes_global_config(self, tmp_path: Path) -> None:
+        home = tmp_path / "home"
+        home.mkdir()
+        project = tmp_path / "project"
+        project.mkdir()
+        with patch.object(Path, "home", return_value=home):
+            _run_init(project, _tool_args(windsurf=True))
+        assert list(home.iterdir()) == []
+        assert not (project / ".devin").exists()
+
+    def test_snippet_uses_absolute_paths(self, tmp_path: Path) -> None:
+        (tmp_path / "lucidshark").write_text("binary")
+        cmd = InitCommand(version="1.0.0")
+        with patch.object(Path, "cwd", return_value=tmp_path):
+            config = cmd._build_windsurf_mcp_config()
+        assert config["command"] == str(tmp_path / "lucidshark")
+        assert config["args"] == ["serve", "--mcp", str(tmp_path)]
+
+    def test_rerun_is_idempotent(self, tmp_path: Path, capsys) -> None:
+        _run_init(tmp_path, _tool_args(windsurf=True))
+        rule_path = tmp_path / ".windsurf" / "rules" / "lucidshark.md"
+        rule_path.write_text("user edited", encoding="utf-8")
+        capsys.readouterr()
+
+        _run_init(tmp_path, _tool_args(windsurf=True))
+
+        assert rule_path.read_text() == "user edited"
+        assert "already exists" in capsys.readouterr().out
+
+    def test_remove(self, tmp_path: Path, capsys) -> None:
+        _run_init(tmp_path, _tool_args(windsurf=True))
+        other = tmp_path / ".windsurf" / "rules" / "team.md"
+        other.write_text("team rule", encoding="utf-8")
+
+        _run_init(tmp_path, _tool_args(windsurf=True, remove=True))
+
+        assert not (tmp_path / ".windsurf" / "rules" / "lucidshark.md").exists()
+        assert other.read_text() == "team rule"
+        assert "manually" in capsys.readouterr().out
+
+    def test_dry_run_writes_nothing(self, tmp_path: Path, capsys) -> None:
+        _run_init(tmp_path, _tool_args(windsurf=True, dry_run=True))
+        assert not (tmp_path / ".windsurf").exists()
+        assert "Would create Windsurf rule" in capsys.readouterr().out
+
+
+class TestSetupAider:
+    """Tests for Aider setup."""
+
+    @staticmethod
+    def _conf(tmp_path: Path) -> dict:
+        return yaml.safe_load((tmp_path / ".aider.conf.yml").read_text())
+
+    def test_creates_conf_and_conventions(self, tmp_path: Path) -> None:
+        assert _run_init(tmp_path, _tool_args(aider=True)) == EXIT_SUCCESS
+
+        conf = self._conf(tmp_path)
+        assert conf == {
+            "lint-cmd": f"lucidshark {AIDER_LINT_ARGS}",
+            "auto-lint": True,
+            "read": ["CONVENTIONS.md"],
+        }
+        # aider appends the file name, so --files must be the last argument
+        assert conf["lint-cmd"].endswith("--files")
+        conventions = (tmp_path / "CONVENTIONS.md").read_text()
+        assert "<!-- lucidshark:start" in conventions
+        assert "<!-- lucidshark:end -->" in conventions
+
+    def test_lint_cmd_parses_with_appended_files(self, tmp_path: Path) -> None:
+        from lucidshark.cli.arguments import build_parser
+
+        _run_init(tmp_path, _tool_args(aider=True))
+        argv = self._conf(tmp_path)["lint-cmd"].split()[1:] + ["src/app.py"]
+        args = build_parser().parse_args(argv)
+        assert args.files == ["src/app.py"]
+        assert args.linting and args.type_checking
+        assert args.fail_on == "low"
+
+    def test_uses_local_binary(self, tmp_path: Path) -> None:
+        _run_init(tmp_path, _tool_args(aider=True), lucidshark_path="./lucidshark")
+        assert self._conf(tmp_path)["lint-cmd"].startswith("./lucidshark scan ")
+
+    def test_preserves_user_keys_and_comments(self, tmp_path: Path) -> None:
+        user = "# my settings\nmodel: sonnet  # preferred\ndark-mode: true\n"
+        (tmp_path / ".aider.conf.yml").write_text(user)
+
+        _run_init(tmp_path, _tool_args(aider=True))
+
+        text = (tmp_path / ".aider.conf.yml").read_text()
+        assert text.startswith(user)
+        conf = self._conf(tmp_path)
+        assert conf["model"] == "sonnet"
+        assert conf["dark-mode"] is True
+        assert conf["auto-lint"] is True
+
+    def test_does_not_override_user_lint_cmd_or_read(
+        self, tmp_path: Path, capsys
+    ) -> None:
+        user = "lint-cmd: flake8\nread: [NOTES.md]\n"
+        (tmp_path / ".aider.conf.yml").write_text(user)
+
+        _run_init(tmp_path, _tool_args(aider=True))
+
+        text = (tmp_path / ".aider.conf.yml").read_text()
+        assert text.count("lint-cmd") == 1
+        assert text.count("read:") == 1
+        conf = self._conf(tmp_path)
+        assert conf["lint-cmd"] == "flake8"
+        assert conf["read"] == ["NOTES.md"]
+        assert conf["auto-lint"] is True
+        out = capsys.readouterr().out
+        assert "'lint-cmd' is already set" in out
+        assert "add CONVENTIONS.md" in out
+
+    def test_rerun_is_idempotent(self, tmp_path: Path, capsys) -> None:
+        (tmp_path / "CONVENTIONS.md").write_text("# Team conventions\n")
+        _run_init(tmp_path, _tool_args(aider=True))
+        conf_before = (tmp_path / ".aider.conf.yml").read_text()
+        conv_before = (tmp_path / "CONVENTIONS.md").read_text()
+        capsys.readouterr()
+
+        _run_init(tmp_path, _tool_args(aider=True))
+
+        assert (tmp_path / ".aider.conf.yml").read_text() == conf_before
+        assert (tmp_path / "CONVENTIONS.md").read_text() == conv_before
+        assert conv_before.startswith("# Team conventions\n")
+        assert "already exist" in capsys.readouterr().out
+
+    def test_force_rewrites_block_once(self, tmp_path: Path) -> None:
+        (tmp_path / ".aider.conf.yml").write_text("model: sonnet\n")
+        _run_init(tmp_path, _tool_args(aider=True))
+        first = (tmp_path / ".aider.conf.yml").read_text()
+
+        _run_init(tmp_path, _tool_args(aider=True, force=True))
+
+        text = (tmp_path / ".aider.conf.yml").read_text()
+        assert text == first
+        assert text.count(AIDER_CONF_START_MARKER) == 1
+
+    def test_remove_keeps_user_content(self, tmp_path: Path) -> None:
+        (tmp_path / ".aider.conf.yml").write_text("model: sonnet\n")
+        (tmp_path / "CONVENTIONS.md").write_text("# Team conventions\n")
+        _run_init(tmp_path, _tool_args(aider=True))
+
+        _run_init(tmp_path, _tool_args(aider=True, remove=True))
+
+        assert (tmp_path / ".aider.conf.yml").read_text().strip() == "model: sonnet"
+        conventions = (tmp_path / "CONVENTIONS.md").read_text()
+        assert conventions.strip() == "# Team conventions"
+
+    def test_remove_deletes_files_left_empty(self, tmp_path: Path) -> None:
+        _run_init(tmp_path, _tool_args(aider=True))
+        _run_init(tmp_path, _tool_args(aider=True, remove=True))
+        assert not (tmp_path / ".aider.conf.yml").exists()
+        assert not (tmp_path / "CONVENTIONS.md").exists()
+
+    def test_remove_when_not_configured(self, tmp_path: Path, capsys) -> None:
+        assert _run_init(tmp_path, _tool_args(aider=True, remove=True)) == 0
+        assert "not found" in capsys.readouterr().out
+
+    def test_dry_run_writes_nothing(self, tmp_path: Path, capsys) -> None:
+        _run_init(tmp_path, _tool_args(aider=True, dry_run=True))
+        assert not (tmp_path / ".aider.conf.yml").exists()
+        assert not (tmp_path / "CONVENTIONS.md").exists()
+        out = capsys.readouterr().out
+        assert "Would create LucidShark settings" in out
+        assert "lint-cmd" in out
+
+    def test_invalid_yaml_is_not_modified(self, tmp_path: Path) -> None:
+        bad = "model: [unclosed\n"
+        (tmp_path / ".aider.conf.yml").write_text(bad)
+
+        exit_code = _run_init(tmp_path, _tool_args(aider=True))
+
+        assert exit_code != EXIT_SUCCESS
+        assert (tmp_path / ".aider.conf.yml").read_text() == bad
+
+    def test_non_mapping_yaml_is_not_modified(self, tmp_path: Path) -> None:
+        (tmp_path / ".aider.conf.yml").write_text("- a\n- b\n")
+        assert _run_init(tmp_path, _tool_args(aider=True)) != EXIT_SUCCESS
+        assert (tmp_path / ".aider.conf.yml").read_text() == "- a\n- b\n"

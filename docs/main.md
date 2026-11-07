@@ -183,7 +183,7 @@ Teams that:
 
 `lucidshark init` is the primary entry point for project setup. It does two things:
 
-1. **Configures Claude Code integration** — sets up `.mcp.json`, `.claude/skills/`, `.claude/CLAUDE.md`, and `.claude/settings.json`
+1. **Configures AI tool integration**: Claude Code by default (`.mcp.json`, `.claude/skills/`, `.claude/CLAUDE.md`, `.claude/settings.json`); `--cursor`, `--windsurf`, `--aider` and `--all-tools` configure other tools
 2. **Generates `lucidshark.yml`** — detects languages, loads pre-built templates, writes complete configuration
 
 The init command:
@@ -882,7 +882,7 @@ Binaries are cached in `{project_root}/.lucidshark/` by default. The `LUCIDSHARK
 │                        LucidShark CLI                            │
 ├─────────────────────────────────────────────────────────────────┤
 │  Commands                                                       │
-│  ├── init           → Configure Claude Code integration           │
+│  ├── init           → Configure AI tool integration               │
 │  ├── scan           → Pipeline execution                        │
 │  ├── serve          → MCP server / file watcher                 │
 │  ├── status         → Show configuration and tool versions      │
@@ -1469,16 +1469,25 @@ Global Options:
 ```
 ./lucidshark init [OPTIONS]
 
-Configure Claude Code integration and generate lucidshark.yml.
+Configure AI tool integration and generate lucidshark.yml.
+
+AI tools (default: Claude Code only; flags combine):
+  --claude-code        Configure Claude Code
+  --cursor             Configure Cursor (.cursor/mcp.json, .cursor/rules/lucidshark.mdc)
+  --windsurf           Configure Windsurf (.windsurf/rules/lucidshark.md, prints MCP snippet)
+  --aider              Configure Aider (.aider.conf.yml lint-cmd, CONVENTIONS.md)
+  --all-tools          Configure all supported tools
 
 Options:
   --dry-run            Show changes without applying
-  --force              Overwrite existing configuration (both Claude Code and lucidshark.yml)
-  --remove             Remove LucidShark from tool configuration
-  --no-config          Skip lucidshark.yml generation (only configure Claude Code integration)
+  --force              Overwrite existing configuration (selected tools and lucidshark.yml)
+  --remove             Remove LucidShark from the selected tools' configuration
+  --no-config          Skip lucidshark.yml generation (only configure AI tool integration)
 
 Examples:
   ./lucidshark init                    # Full setup: Claude Code + config generation
+  ./lucidshark init --cursor --aider   # Cursor and Aider instead of Claude Code
+  ./lucidshark init --all-tools        # Every supported AI tool
   ./lucidshark init --no-config        # Only configure Claude Code
   ./lucidshark init --force            # Regenerate everything
 ```
