@@ -62,18 +62,25 @@ These options are available for all commands:
 
 ### `lucidshark init` / `./lucidshark init`
 
-Configure Claude Code to use LucidShark via MCP **and** generate a `lucidshark.yml` configuration file with all domains enabled for the detected languages.
+Configure AI coding tools to use LucidShark **and** generate a `lucidshark.yml` configuration file with all domains enabled for the detected languages.
 
 This command does two things:
-1. **Configures Claude Code integration** — sets up `.mcp.json`, `.claude/skills/`, `.claude/CLAUDE.md`, and `.claude/settings.json`
+1. **Configures AI tool integration**: Claude Code by default (`.mcp.json`, `.claude/skills/`, `.claude/CLAUDE.md`, `.claude/settings.json`), plus Cursor, Windsurf and Aider when their flags are given
 2. **Generates `lucidshark.yml`** — detects project languages, loads pre-built templates with all supported tools, and writes a complete configuration
 
 | Option | Description |
 |--------|-------------|
+| `--claude-code` | Configure Claude Code (the default when no tool flag is given) |
+| `--cursor` | Configure Cursor: `.cursor/mcp.json` and `.cursor/rules/lucidshark.mdc` |
+| `--windsurf` | Configure Windsurf: `.windsurf/rules/lucidshark.md`, and print the MCP snippet for the global `~/.codeium/windsurf/mcp_config.json` (not written) |
+| `--aider` | Configure Aider: `lint-cmd`, `auto-lint` and `read` in `.aider.conf.yml`, plus a `CONVENTIONS.md` section |
+| `--all-tools` | Configure every supported tool |
 | `--dry-run` | Show changes without applying |
-| `--force` | Overwrite existing configuration (both Claude Code and `lucidshark.yml`) |
-| `--remove` | Remove LucidShark from tool configuration |
-| `--no-config` | Skip `lucidshark.yml` generation (only configure Claude Code integration) |
+| `--force` | Overwrite existing configuration (selected tools and `lucidshark.yml`) |
+| `--remove` | Remove LucidShark from the selected tools' configuration |
+| `--no-config` | Skip `lucidshark.yml` generation (only configure AI tool integration) |
+
+Tool flags combine. Shared files are merged through managed sections, so user content in `CLAUDE.md`, `CONVENTIONS.md`, `.aider.conf.yml` and MCP JSON files is preserved. In `.aider.conf.yml`, keys you already set (such as your own `lint-cmd`) are left unchanged.
 
 **Config generation details:**
 - Detects languages by scanning file extensions and marker files (e.g., `pyproject.toml`, `package.json`, `Cargo.toml`)
@@ -86,6 +93,12 @@ This command does two things:
 ```bash
 # Full setup: Claude Code + config generation
 ./lucidshark init
+
+# Configure Cursor and Aider instead of Claude Code
+./lucidshark init --cursor --aider
+
+# Configure every supported AI tool
+./lucidshark init --all-tools
 
 # Remove LucidShark integration
 ./lucidshark init --remove

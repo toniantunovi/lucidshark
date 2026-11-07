@@ -1,5 +1,7 @@
 ## LucidShark
 
+<!-- mcp-name: io.github.toniantunovi/lucidshark -->
+
 [![CI](https://github.com/toniantunovi/lucidshark/actions/workflows/ci.yml/badge.svg)](https://github.com/toniantunovi/lucidshark/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/toniantunovi/lucidshark/graph/badge.svg)](https://codecov.io/gh/toniantunovi/lucidshark)
 [![License](https://img.shields.io/github/license/toniantunovi/lucidshark)](https://github.com/toniantunovi/lucidshark/blob/main/LICENSE)
@@ -21,7 +23,7 @@ AI writes code → LucidShark checks → AI fixes → repeat
 
 - **Configuration-as-code** - `lucidshark.yml` lives in your repo. Same rules for everyone, changes go through code review.
 
-- **AI-native** - MCP integration with Claude Code. Structured feedback that AI agents can act on directly.
+- **AI-native** - MCP integration with Claude Code, Cursor and Windsurf, plus a lint hook for Aider. Structured feedback that AI agents can act on directly.
 
 - **Unified pipeline** - Linting, type checking, formatting, security (SAST/SCA/IaC), tests, coverage, and duplication detection in one tool. Stop configuring 5+ separate tools.
 
@@ -33,7 +35,7 @@ AI writes code → LucidShark checks → AI fixes → repeat
 # 1. Install LucidShark
 curl -fsSL https://raw.githubusercontent.com/toniantunovi/lucidshark/main/install.sh | bash
 
-# 2. Configure Claude Code integration
+# 2. Configure Claude Code integration (add --cursor, --windsurf, --aider for other tools)
 ./lucidshark init
 
 # 3. Restart your AI tool, then ask it:
@@ -141,13 +143,21 @@ This checks:
 
 ### AI Tool Setup
 
-```bash
-./lucidshark init
-```
+`init` configures Claude Code by default. Tool flags select other tools and combine freely; `--all-tools` configures all of them. `--dry-run`, `--force` and `--remove` apply to every selected tool, and shared files (`CLAUDE.md`, `CONVENTIONS.md`, `.aider.conf.yml`, MCP JSON files) are merged, never overwritten.
 
-This configures `.mcp.json` and `.claude/CLAUDE.md` for Claude Code integration.
+| Tool | Command | What it writes |
+|------|---------|----------------|
+| Claude Code | `./lucidshark init` | `.mcp.json`, `.claude/skills/lucidshark/SKILL.md`, `.claude/CLAUDE.md` section, `.claude/settings.json` hook |
+| Cursor | `./lucidshark init --cursor` | `.cursor/mcp.json`, `.cursor/rules/lucidshark.mdc` (always applied) |
+| Windsurf | `./lucidshark init --windsurf` | `.windsurf/rules/lucidshark.md` (`trigger: always_on`); prints the MCP snippet for `~/.codeium/windsurf/mcp_config.json`, since Windsurf keeps MCP servers in your home directory and `init` does not write there |
+| Aider | `./lucidshark init --aider` | `.aider.conf.yml` keys `lint-cmd` (LucidShark on every edited file), `auto-lint`, `read: [CONVENTIONS.md]`, plus a `CONVENTIONS.md` section. Aider has no MCP support |
+| All of the above | `./lucidshark init --all-tools` | |
 
 Restart your AI tool after running `init` to activate.
+
+Any other MCP client can run the server directly with `lucidshark serve --mcp .`. Or tell your agent:
+
+> Add the LucidShark MCP server so you can test your own output before committing.
 
 ## Supported Languages
 
@@ -249,7 +259,7 @@ See [docs/help.md](docs/help.md) for the full configuration reference.
 | `./lucidshark scan --linting --fix` | Lint and auto-fix |
 | `./lucidshark scan --formatting --fix` | Format and auto-fix |
 | `./lucidshark overview --update` | Generate/update QUALITY.md |
-| `./lucidshark init` | Configure Claude Code integration |
+| `./lucidshark init` | Configure AI tool integration (Claude Code by default; `--cursor`, `--windsurf`, `--aider`, `--all-tools`) |
 | `./lucidshark doctor` | Check setup and environment health |
 | `./lucidshark validate` | Validate `lucidshark.yml` |
 

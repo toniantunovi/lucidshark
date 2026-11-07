@@ -1,7 +1,8 @@
 """Init command implementation.
 
 `lucidshark init` does two things:
-1. Configures Claude Code/IDE integration (MCP server, skills, hooks, CLAUDE.md)
+1. Configures AI tool integration: Claude Code by default (MCP server, skills,
+   hooks, CLAUDE.md), plus Cursor, Windsurf and Aider on request
 2. Generates lucidshark.yml with all domains enabled for detected languages
 
 The `autoconfigure` MCP tool is still available for AI-assisted customization
@@ -261,12 +262,133 @@ LUCIDSHARK_HOOKS_CONFIG: Dict[str, Any] = {
     }
 }
 
+# Tool-neutral scan guidance shared by the Cursor and Windsurf rule files.
+# These IDEs expose MCP tools by their plain name, so the text refers to
+# "the lucidshark `scan` MCP tool" instead of Claude's mcp__server__tool form.
+LUCIDSHARK_AGENT_RULES_BODY = """\
+# LucidShark: Scan After Every Code Change
+
+LucidShark is the project's code quality and security scanner (linting, type
+checking, formatting, SAST, SCA, IaC, container, testing, coverage, duplication).
+It runs as the `lucidshark` MCP server.
+
+You MUST run a LucidShark scan after editing code files. Do not report a task
+as complete until the scan shows zero issues.
+
+## When to Scan
+
+- After every code edit: scan the changed files with auto-fix enabled
+- After fixing bugs: verify the fix did not introduce new issues
+- Before reporting a task as done
+- Before creating commits: run a full scan with all domains
+
+## How to Scan
+
+Preferred: call the lucidshark `scan` MCP tool.
+
+| Situation | `scan` tool arguments |
+|---|---|
+| After edits (auto-fix, changed files) | `fix: true` |
+| Targeted domains | `domains: ["linting", "type_checking"]` |
+| Run tests | `domains: ["testing"]` |
+| Security | `domains: ["sast", "sca"]` |
+| Before commits | `domains: ["all"]` |
+| Specific files | `files: ["path/to/file.py"]` |
+| Entire project, not just changed files | `all_files: true` |
+
+Other lucidshark MCP tools: `check_file` (single file), `get_fix_instructions`
+and `apply_fix` (per issue), `autoconfigure` (AI-assisted `lucidshark.yml` setup).
+
+CLI fallback if the MCP server is unavailable (`./lucidshark` for the binary
+install, `lucidshark` for pip):
+
+```bash
+./lucidshark scan --fix --format ai           # after edits
+./lucidshark scan --all --format ai           # before commits
+./lucidshark scan --files path/to/file.py --format ai
+```
+
+By default LucidShark scans only git-changed files. Use `all_files: true`
+(MCP) or `--all-files` (CLI) to scan the whole project.
+
+## Domain Selection
+
+- `.py` `.js` `.ts` `.rs` `.go` `.java` `.kt`: `["linting", "type_checking", "formatting"]`
+- Dockerfile / docker-compose: `["container"]`
+- Terraform / K8s / IaC YAML: `["iac"]`
+- `package.json` `requirements.txt` `Cargo.toml`: `["sca"]`
+- Auth, crypto, SQL code: `["sast"]`
+- Before commit or mixed changes: `["all"]`
+
+## When NOT to Scan
+
+- The user explicitly says "don't scan" or "skip checks"
+- You only read code without changing it
+- You only edited non-code files (markdown, docs)
+"""
+
+# Cursor project rule (.cursor/rules/lucidshark.mdc). alwaysApply: true puts
+# the rule in context for every request.
+LUCIDSHARK_CURSOR_RULE_CONTENT = (
+    "---\n"
+    "description: Run LucidShark quality and security scans after every code change\n"
+    "alwaysApply: true\n"
+    "---\n\n" + LUCIDSHARK_AGENT_RULES_BODY
+)
+
+# Windsurf workspace rule (.windsurf/rules/lucidshark.md).
+LUCIDSHARK_WINDSURF_RULE_CONTENT = (
+    "---\ntrigger: always_on\n---\n\n" + LUCIDSHARK_AGENT_RULES_BODY
+)
+
+# Windsurf (renamed Devin Desktop) reads MCP servers from a global per-user
+# file, and newer releases also from a project .devin/mcp_config.json. init
+# does not write either; it prints a snippet with absolute paths that works
+# in both locations.
+WINDSURF_GLOBAL_MCP_CONFIG = "~/.codeium/windsurf/mcp_config.json"
+WINDSURF_PROJECT_MCP_CONFIG = ".devin/mcp_config.json"
+
+# Aider has no MCP support. It runs lint-cmd after each edit with the edited
+# file names appended, and treats a non-zero exit code as lint failure, so
+# --files must come last and --fail-on low guarantees a non-zero exit when
+# any issue is found.
+AIDER_LINT_ARGS = "scan --linting --type-checking --fail-on low --format ai --files"
+
+# Markers for the managed block in .aider.conf.yml (YAML comments).
+AIDER_CONF_START_MARKER = "# lucidshark:start"
+AIDER_CONF_END_MARKER = "# lucidshark:end"
+
+# Managed section appended to CONVENTIONS.md, which init adds to aider's
+# read-only context via the `read` key in .aider.conf.yml.
+LUCIDSHARK_CONVENTIONS_SECTION = """\
+
+<!-- lucidshark:start - managed by lucidshark init, do not edit manually -->
+## LucidShark: Code Quality Gate
+
+This project uses LucidShark for linting, type checking, formatting, security
+and test checks. Aider runs LucidShark automatically as the lint command after
+each edit (`lint-cmd` in `.aider.conf.yml`). When it reports issues, fix them
+before moving on.
+
+- Treat every LucidShark issue as a required fix, not a suggestion.
+- Do not consider a task done while LucidShark reports issues.
+- Before committing, ask the user to run the full scan, or run it with
+  `/run ./lucidshark scan --all --format ai` (binary install) or
+  `/run lucidshark scan --all --format ai` (pip install).
+- Use `--all-files` to scan the whole project instead of only changed files.
+<!-- lucidshark:end -->
+"""
+
+# Valid tool selectors for `lucidshark init`, in setup order.
+INIT_TOOLS = ("claude_code", "cursor", "windsurf", "aider")
+
 
 class InitCommand(Command):
-    """Configure Claude Code integration and generate lucidshark.yml.
+    """Configure AI tool integration and generate lucidshark.yml.
 
-    This sets up .mcp.json, .claude/skills/, .claude/CLAUDE.md, and .claude/settings.json
-    so Claude Code can use LucidShark's MCP tools.
+    By default this sets up .mcp.json, .claude/skills/, .claude/CLAUDE.md, and
+    .claude/settings.json so Claude Code can use LucidShark's MCP tools.
+    --cursor, --windsurf, --aider and --all-tools configure other tools.
 
     It also detects project languages and generates a lucidshark.yml configuration
     with all domains enabled and all supported tools for the detected languages.
@@ -296,18 +418,23 @@ class InitCommand(Command):
         Returns:
             Exit code.
         """
-        # Claude Code is the default (and currently only) target
-        configure_claude = True
-
         dry_run = getattr(args, "dry_run", False)
         force = getattr(args, "force", False)
         remove = getattr(args, "remove", False)
         no_config = getattr(args, "no_config", False)
 
-        success = True
+        setup_steps = {
+            "claude_code": self._setup_claude_code,
+            "cursor": self._setup_cursor,
+            "windsurf": self._setup_windsurf,
+            "aider": self._setup_aider,
+        }
 
-        if configure_claude:
-            if not self._setup_claude_code(dry_run, force, remove):
+        success = True
+        for index, tool in enumerate(self._selected_tools(args)):
+            if index:
+                print()
+            if not setup_steps[tool](dry_run, force, remove):
                 success = False
 
         # Generate lucidshark.yml from language templates
@@ -322,6 +449,24 @@ class InitCommand(Command):
             print("\nRestart your AI tool to apply changes.")
 
         return EXIT_SUCCESS if success else EXIT_INVALID_USAGE
+
+    @staticmethod
+    def _selected_tools(args: Namespace) -> List[str]:
+        """Return the AI tools to configure, in setup order.
+
+        With no tool flag, only Claude Code is configured (the historical
+        default). --all-tools selects every supported tool.
+
+        Args:
+            args: Parsed command-line arguments.
+
+        Returns:
+            List of tool identifiers from INIT_TOOLS.
+        """
+        if getattr(args, "all_tools", False):
+            return list(INIT_TOOLS)
+        selected = [tool for tool in INIT_TOOLS if getattr(args, tool, False)]
+        return selected or ["claude_code"]
 
     def _setup_claude_code(
         self,
@@ -602,47 +747,75 @@ class InitCommand(Command):
         Returns:
             True if successful.
         """
-        skill_dir = Path.cwd() / ".claude" / "skills" / "lucidshark"
-        skill_file = skill_dir / "SKILL.md"
-
         print("Configuring Claude skill...")
+        skill_file = Path.cwd() / ".claude" / "skills" / "lucidshark" / "SKILL.md"
+        return self._configure_owned_file(
+            skill_file,
+            LUCIDSHARK_SKILL_CONTENT.lstrip(),
+            label="lucidshark skill",
+            dry_run=dry_run,
+            force=force,
+            remove=remove,
+        )
 
+    def _configure_owned_file(
+        self,
+        path: Path,
+        content: str,
+        label: str,
+        dry_run: bool = False,
+        force: bool = False,
+        remove: bool = False,
+    ) -> bool:
+        """Create, overwrite or remove a file owned entirely by LucidShark.
+
+        Used for files that only LucidShark writes (skills, IDE rule files).
+        On removal, the parent directory is removed too if it is left empty.
+
+        Args:
+            path: File to manage.
+            content: Full file content to write.
+            label: Human readable name used in messages.
+            dry_run: If True, only show what would be done.
+            force: If True, overwrite an existing file.
+            remove: If True, remove the file.
+
+        Returns:
+            True if successful.
+        """
         if remove:
-            if skill_file.exists():
-                if dry_run:
-                    print(f"  Would remove {skill_file}")
-                else:
-                    try:
-                        skill_file.unlink()
-                        # Remove directory if empty
-                        if skill_dir.exists() and not any(skill_dir.iterdir()):
-                            skill_dir.rmdir()
-                        print("  Removed lucidshark skill")
-                    except Exception as e:
-                        print(f"  Error removing skill: {e}")
-                        return False
-            else:
-                print("  Lucidshark skill not found")
-            return True
+            if not path.exists():
+                print(f"  {label[0].upper()}{label[1:]} not found")
+                return True
+            if dry_run:
+                print(f"  Would remove {path}")
+                return True
+            try:
+                path.unlink()
+                if path.parent.exists() and not any(path.parent.iterdir()):
+                    path.parent.rmdir()
+                print(f"  Removed {label}")
+                return True
+            except Exception as e:
+                print(f"  Error removing {label}: {e}")
+                return False
 
-        if skill_file.exists() and not force:
-            print(f"  Lucidshark skill already exists at {skill_file}")
+        if path.exists() and not force:
+            print(f"  {label[0].upper()}{label[1:]} already exists at {path}")
             print("  Use --force to overwrite.")
             return True
 
         if dry_run:
-            print(f"  Would create skill at {skill_file}")
+            print(f"  Would create {label} at {path}")
             return True
-
-        # Ensure directory exists
-        skill_dir.mkdir(parents=True, exist_ok=True)
 
         try:
-            skill_file.write_text(LUCIDSHARK_SKILL_CONTENT.lstrip(), encoding="utf-8")
-            print(f"  Created lucidshark skill at {skill_file}")
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content, encoding="utf-8")
+            print(f"  Created {label} at {path}")
             return True
         except Exception as e:
-            print(f"  Error creating skill: {e}")
+            print(f"  Error creating {label}: {e}")
             return False
 
     def _configure_claude_md(
@@ -655,8 +828,6 @@ class InitCommand(Command):
 
         CLAUDE.md is loaded into Claude's system prompt for every conversation,
         making it the most reliable way to ensure proactive scanning behavior.
-        Uses HTML comment markers to manage the LucidShark section so it can
-        be updated or removed without affecting user content.
 
         Args:
             dry_run: If True, only show what would be done.
@@ -666,19 +837,49 @@ class InitCommand(Command):
         Returns:
             True if successful.
         """
-        claude_md_path = Path.cwd() / ".claude" / "CLAUDE.md"
+        print("Configuring .claude/CLAUDE.md...")
+        return self._configure_markdown_section(
+            Path.cwd() / ".claude" / "CLAUDE.md",
+            LUCIDSHARK_CLAUDE_MD_SECTION,
+            dry_run=dry_run,
+            force=force,
+            remove=remove,
+        )
+
+    def _configure_markdown_section(
+        self,
+        md_path: Path,
+        section: str,
+        dry_run: bool = False,
+        force: bool = False,
+        remove: bool = False,
+    ) -> bool:
+        """Add, update or remove the LucidShark managed section of a markdown file.
+
+        Uses HTML comment markers to manage the LucidShark section so it can
+        be updated or removed without affecting user content. The file is
+        deleted on removal only if nothing but whitespace remains.
+
+        Args:
+            md_path: Markdown file to manage.
+            section: Managed section content, including markers.
+            dry_run: If True, only show what would be done.
+            force: If True, overwrite existing LucidShark section.
+            remove: If True, remove the LucidShark section.
+
+        Returns:
+            True if successful.
+        """
         start_marker = "<!-- lucidshark:start"
         end_marker = "<!-- lucidshark:end -->"
 
-        print("Configuring .claude/CLAUDE.md...")
-
         # Read existing content
         existing_content = ""
-        if claude_md_path.exists():
+        if md_path.exists():
             try:
-                existing_content = claude_md_path.read_text(encoding="utf-8")
+                existing_content = md_path.read_text(encoding="utf-8")
             except Exception as e:
-                print(f"  Error reading {claude_md_path}: {e}")
+                print(f"  Error reading {md_path}: {e}")
                 return False
 
         has_section = (
@@ -686,64 +887,356 @@ class InitCommand(Command):
         )
 
         if remove:
-            if has_section:
-                if dry_run:
-                    print(f"  Would remove LucidShark section from {claude_md_path}")
-                else:
-                    new_content = self._remove_managed_section(
-                        existing_content, start_marker, end_marker
-                    )
-                    try:
-                        # If only whitespace remains, remove the file
-                        if new_content.strip():
-                            claude_md_path.write_text(new_content, encoding="utf-8")
-                            print(f"  Removed LucidShark section from {claude_md_path}")
-                        else:
-                            claude_md_path.unlink()
-                            print(
-                                f"  Removed {claude_md_path} (was empty after removal)"
-                            )
-                    except Exception as e:
-                        print(f"  Error updating {claude_md_path}: {e}")
-                        return False
-            else:
-                print(f"  LucidShark section not found in {claude_md_path}")
-            return True
+            if not has_section:
+                print(f"  LucidShark section not found in {md_path}")
+                return True
+            if dry_run:
+                print(f"  Would remove LucidShark section from {md_path}")
+                return True
+            new_content = self._remove_managed_section(
+                existing_content, start_marker, end_marker
+            )
+            return self._write_or_delete(
+                md_path, new_content, f"Removed LucidShark section from {md_path}"
+            )
 
         if has_section and not force:
-            print(f"  LucidShark section already exists in {claude_md_path}")
+            print(f"  LucidShark section already exists in {md_path}")
             print("  Use --force to overwrite.")
             return True
 
         if dry_run:
             action = "update" if has_section else "create"
-            print(f"  Would {action} LucidShark section in {claude_md_path}")
+            print(f"  Would {action} LucidShark section in {md_path}")
             return True
 
-        # Build new content
         if has_section:
-            # Replace existing section
             new_content = self._replace_managed_section(
-                existing_content,
-                start_marker,
-                end_marker,
-                LUCIDSHARK_CLAUDE_MD_SECTION,
+                existing_content, start_marker, end_marker, section
             )
         else:
             # Append to existing content (or create new file)
-            new_content = (
-                existing_content.rstrip() + "\n" + LUCIDSHARK_CLAUDE_MD_SECTION
-            )
+            new_content = existing_content.rstrip() + "\n" + section
 
         try:
-            claude_md_path.parent.mkdir(parents=True, exist_ok=True)
-            claude_md_path.write_text(new_content, encoding="utf-8")
+            md_path.parent.mkdir(parents=True, exist_ok=True)
+            md_path.write_text(new_content, encoding="utf-8")
             action = "Updated" if has_section else "Added"
-            print(f"  {action} LucidShark section in {claude_md_path}")
+            print(f"  {action} LucidShark section in {md_path}")
             return True
         except Exception as e:
-            print(f"  Error writing {claude_md_path}: {e}")
+            print(f"  Error writing {md_path}: {e}")
             return False
+
+    @staticmethod
+    def _write_or_delete(path: Path, content: str, message: str) -> bool:
+        """Write content to path, or delete path if content is only whitespace.
+
+        Args:
+            path: File to update.
+            content: New content.
+            message: Message printed after a successful write.
+
+        Returns:
+            True if successful.
+        """
+        try:
+            if content.strip():
+                path.write_text(content, encoding="utf-8")
+                print(f"  {message}")
+            else:
+                path.unlink()
+                print(f"  Removed {path} (was empty after removal)")
+            return True
+        except Exception as e:
+            print(f"  Error updating {path}: {e}")
+            return False
+
+    def _setup_cursor(
+        self,
+        dry_run: bool = False,
+        force: bool = False,
+        remove: bool = False,
+    ) -> bool:
+        """Configure Cursor: project MCP server and an always-applied rule.
+
+        Args:
+            dry_run: If True, only show what would be done.
+            force: If True, overwrite existing config.
+            remove: If True, remove LucidShark from Cursor config.
+
+        Returns:
+            True if successful.
+        """
+        print("Configuring Cursor (.cursor/mcp.json)...")
+        cursor_dir = Path.cwd() / ".cursor"
+        mcp_success = self._configure_mcp_tool(
+            tool_name="Cursor",
+            config_path=cursor_dir / "mcp.json",
+            config_key="mcpServers",
+            dry_run=dry_run,
+            force=force,
+            remove=remove,
+            use_portable_path=True,  # project config, version controlled
+        )
+
+        print("Configuring Cursor rule (.cursor/rules/lucidshark.mdc)...")
+        rule_success = self._configure_owned_file(
+            cursor_dir / "rules" / "lucidshark.mdc",
+            LUCIDSHARK_CURSOR_RULE_CONTENT,
+            label="Cursor rule",
+            dry_run=dry_run,
+            force=force,
+            remove=remove,
+        )
+        return mcp_success and rule_success
+
+    def _setup_windsurf(
+        self,
+        dry_run: bool = False,
+        force: bool = False,
+        remove: bool = False,
+    ) -> bool:
+        """Configure Windsurf: workspace rule plus a printed MCP snippet.
+
+        Windsurf reads MCP servers from a global per-user file, which init
+        never writes. The snippet and path are printed instead.
+
+        Args:
+            dry_run: If True, only show what would be done.
+            force: If True, overwrite existing rule.
+            remove: If True, remove the LucidShark rule.
+
+        Returns:
+            True if successful.
+        """
+        print("Configuring Windsurf rule (.windsurf/rules/lucidshark.md)...")
+        rule_success = self._configure_owned_file(
+            Path.cwd() / ".windsurf" / "rules" / "lucidshark.md",
+            LUCIDSHARK_WINDSURF_RULE_CONTENT,
+            label="Windsurf rule",
+            dry_run=dry_run,
+            force=force,
+            remove=remove,
+        )
+
+        if remove:
+            print(
+                "  Remove the 'lucidshark' entry from "
+                f"{WINDSURF_GLOBAL_MCP_CONFIG} or {WINDSURF_PROJECT_MCP_CONFIG} "
+                "manually if you added it."
+            )
+            return rule_success
+
+        snippet = {"mcpServers": {"lucidshark": self._build_windsurf_mcp_config()}}
+        print(
+            "  init does not write Windsurf MCP config. Merge this into "
+            f"{WINDSURF_GLOBAL_MCP_CONFIG} (or {WINDSURF_PROJECT_MCP_CONFIG} "
+            "in Devin Desktop):"
+        )
+        for line in json.dumps(snippet, indent=2).splitlines():
+            print(f"    {line}")
+        return rule_success
+
+    def _build_windsurf_mcp_config(self) -> Dict[str, Any]:
+        """Build an MCP server entry usable from a global (non-project) config.
+
+        A global config has no project working directory, so the command and
+        the project path are made absolute.
+
+        Returns:
+            MCP server configuration dict.
+        """
+        cwd = Path.cwd()
+        lucidshark_path = self._find_lucidshark_path(portable=False)
+        if lucidshark_path and lucidshark_path.startswith("./"):
+            lucidshark_path = str(cwd / lucidshark_path[2:])
+        config = self._build_mcp_config(lucidshark_path)
+        config["args"] = [*LUCIDSHARK_MCP_ARGS[:-1], str(cwd)]
+        return config
+
+    def _setup_aider(
+        self,
+        dry_run: bool = False,
+        force: bool = False,
+        remove: bool = False,
+    ) -> bool:
+        """Configure Aider: lint-cmd in .aider.conf.yml and CONVENTIONS.md.
+
+        Aider has no MCP support. LucidShark runs as aider's lint command,
+        and CONVENTIONS.md (loaded via `read`) carries the guidance.
+
+        Args:
+            dry_run: If True, only show what would be done.
+            force: If True, overwrite existing LucidShark sections.
+            remove: If True, remove LucidShark sections.
+
+        Returns:
+            True if successful.
+        """
+        print("Configuring Aider (.aider.conf.yml)...")
+        conf_success = self._configure_aider_conf(dry_run, force, remove)
+
+        print("Configuring Aider conventions (CONVENTIONS.md)...")
+        conventions_success = self._configure_markdown_section(
+            Path.cwd() / "CONVENTIONS.md",
+            LUCIDSHARK_CONVENTIONS_SECTION,
+            dry_run=dry_run,
+            force=force,
+            remove=remove,
+        )
+        return conf_success and conventions_success
+
+    def _configure_aider_conf(
+        self,
+        dry_run: bool = False,
+        force: bool = False,
+        remove: bool = False,
+    ) -> bool:
+        """Add, update or remove the LucidShark managed block in .aider.conf.yml.
+
+        The block is delimited by YAML comment markers and appended as text,
+        so user keys and comments are never rewritten. Keys the user already
+        sets outside the block are left alone and reported instead.
+
+        Args:
+            dry_run: If True, only show what would be done.
+            force: If True, rewrite an existing LucidShark block.
+            remove: If True, remove the LucidShark block.
+
+        Returns:
+            True if successful.
+        """
+        conf_path = Path.cwd() / ".aider.conf.yml"
+        existing_content = ""
+        if conf_path.exists():
+            try:
+                existing_content = conf_path.read_text(encoding="utf-8")
+            except Exception as e:
+                print(f"  Error reading {conf_path}: {e}")
+                return False
+
+        has_block = (
+            AIDER_CONF_START_MARKER in existing_content
+            and AIDER_CONF_END_MARKER in existing_content
+        )
+        user_content = (
+            self._remove_managed_section(
+                existing_content, AIDER_CONF_START_MARKER, AIDER_CONF_END_MARKER
+            )
+            if has_block
+            else existing_content
+        )
+
+        if remove:
+            if not has_block:
+                print(f"  LucidShark settings not found in {conf_path}")
+                return True
+            if dry_run:
+                print(f"  Would remove LucidShark settings from {conf_path}")
+                return True
+            return self._write_or_delete(
+                conf_path, user_content, f"Removed LucidShark settings from {conf_path}"
+            )
+
+        if has_block and not force:
+            print(f"  LucidShark settings already exist in {conf_path}")
+            print("  Use --force to overwrite.")
+            return True
+
+        user_keys = self._parse_yaml_mapping(user_content, conf_path)
+        if user_keys is None:
+            return False
+
+        block = self._build_aider_block(user_keys)
+        if dry_run:
+            action = "update" if has_block else "create"
+            print(f"  Would {action} LucidShark settings in {conf_path}:")
+            for line in block.splitlines():
+                print(f"    {line}")
+            return True
+
+        new_content = user_content.rstrip()
+        new_content = (new_content + "\n\n" if new_content else "") + block
+        try:
+            conf_path.write_text(new_content, encoding="utf-8")
+            action = "Updated" if has_block else "Added"
+            print(f"  {action} LucidShark settings in {conf_path}")
+            return True
+        except Exception as e:
+            print(f"  Error writing {conf_path}: {e}")
+            return False
+
+    @staticmethod
+    def _parse_yaml_mapping(content: str, path: Path) -> Optional[Dict[str, Any]]:
+        """Parse YAML content that must be a mapping (or empty).
+
+        Args:
+            content: YAML text.
+            path: Source path, for error messages.
+
+        Returns:
+            The parsed mapping, or None if the content is invalid.
+        """
+        import yaml
+
+        try:
+            data = yaml.safe_load(content) if content.strip() else {}
+        except yaml.YAMLError as e:
+            print(f"  Invalid YAML in {path}: {e}")
+            return None
+        if data is None:
+            return {}
+        if not isinstance(data, dict):
+            print(f"  {path} is not a YAML mapping; not modifying it.")
+            return None
+        return data
+
+    def _build_aider_block(self, user_keys: Dict[str, Any]) -> str:
+        """Build the managed .aider.conf.yml block for keys the user has not set.
+
+        Args:
+            user_keys: Keys already set by the user outside the managed block.
+
+        Returns:
+            Managed block text including markers.
+        """
+        import yaml
+
+        lucidshark_cmd = self._find_lucidshark_path(portable=True) or "lucidshark"
+        wanted: Dict[str, Any] = {
+            "lint-cmd": f"{lucidshark_cmd} {AIDER_LINT_ARGS}",
+            "auto-lint": True,
+            "read": ["CONVENTIONS.md"],
+        }
+
+        settings: Dict[str, Any] = {}
+        for key, value in wanted.items():
+            if key not in user_keys:
+                settings[key] = value
+                continue
+            if key == "read":
+                user_read = user_keys[key]
+                listed = user_read if isinstance(user_read, list) else [user_read]
+                if "CONVENTIONS.md" not in listed:
+                    print(
+                        "  Note: 'read' is already set; add CONVENTIONS.md to it "
+                        "so aider loads the LucidShark conventions."
+                    )
+            else:
+                print(f"  Note: '{key}' is already set; leaving your value unchanged.")
+
+        lines = [
+            f"{AIDER_CONF_START_MARKER} - managed by lucidshark init, do not edit manually"
+        ]
+        if settings:
+            lines.append(
+                yaml.safe_dump(
+                    settings, sort_keys=False, default_flow_style=False
+                ).rstrip()
+            )
+        lines.append(AIDER_CONF_END_MARKER)
+        return "\n".join(lines) + "\n"
 
     def _configure_claude_hooks(
         self,

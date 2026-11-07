@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Multi-tool `init`**: `--cursor` (`.cursor/mcp.json` and an always-applied `.cursor/rules/lucidshark.mdc`), `--windsurf` (`.windsurf/rules/lucidshark.md` plus a printed snippet for Windsurf's global MCP config), `--aider` (`lint-cmd`/`auto-lint`/`read` in `.aider.conf.yml` and a `CONVENTIONS.md` section), `--claude-code` and `--all-tools`. With no tool flag, `init` still configures Claude Code only. `--dry-run`, `--force` and `--remove` work per tool and shared files are merged through managed sections
+- **MCP Registry metadata**: `server.json` for `io.github.toniantunovi/lucidshark` and the PyPI ownership marker in `README.md`
+
 ## [0.9.0] - 2026-11-07
 
 ### Removed

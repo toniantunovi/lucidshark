@@ -42,15 +42,52 @@ def _add_global_options(parser: argparse.ArgumentParser) -> None:
 def _build_init_parser(subparsers: argparse._SubParsersAction) -> None:
     """Build the 'init' subcommand parser.
 
-    This command configures AI tools (Claude Code) to use LucidShark.
+    This command configures AI tools (Claude Code, Cursor, Windsurf, Aider)
+    to use LucidShark.
     """
     init_parser = subparsers.add_parser(
         "init",
         help="Configure AI tools and generate lucidshark.yml.",
         description=(
-            "Configure Claude Code integration and generate lucidshark.yml "
-            "with all domains enabled for detected languages."
+            "Configure AI coding tools (Claude Code by default; Cursor, Windsurf "
+            "and Aider on request) and generate lucidshark.yml with all domains "
+            "enabled for detected languages."
         ),
+    )
+
+    # Tool selection. No tool flag means Claude Code only.
+    tools_group = init_parser.add_argument_group(
+        "AI tools (default: Claude Code only; flags combine)"
+    )
+    tools_group.add_argument(
+        "--claude-code",
+        action="store_true",
+        dest="claude_code",
+        help="Configure Claude Code (.mcp.json, .claude/ skill, CLAUDE.md, hooks).",
+    )
+    tools_group.add_argument(
+        "--cursor",
+        action="store_true",
+        help="Configure Cursor (.cursor/mcp.json, .cursor/rules/lucidshark.mdc).",
+    )
+    tools_group.add_argument(
+        "--windsurf",
+        action="store_true",
+        help=(
+            "Configure Windsurf (.windsurf/rules/lucidshark.md) and print the "
+            "MCP config snippet for its global config."
+        ),
+    )
+    tools_group.add_argument(
+        "--aider",
+        action="store_true",
+        help="Configure Aider (lint-cmd in .aider.conf.yml, CONVENTIONS.md).",
+    )
+    tools_group.add_argument(
+        "--all-tools",
+        action="store_true",
+        dest="all_tools",
+        help="Configure all supported AI tools.",
     )
 
     # Options
@@ -73,7 +110,7 @@ def _build_init_parser(subparsers: argparse._SubParsersAction) -> None:
     options_group.add_argument(
         "--no-config",
         action="store_true",
-        help="Skip generating lucidshark.yml (only configure Claude Code integration).",
+        help="Skip generating lucidshark.yml (only configure AI tool integration).",
     )
 
 
