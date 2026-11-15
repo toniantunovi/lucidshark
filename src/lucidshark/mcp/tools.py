@@ -566,6 +566,19 @@ class MCPToolExecutor:
                 "issue_type": issue.domain.value if issue.domain else "unknown",
             }
 
+        # The targeted fix below runs Ruff, so it can only fix Ruff issues.
+        # Running it on an ESLint/Biome/etc. issue would change nothing and
+        # still report success.
+        if issue.source_tool != "ruff":
+            return {
+                "error": (
+                    f"apply_fix only supports Ruff linting issues; this issue "
+                    f"comes from {issue.source_tool or 'another tool'}. "
+                    "Use scan(fix=true) to apply that tool's auto-fixes."
+                ),
+                "source_tool": issue.source_tool,
+            }
+
         # Run linter in fix mode for the specific file
         if not issue.file_path:
             return {"error": "Issue has no file path for fixing"}

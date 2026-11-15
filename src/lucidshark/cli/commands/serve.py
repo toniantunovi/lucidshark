@@ -132,7 +132,8 @@ class ServeCommand(Command):
                 """Print scan results to stdout."""
                 import json
 
-                print(json.dumps(result, indent=2))
+                # Flush so results reach a pipe or file as they happen.
+                print(json.dumps(result, indent=2), flush=True)
 
             watcher.on_result(on_result)
             asyncio.run(watcher.start())

@@ -885,7 +885,10 @@ class DomainRunner:
                     id=f"custom-{domain.value}-failure",
                     domain=domain,
                     source_tool="custom",
-                    severity=Severity.MEDIUM,
+                    # The check itself did not run to a usable result, so
+                    # this must trip fail_on "error" like a failed test
+                    # command does. MEDIUM would let the scan pass.
+                    severity=Severity.HIGH,
                     rule_id=f"{domain.value}-failure",
                     title=f"Custom {domain.value} command failed",
                     description=f"Command `{command}` exited with code {result.returncode}.\n\nOutput:\n{output_snippet}",
@@ -1412,7 +1415,7 @@ class DomainRunner:
                         id="custom-coverage-failure",
                         domain=ToolDomain.COVERAGE,
                         source_tool="custom",
-                        severity=Severity.MEDIUM,
+                        severity=Severity.HIGH,
                         rule_id="coverage-failure",
                         title="Custom coverage command failed",
                         description=f"Command `{command}` exited with code {result.returncode}.\n\n{output}",

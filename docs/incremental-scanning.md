@@ -507,20 +507,23 @@ git push origin feature/my-new-feature
 | Type Checking | Yes | No (always shows changed) | Yes |
 | Coverage | Yes | No (always shows changed) | Yes |
 | Duplication | Yes | No (always shows changed) | Yes |
-| Security | Yes | N/A (no scope option) | N/A (`fail_on` sees changed files only) |
-| Testing | Yes | N/A (no scope option) | N/A (`fail_on` sees changed files only) |
+| Security | Yes (except findings with no file path) | N/A (no scope option) | N/A (`fail_on` sees the filtered findings) |
+| Testing | No (all failures are shown) | N/A (no scope option) | N/A (`fail_on` sees every failure) |
 
 **Key difference:** For linting/type_checking, `threshold_scope` only affects which issues are checked against `fail_on`, not what's displayed. For coverage/duplication, filtering affects both display and the metrics.
 
-### Security and Testing Results Are Filtered Too
+### Security Results Are Filtered Too, Test Failures Are Not
 
-With `--base-branch` (CLI and MCP), **every** issue is filtered to the changed files, including SAST, SCA, IaC and container findings and test failures. Issues that have no file path are dropped. In practice:
+With `--base-branch` (CLI and MCP), issues are filtered to the changed files, including SAST, SCA and IaC findings. Two kinds of issue are never filtered:
+- **Test failures.** The full suite runs, so a failing test is reported and trips `fail_on.testing: any` even when its test file didn't change on the branch
+- **Issues with no file path**, such as container image findings or a tool that failed to run. They can't be attributed to a file, so they are always reported
+
+In practice:
 - An SCA vulnerability is reported only if the manifest/lockfile it was found in changed on the branch
-- Container image findings carry no file path, so they are not reported
-- A failing test in a test file the branch didn't touch is not reported and won't trip `fail_on.testing: any`, even though the full suite still runs
-- `fail_on.security` only sees findings in changed files
+- `fail_on.security` sees findings in changed files plus any finding without a file path
+- Coverage and duplication are evaluated from their filtered percentages, according to `threshold_scope`
 
-Run without `--base-branch` (for example with `--all-files`) to see project-wide security and test results.
+Run without `--base-branch` (for example with `--all-files`) to see project-wide security results.
 
 ### Deleted Files Not Reported
 
@@ -542,7 +545,7 @@ This gives context: "50 duplicate lines involving your changes represent 0.5% of
 
 ### Testing Always Runs Full Suite
 
-Even with `--base-branch`, all tests run. Only coverage/failure **reporting** is filtered (see [above](#security-and-testing-results-are-filtered-too) for what that means for failing tests). This ensures:
+Even with `--base-branch`, all tests run and every test failure is reported (see [above](#security-results-are-filtered-too-test-failures-are-not)). Only coverage **reporting** is filtered. This ensures:
 - Indirect coverage is measured (test for `module_a` covers `module_b`)
 - Regressions are caught
 - Coverage percentages are accurate
@@ -551,7 +554,7 @@ Even with `--base-branch`, all tests run. Only coverage/failure **reporting** is
 
 ### Does this skip tests for unchanged files?
 
-No. All tests run for accurate coverage measurement. Only **reporting** is filtered.
+No. All tests run for accurate coverage measurement, and every test failure is reported. Only the reporting of other domains is filtered.
 
 ### What if I have no changes on my branch?
 

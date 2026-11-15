@@ -308,7 +308,7 @@ setup steps like starting services, generating files, or preparing the environme
 
 **`command`** replaces the plugin-based runner with a custom shell command. When set,
 LucidShark runs the command from the project root and skips plugin discovery entirely. A
-non-zero exit code from `testing.command` is reported as a HIGH-severity issue. For linting, type checking and formatting commands the output is parsed for issues (SARIF, JSON or text), with a generic MEDIUM issue if nothing can be parsed; a failing coverage command is reported as MEDIUM.
+non-zero exit code from a testing or coverage command is reported as a HIGH-severity issue. For linting, type checking and formatting commands the output is first parsed for issues (SARIF, JSON or text), and a generic HIGH-severity issue is created only if nothing can be parsed.
 
 **`post_command`** runs after the main command (or plugin-based runner) completes.
 Failures are logged as warnings and do not fail the pipeline.
@@ -1189,7 +1189,7 @@ The MCP server (`mcp/server.py`) exposes tools for AI agents via stdio. By defau
 | `scan` | Run quality checks. Params: `domains` (default `["all"]`), `files`, `all_files`, `fix`, `base_branch`, `coverage_threshold_scope`, `linting_threshold_scope`, `type_checking_threshold_scope`, `duplication_threshold_scope` |
 | `check_file` | Check a single file (auto-detects language and runs relevant checks) |
 | `get_fix_instructions` | Get detailed fix instructions for a specific issue by ID |
-| `apply_fix` | Apply auto-fix for a fixable issue (Ruff/Python linting only): runs `ruff check --select <rule> --fix <file>`, which fixes every occurrence of that rule in the file |
+| `apply_fix` | Apply auto-fix for a fixable issue (Ruff/Python linting only; issues from other tools are rejected): runs `ruff check --select <rule> --fix <file>`, which fixes every occurrence of that rule in the file |
 | `get_status` | Returns `project_root`, `available_tools`, `enabled_domains` (security domains only) and `cached_issues` |
 | `get_help` | Get LucidShark documentation in markdown format |
 | `autoconfigure` | Get instructions for AI-driven project configuration |

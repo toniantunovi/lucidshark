@@ -155,6 +155,29 @@ class TestCheck:
             issues = formatter.check(context)
             assert issues == []
 
+    @patch("lucidshark.plugins.formatters.clang_format.run_with_streaming")
+    @patch.object(ClangFormatFormatter, "ensure_binary")
+    def test_check_includes_c_sources(self, mock_binary, mock_run) -> None:
+        """C projects use this plugin too, so .c files must be checked."""
+        mock_binary.return_value = Path("/usr/bin/clang-format")
+        mock_run.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="", stderr=""
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            c_file = tmpdir_path / "main.c"
+            c_file.write_text("int main(void) { return 0; }")
+            formatter = ClangFormatFormatter()
+            context = ScanContext(
+                project_root=tmpdir_path,
+                paths=[tmpdir_path],
+                enabled_domains=[],
+            )
+            formatter.check(context)
+
+        cmd = mock_run.call_args.kwargs.get("cmd") or mock_run.call_args.args[0]
+        assert any(arg.endswith("main.c") for arg in cmd)
+
 
 class TestFix:
     """Tests for fix method."""

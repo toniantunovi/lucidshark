@@ -163,6 +163,52 @@ class TestFileWatcherAsync:
         return LucidSharkFileWatcher(project_root, config, debounce_ms=10)
 
     @pytest.mark.asyncio
+    async def test_change_from_another_thread_triggers_scan(
+        self, project_root: Path, config: LucidSharkConfig
+    ) -> None:
+        """Watchdog reports changes on its own thread, which has no event loop.
+
+        The change must still reach the watcher's loop and produce a scan.
+        """
+        import asyncio
+        import threading
+        from unittest.mock import AsyncMock
+
+        watcher = LucidSharkFileWatcher(project_root, config, debounce_ms=10)
+        watcher.executor.scan = AsyncMock(return_value={"total_issues": 0})  # type: ignore[method-assign]
+        watcher._loop = asyncio.get_running_loop()
+
+        done = asyncio.Event()
+        results = []
+
+        def on_result(result):
+            results.append(result)
+            done.set()
+
+        watcher.on_result(on_result)
+
+        changed = project_root / "module.py"
+        changed.write_text("x = 1\n")
+
+        errors = []
+
+        def report_change() -> None:
+            try:
+                watcher._on_file_change(changed)
+            except Exception as e:  # pragma: no cover - failure path
+                errors.append(e)
+
+        thread = threading.Thread(target=report_change)
+        thread.start()
+        thread.join()
+
+        assert errors == []
+        await asyncio.wait_for(done.wait(), timeout=5)
+
+        assert results[0]["changed_files"] == ["module.py"]
+        watcher.executor.scan.assert_awaited_once()
+
+    @pytest.mark.asyncio
     async def test_process_pending_empty(self, watcher: LucidSharkFileWatcher) -> None:
         """Test processing with no pending files."""
         # Should complete without error

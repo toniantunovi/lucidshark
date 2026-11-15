@@ -353,6 +353,32 @@ class TestMCPToolExecutorAsync:
             assert "error" not in result
 
     @pytest.mark.asyncio
+    async def test_apply_fix_rejects_non_ruff_linter(
+        self, executor: MCPToolExecutor, project_root: Path
+    ) -> None:
+        """apply_fix runs Ruff, so it must refuse issues from other linters."""
+        test_file = project_root / "app.js"
+        test_file.write_text("var x = 1")
+        issue = UnifiedIssue(
+            id="eslint-issue",
+            domain=ToolDomain.LINTING,
+            rule_id="no-var",
+            source_tool="eslint",
+            severity=Severity.LOW,
+            title="Unexpected var",
+            description="Test",
+            file_path=test_file,
+        )
+        executor._issue_cache["eslint-issue"] = issue
+
+        with patch("subprocess.run") as mock_run:
+            result = await executor.apply_fix("eslint-issue")
+
+        assert "success" not in result
+        assert "ruff" in result["error"].lower()
+        assert result["source_tool"] == "eslint"
+        mock_run.assert_not_called()
+
     async def test_apply_fix_no_file_path(self, executor: MCPToolExecutor) -> None:
         """Test apply_fix when issue has no file path."""
         issue = UnifiedIssue(

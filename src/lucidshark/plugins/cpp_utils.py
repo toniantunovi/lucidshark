@@ -22,6 +22,11 @@ CPP_EXTENSIONS = {".cpp", ".cc", ".cxx", ".hpp", ".h", ".hh", ".hxx"}
 # C++ source file extensions (excluding headers)
 CPP_SOURCE_EXTENSIONS = {".cpp", ".cc", ".cxx"}
 
+# Extensions handled by the plugins shared between C and C++ (clang-tidy,
+# clang-format, cppcheck). CPP_EXTENSIONS alone has no ".c", which left C
+# sources unchecked in C projects.
+C_CPP_EXTENSIONS = CPP_EXTENSIONS | {".c"}
+
 
 def find_clang_tidy() -> Path:
     """Find clang-tidy binary in PATH.

@@ -23,7 +23,7 @@ from lucidshark.core.models import (
 )
 from lucidshark.core.subprocess_runner import run_with_streaming, temporary_env
 from lucidshark.plugins.cpp_utils import (
-    CPP_EXTENSIONS,
+    C_CPP_EXTENSIONS,
     ensure_cpp_tools_in_path,
     find_build_dir,
     find_clang_tidy,
@@ -232,7 +232,7 @@ class ClangTidyLinter(LinterPlugin):
             files = []
             for path in context.paths:
                 if path.is_dir():
-                    for ext in CPP_EXTENSIONS:
+                    for ext in C_CPP_EXTENSIONS:
                         for f in path.rglob(f"*{ext}"):
                             if (
                                 context.ignore_patterns is None
@@ -241,13 +241,13 @@ class ClangTidyLinter(LinterPlugin):
                                 )
                             ):
                                 files.append(str(f))
-                elif path.suffix.lower() in CPP_EXTENSIONS:
+                elif path.suffix.lower() in C_CPP_EXTENSIONS:
                     files.append(str(path))
             return files
 
         # Default: find all C/C++ files in project
         files = []
-        for ext in CPP_EXTENSIONS:
+        for ext in C_CPP_EXTENSIONS:
             for f in context.project_root.rglob(f"*{ext}"):
                 if (
                     context.ignore_patterns is None

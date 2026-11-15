@@ -21,7 +21,7 @@ from lucidshark.core.models import (
 )
 from lucidshark.core.subprocess_runner import run_with_streaming, temporary_env
 from lucidshark.plugins.cpp_utils import (
-    CPP_EXTENSIONS,
+    C_CPP_EXTENSIONS,
     ensure_cpp_tools_in_path,
     find_clang_format,
     get_tool_version,
@@ -66,7 +66,7 @@ class ClangFormatFormatter(FormatterPlugin):
             LOGGER.warning(str(e))
             return []
 
-        paths = self._resolve_paths(context, CPP_EXTENSIONS, fallback_to_cwd=False)
+        paths = self._resolve_paths(context, C_CPP_EXTENSIONS, fallback_to_cwd=False)
         if not paths:
             LOGGER.debug("No C/C++ files to format-check")
             return []
@@ -128,7 +128,7 @@ class ClangFormatFormatter(FormatterPlugin):
             LOGGER.warning(str(e))
             return FixResult()
 
-        paths = self._resolve_paths(context, CPP_EXTENSIONS, fallback_to_cwd=False)
+        paths = self._resolve_paths(context, C_CPP_EXTENSIONS, fallback_to_cwd=False)
         if not paths:
             return FixResult()
 

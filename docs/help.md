@@ -739,7 +739,7 @@ get_fix_instructions(issue_id="security-123")
 
 ### `apply_fix`
 
-Apply a Ruff auto-fix to a Python linting issue from the last scan. It runs `ruff check --select <rule> --fix <file>`, so every occurrence of that rule in the file is fixed. Non-linting issues are rejected. For other linters (ESLint, Biome, ...) and for formatting, use `scan(fix=true)` instead.
+Apply a Ruff auto-fix to a Python linting issue from the last scan. It runs `ruff check --select <rule> --fix <file>`, so every occurrence of that rule in the file is fixed. Non-linting issues and issues from other linters are rejected with an error. For other linters (ESLint, Biome, ...) and for formatting, use `scan(fix=true)` instead.
 
 **Parameters:**
 
@@ -1152,7 +1152,7 @@ generating files, or preparing the environment.
 **`command`** replaces the plugin-based runner with a custom shell command. When set,
 LucidShark executes the command via the shell from the project root directory and skips
 plugin discovery entirely (the `tools` list is ignored). A non-zero exit code is reported
-as a HIGH-severity issue for `testing.command`. For linting, type checking and formatting commands the output is parsed for issues (SARIF, JSON or text), with a generic MEDIUM issue if nothing can be parsed; a failing coverage command is reported as MEDIUM.
+as a HIGH-severity issue for testing and coverage commands. For linting, type checking and formatting commands the output is first parsed for issues (SARIF, JSON or text), and a generic HIGH-severity issue is created only if nothing can be parsed.
 
 **`post_command`** runs a shell command after the main command (or plugin-based runner)
 completes. If the post-command fails (non-zero exit code), it is logged as a warning but
