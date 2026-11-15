@@ -30,7 +30,7 @@ Python has the deepest tool coverage in LucidShark, with dedicated tools across 
 
 **Tool: [Ruff](https://docs.astral.sh/ruff/)**
 
-Ruff is an extremely fast Python linter and formatter written in Rust. LucidShark downloads the binary automatically.
+Ruff is an extremely fast Python linter and formatter written in Rust. Ruff must be installed in the project venv or on PATH (`pip install ruff` / `uv add --dev ruff`); LucidShark does not download it.
 
 - Supports auto-fix via `--fix`
 - 100+ rule categories including: pyflakes (F), pycodestyle (E/W), isort (I), pep8-naming (N), flake8-bugbear (B), flake8-security (S), and many more
@@ -129,6 +129,9 @@ Parses existing `.coverage` data files produced by the pytest test runner.
 
 ```yaml
 pipeline:
+  testing:
+    enabled: true
+    tools: [{ name: pytest }]
   coverage:
     enabled: true
     tools: [{ name: coverage_py }]
@@ -182,6 +185,7 @@ pipeline:
     tools: [{ name: pytest }]
   coverage:
     enabled: true
+    tools: [{ name: coverage_py }]
     threshold: 80
   duplication:
     enabled: true

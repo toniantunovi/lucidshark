@@ -6,11 +6,17 @@ LucidShark is a unified code quality tool that combines linting, type checking, 
 
 ### Installation
 
+**Standalone binary (Linux/macOS, no Python required):**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/toniantunovi/lucidshark/main/install.sh | bash
 ```
 
-**Note:** LucidShark installs as a project-local `./lucidshark` binary. Always use `./lucidshark` to ensure you're running the project-specific version.
+**pip (Python 3.10+):**
+```bash
+pip install lucidshark      # or run without installing: uvx lucidshark
+```
+
+**Note:** The install script creates a project-local `./lucidshark` binary; use `./lucidshark` to run the project-specific version. A pip install puts `lucidshark` on your `PATH`. Examples below use `./lucidshark`; with pip, drop the `./`.
 
 The installer verifies the binary against the release's `SHA256SUMS` before installing it and aborts on mismatch. Releases published before checksums existed (0.8.4 and earlier) can only be installed with `--insecure-skip-checksum`. Every scanner or tool binary LucidShark downloads later is checked against a SHA-256 pinned inside LucidShark.
 
@@ -51,7 +57,7 @@ This single command detects your project's languages, generates a full `lucidsha
 
 ### Global Options
 
-These options are available for all commands:
+These options belong to the top-level command and must come before the subcommand (`lucidshark --debug scan ...`, not `lucidshark scan --debug`):
 
 | Option | Description |
 |--------|-------------|
@@ -72,7 +78,7 @@ This command does two things:
 |--------|-------------|
 | `--claude-code` | Configure Claude Code (the default when no tool flag is given) |
 | `--cursor` | Configure Cursor: `.cursor/mcp.json` and `.cursor/rules/lucidshark.mdc` |
-| `--windsurf` | Configure Windsurf: `.windsurf/rules/lucidshark.md`, and print the MCP snippet for the global `~/.codeium/windsurf/mcp_config.json` (not written) |
+| `--windsurf` | Configure Windsurf: `.windsurf/rules/lucidshark.md`, and print an MCP snippet (with absolute paths) to merge into the global `~/.codeium/windsurf/mcp_config.json`, or `.devin/mcp_config.json` in Devin Desktop. `init` writes neither file |
 | `--aider` | Configure Aider: `lint-cmd`, `auto-lint` and `read` in `.aider.conf.yml`, plus a `CONVENTIONS.md` section |
 | `--all-tools` | Configure every supported tool |
 | `--dry-run` | Show changes without applying |
@@ -138,6 +144,8 @@ All languages also include: security scanning (trivy for SCA, opengrep for SAST,
 
 Run the quality/security pipeline. By default, scans only changed files (uncommitted changes).
 
+**Which domains run:** with no domain flag, `scan` runs only the security domains (SCA, SAST, IaC, container) enabled in `lucidshark.yml`. Linting, type checking, formatting, testing, coverage and duplication run only when their flag or `--all` is given. A non-security flag on its own (for example `--linting`) runs just that domain, without security scanning. This differs from the MCP `scan` tool, whose `domains` default is `["all"]`.
+
 #### Scan Domains
 
 | Flag | Domain | Description |
@@ -168,21 +176,21 @@ Run the quality/security pipeline. By default, scans only changed files (uncommi
 
 | Option | Description |
 |--------|-------------|
-| `--format {ai,json,table,sarif,summary}` | Output format (`ai` is optimized for AI agents) |
+| `--format {ai,json,table,sarif,summary}` | Output format (default: `json`; `ai` is optimized for AI agents) |
 
 #### Configuration Options
 
 | Option | Description |
 |--------|-------------|
-| `--fail-on {critical,high,medium,low}` | Failure threshold for security issues |
+| `--fail-on {critical,high,medium,low}` | Exit 1 if any issue in any domain is at or above this severity. Overrides the `fail_on` settings in `lucidshark.yml` |
 | `--coverage-threshold PERCENT` | Coverage threshold (default: 80) |
 | `--coverage-threshold-scope {changed,project,both}` | With `--base-branch`: apply coverage threshold to changed files (default), project, or both |
 | `--linting-threshold-scope {changed,project,both}` | With `--base-branch`: apply linting threshold to changed files (default), project, or both |
 | `--type-checking-threshold-scope {changed,project,both}` | With `--base-branch`: apply type checking threshold to changed files (default), project, or both |
 | `--duplication-threshold PERCENT` | Maximum allowed duplication percentage (default: 10) |
-| `--duplication-threshold-scope {changed,project,both}` | With `--base-branch`: apply duplication threshold to changed files (default), project, or both |
+| `--duplication-threshold-scope {changed,project,both}` | With `--base-branch`: apply duplication threshold to changed files, project, or both (default when `pipeline.duplication` is configured) |
 | `--min-lines N` | Minimum lines for a duplicate block (default: 4) |
-| `--config PATH` | Path to config file |
+| `--config PATH` | Path to config file (default: first of `.lucidshark.yml`, `.lucidshark.yaml`, `lucidshark.yml`, `lucidshark.yaml` in the project root) |
 
 #### Execution Options
 
@@ -210,7 +218,7 @@ Run the quality/security pipeline. By default, scans only changed files (uncommi
 
 Use `--base-branch` to filter results to files changed in a PR. All scans run fully  -  only reporting is filtered. Works with all domains: linting, type_checking, coverage, and duplication. See [Incremental Scanning](incremental-scanning.md) for comprehensive documentation.
 
-**GitHub Actions** (using install script):
+**GitHub Actions** (using pip install):
 ```yaml
 - name: Set up Python
   uses: actions/setup-python@v5
@@ -218,11 +226,11 @@ Use `--base-branch` to filter results to files changed in a PR. All scans run fu
     python-version: '3.11'
 
 - name: Install LucidShark
-  run: 
+  run: pip install lucidshark
 
 - name: Run LucidShark Incremental Scan
   run: |
-    ./lucidshark scan --all \
+    lucidshark scan --all \
       --base-branch origin/${{ github.base_ref }} \
       --coverage-threshold 80 \
       --duplication-threshold 10
@@ -241,31 +249,31 @@ Use `--base-branch` to filter results to files changed in a PR. All scans run fu
       --duplication-threshold 10
 ```
 
-**GitLab CI** (install script):
+**GitLab CI** (pip install):
 ```yaml
 test:
   script:
-    - 
+    - pip install lucidshark
     - lucidshark scan --all \
         --base-branch origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME \
         --coverage-threshold 80
 ```
 
-**Bitbucket Pipelines** (install script):
+**Bitbucket Pipelines** (pip install):
 ```yaml
 - step:
     script:
-      - 
+      - pip install lucidshark
       - lucidshark scan --all \
           --base-branch origin/$BITBUCKET_PR_DESTINATION_BRANCH \
           --coverage-threshold 80
 ```
 
-**Azure DevOps** (install script):
+**Azure DevOps** (pip install):
 ```yaml
 - script: |
-    
-    ./lucidshark scan --all \
+    pip install lucidshark
+    lucidshark scan --all \
       --base-branch origin/$(System.PullRequest.TargetBranch) \
       --coverage-threshold 80
 ```
@@ -274,22 +282,15 @@ test:
 
 ### `lucidshark status` / `./lucidshark status`
 
-Show configuration and tool status.
-
-| Option | Description |
-|--------|-------------|
-| `--tools` | Show installed tool versions |
-| `--config` | Show effective configuration |
+Show LucidShark version, platform, installed scanner plugins and tool status. Takes no options.
 
 **Examples:**
 ```bash
 # Pip install
-./lucidshark status
-./lucidshark status --tools
+lucidshark status
 
 # Binary install
 ./lucidshark status
-./lucidshark status --tools
 ```
 
 ### `lucidshark serve` / `./lucidshark serve`
@@ -298,18 +299,19 @@ Run LucidShark as a server for AI tool integration.
 
 | Option | Description |
 |--------|-------------|
-| `--mcp` | Run as MCP server (for Claude Code) |
-| `--watch` | Watch files and run incremental checks |
-| `--port PORT` | HTTP port for status endpoint (default: 7432) |
+| `--mcp` | Run as MCP server over stdio (the default when neither `--mcp` nor `--watch` is given) |
+| `--watch` | Watch files and run a scan of all configured domains on each debounced batch of changes; results are printed to stdout as JSON |
 | `--debounce MS` | File watcher debounce delay (default: 1000) |
 | `path` | Project directory to serve (default: `.`) |
+
+With a binary install, `serve --mcp` checks for a LucidShark update, applies it and restarts before serving. Other commands check for and download a new release in the background, and it is applied the next time LucidShark starts. Set `settings.auto_update: false` in `lucidshark.yml` to turn update checks off.
 
 **Examples:**
 ```bash
 # Pip install
-./lucidshark serve --mcp
-./lucidshark serve --watch
-./lucidshark serve --watch --debounce 500
+lucidshark serve --mcp
+lucidshark serve --watch
+lucidshark serve --watch --debounce 500
 
 # Binary install
 ./lucidshark serve --mcp
@@ -324,7 +326,7 @@ Display this documentation.
 
 ```bash
 # Pip install
-./lucidshark help
+lucidshark help
 
 # Binary install
 ./lucidshark help
@@ -342,10 +344,12 @@ Run health checks on the LucidShark setup and environment. Checks configuration,
 - Git repository detected
 - Claude Code MCP integration configured
 
+Exits 0 when every check passes and 1 when any check fails.
+
 **Examples:**
 ```bash
 # Pip install
-./lucidshark doctor
+lucidshark doctor
 
 # Binary install
 ./lucidshark doctor
@@ -357,7 +361,7 @@ Validate a `lucidshark.yml` configuration file and report errors/warnings.
 
 | Option | Description |
 |--------|-------------|
-| `--config PATH` | Path to config file (default: find in current directory) |
+| `--config PATH` | Path to config file (default: first of `.lucidshark.yml`, `.lucidshark.yaml`, `lucidshark.yml`, `lucidshark.yaml` in the current directory) |
 
 **Exit codes:**
 - 0: Configuration is valid (may have warnings)
@@ -367,8 +371,8 @@ Validate a `lucidshark.yml` configuration file and report errors/warnings.
 **Examples:**
 ```bash
 # Pip install
-./lucidshark validate
-./lucidshark validate --config custom-config.yml
+lucidshark validate
+lucidshark validate --config custom-config.yml
 
 # Binary install
 ./lucidshark validate
@@ -411,10 +415,10 @@ Overview requires a full project scan (`--all-files`) because it represents the 
 **Examples:**
 ```bash
 # Pip install
-./lucidshark overview                                # View overview
-./lucidshark overview --preview                      # Preview without saving
-./lucidshark overview --update                       # Update QUALITY.md
-./lucidshark scan --all --all-files && lucidshark overview --update  # Scan then update
+lucidshark overview                                # View overview
+lucidshark overview --preview                      # Preview without saving
+lucidshark overview --update                       # Update QUALITY.md
+lucidshark scan --all --all-files && lucidshark overview --update  # Scan then update
 
 # Binary install
 ./lucidshark overview                              # View overview
@@ -427,7 +431,7 @@ Overview requires a full project scan (`--all-files`) because it represents the 
 
 Add to your CI pipeline to auto-commit quality updates on merge to main.
 
-**GitHub Actions** (using install script):
+**GitHub Actions** (using pip install):
 
 Uses `GITHUB_TOKEN` with explicit write permissions. No secrets needed.
 
@@ -445,11 +449,11 @@ jobs:
         with:
           python-version: '3.11'
       - name: Install LucidShark
-        run: 
+        run: pip install lucidshark
       - name: Update Quality Overview
         run: |
-          ./lucidshark scan --all --all-files
-          ./lucidshark overview --update
+          lucidshark scan --all --all-files
+          lucidshark overview --update
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add QUALITY.md .lucidshark/quality-history.json
@@ -481,7 +485,7 @@ jobs:
           git push
 ```
 
-**GitLab CI** (using install script):
+**GitLab CI** (using pip install):
 
 Requires a Project Access Token with `write_repository` scope stored in `GL_TOKEN` variable.
 Go to Settings → Access Tokens → Create token with `write_repository` scope, then add to CI/CD Variables.
@@ -492,7 +496,7 @@ update-quality:
   rules:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   script:
-    - 
+    - pip install lucidshark
     - lucidshark scan --all --all-files
     - lucidshark overview --update
     - git config user.name "GitLab CI"
@@ -503,7 +507,7 @@ update-quality:
     - git push origin HEAD:$CI_COMMIT_BRANCH
 ```
 
-**Bitbucket Pipelines** (using install script):
+**Bitbucket Pipelines** (using pip install):
 
 Requires an SSH keypair with write access. Go to Repository Settings → Access keys → Add key (with write permission), then add the private key to Repository Settings → SSH keys.
 
@@ -514,7 +518,7 @@ pipelines:
       - step:
           name: Update Quality Overview
           script:
-            - 
+            - pip install lucidshark
             - lucidshark scan --all --all-files
             - lucidshark overview --update
             - git config user.name "Bitbucket Pipelines"
@@ -524,7 +528,7 @@ pipelines:
             - git push origin main
 ```
 
-**Azure DevOps** (using install script):
+**Azure DevOps** (using pip install):
 
 Grant the build service "Contribute" permission: Project Settings → Repositories → Security → [Build Service] → Contribute: Allow. Checkout with `persistCredentials: true`.
 
@@ -539,9 +543,9 @@ steps:
     persistCredentials: true  # Required for pushing
 
   - script: |
-      
-      ./lucidshark scan --all --all-files
-      ./lucidshark overview --update
+      pip install lucidshark
+      lucidshark scan --all --all-files
+      lucidshark overview --update
       git config user.name "Azure Pipelines"
       git config user.email "azuredevops@microsoft.com"
       git add QUALITY.md .lucidshark/quality-history.json
@@ -559,10 +563,9 @@ steps:
 | Code | Meaning |
 |------|---------|
 | 0 | All checks passed |
-| 1 | Issues found above threshold |
-| 2 | Tool/scanner execution error |
-| 3 | Configuration error |
-| 4 | Bootstrap/download failure |
+| 1 | A `fail_on` rule in `lucidshark.yml` failed (including coverage `below_threshold` and duplication `above_threshold`), an issue is at or above `--fail-on`, or a mandatory tool was skipped or failed. Without `fail_on` or `--fail-on`, issues and threshold misses are reported but don't change the exit code |
+| 2 | Tool/scanner execution error, or invalid command-line arguments |
+| 3 | Config file not found or not parseable, scan path not found, a configured tool not installed, or `--coverage` without `--testing`. Invalid values in a config that parses only produce warnings |
 
 ---
 
@@ -584,9 +587,11 @@ Run quality checks on the codebase or specific files. Supports partial scanning 
 | `fix` | boolean | `false` | Apply auto-fixes for linting and formatting issues |
 | `base_branch` | string | (none) | Filter results to files changed since this branch (e.g., `origin/main`). Full analysis runs; only reporting is filtered. |
 | `coverage_threshold_scope` | string | `"changed"` | With `base_branch`: apply coverage threshold to `changed`, `project`, or `both` |
-| `linting_threshold_scope` | string | `"changed"` | With `base_branch`: apply linting threshold to `changed`, `project`, or `both` |
-| `type_checking_threshold_scope` | string | `"changed"` | With `base_branch`: apply type checking threshold to `changed`, `project`, or `both` |
+| `linting_threshold_scope` | string | `"changed"` | Accepted for parity with the CLI but currently has no effect over MCP |
+| `type_checking_threshold_scope` | string | `"changed"` | Accepted for parity with the CLI but currently has no effect over MCP |
 | `duplication_threshold_scope` | string | `"both"` | With `base_branch`: apply duplication threshold to `changed`, `project`, or `both` |
+
+The MCP scope defaults are fixed: they do not read `threshold_scope` from `lucidshark.yml`. The MCP `scan` tool also does not apply `fail_on`; it reports issues and per-domain status, and the agent decides what to fix.
 
 **Valid domains:** `linting`, `type_checking`, `formatting`, `sast`, `sca`, `iac`, `container`, `testing`, `coverage`, `duplication`, `all`
 
@@ -596,13 +601,13 @@ Run quality checks on the codebase or specific files. Supports partial scanning 
 
 | Domain | Partial Scan Support | Behavior |
 |--------|---------------------|----------|
-| `linting` | ⚠️ Partial support | Ruff/ESLint/Biome/golangci-lint/ktlint/dotnet format/clang-tidy/Scalafix/SwiftLint/RuboCop/phpcs support file args; Clippy is workspace-wide |
-| `type_checking` | ⚠️ Partial support | mypy/pyright/cppcheck/Sorbet/PHPStan support file args; tsc/SpotBugs/detekt/cargo check/go vet/dotnet build/scala compile/swift compiler scan full project |
-| `formatting` | ⚠️ Partial support | Ruff Format/Prettier/ktlint/gofmt/dotnet format/clang-format/Scalafmt/SwiftFormat/RuboCop Format/PHP-CS-Fixer support file args; rustfmt project-wide |
-| `sast` | ✅ Full support | OpenGrep and gosec scan only specified/changed files |
+| `linting` | ⚠️ Partial support | Ruff/ESLint/Biome/Checkstyle/PMD/ktlint/clang-tidy/Scalafix/RuboCop/phpcs support file args; Clippy, golangci-lint, dotnet format and SwiftLint are project-wide |
+| `type_checking` | ⚠️ Partial support | mypy/pyright/cppcheck/detekt support file args; tsc/SpotBugs/cargo check/go vet/dotnet build/scala compile/swift compiler/Sorbet/PHPStan scan full project |
+| `formatting` | ⚠️ Partial support | Ruff Format/Prettier/ktlint/rustfmt/gofmt/clang-format/Scalafmt/SwiftFormat/RuboCop Format/PHP-CS-Fixer support file args; dotnet format is project-wide |
+| `sast` | ❌ Project-wide only | OpenGrep scans the project root and gosec scans `./...`; results are narrowed to changed files only with `base_branch` |
 | `sca` | ❌ Project-wide only | Trivy dependency scan is inherently project-wide |
 | `iac` | ❌ Project-wide only | Checkov scans entire project |
-| `testing` | ⚠️ Partial support | pytest/Jest/Vitest/Mocha/Playwright/RSpec/PHPUnit support file args; Karma/Maven/cargo test/go test/dotnet test/CTest/sbt/swift test are project-wide |
+| `testing` | ⚠️ Partial support | Jest/Vitest/Mocha/Playwright support file args; pytest (always runs the full suite via its own discovery)/Karma/Maven/cargo test/go test/dotnet test/CTest/sbt/swift test/RSpec/PHPUnit are project-wide |
 | `coverage` | ⚠️ Parse data, filter output | Coverage reads existing data files; output can be filtered to changed files; Tarpaulin/JaCoCo/go cover always project-wide |
 | `duplication` | ❌ Project-wide only | Duplo scans entire project to detect cross-file duplicates |
 
@@ -610,37 +615,54 @@ Run quality checks on the codebase or specific files. Supports partial scanning 
 ```json
 {
   "total_issues": 5,
+  "ignored_issues": 0,
   "blocking": true,
   "summary": "5 issues found: 1 critical, 2 high, 2 medium",
   "severity_counts": {"critical": 1, "high": 2, "medium": 2},
   "domain_status": {
-    "linting": {"status": "pass", "display": "Pass"},
-    "type_checking": {"status": "fail", "display": "3 issues"},
-    "sast": {"status": "pass", "display": "Pass"},
-    "sca": {"status": "fail", "display": "2 issues"},
-    "testing": {"status": "skipped", "display": "Skipped"},
-    "coverage": {"status": "skipped", "display": "Skipped"}
+    "linting": {"status": "pass", "display": "Pass", "issue_count": 0, "fixable_count": 0},
+    "type_checking": {"status": "fail", "display": "3 issues", "issue_count": 3, "fixable_count": 0},
+    "sast": {"status": "fail", "display": "1 issues", "issue_count": 1, "fixable_count": 0},
+    "sca": {"status": "fail", "display": "1 issues", "issue_count": 1, "fixable_count": 0},
+    "coverage": {"status": "pass", "display": "84.2% coverage (threshold: 80%)", "coverage_percent": 84.2, "threshold": 80, "scope_is_empty": false},
+    "testing": {"status": "skipped", "display": "Skipped"}
+  },
+  "issues_by_domain": {
+    "sast": [
+      {"id": "security-123", "location": "config.py:23", "severity": "critical", "title": "Hardcoded password", "fixable": false}
+    ]
   },
   "instructions": [
     {
       "priority": 1,
-      "action": "FIX_SECURITY_VULNERABILITY",
+      "action": "FIX_SECURITY_HARDCODED_SECRET",
       "summary": "Hardcoded password in config.py:23",
       "file": "config.py",
       "line": 23,
+      "column": 5,
       "problem": "Hardcoded credentials detected",
       "fix_steps": ["Remove hardcoded password", "Use environment variable"],
+      "suggested_fix": null,
+      "current_code": null,
+      "documentation_url": null,
+      "related_issues": [],
       "issue_id": "security-123"
     }
-  ]
+  ],
+  "recommended_action": "..."
 }
 ```
+
+Additional keys appear when relevant: `ignored_issues_by_domain` (when issues are ignored via `ignore_issues`), `coverage_summary` and `duplication_summary` (when those domains ran), and `incremental_scan` (when `base_branch` is used). Duplication entries in `domain_status` carry `duplication_percent` and `threshold`.
+
+Instruction `priority` follows severity: critical 1, high 2, medium 3, low 4, info 5. `blocking` is `true` when any instruction has priority 1 or 2.
+
+On failure the response is `{"error": "...", "blocking": true, "total_issues": 0}`, plus `missing_tools` and `message` when configured tools are not installed.
 
 The `domain_status` field shows all configured domains with their status:
 - `pass`: Domain executed with no issues
 - `fail`: Domain executed with issues found
 - `skipped`: Domain is configured but wasn't executed in this scan
-```
 
 **Examples:**
 ```
@@ -656,7 +678,7 @@ scan(domains=["linting", "type_checking"], files=["src/main.py", "src/utils.py"]
 # Lint with auto-fix (on changed files by default)
 scan(domains=["linting"], fix=true)
 
-# Security scan - SAST scans changed files, SCA always project-wide
+# Security scan - SAST and SCA always scan the whole project
 scan(domains=["sca", "sast"])
 
 # Incremental scan - filter to files changed since main
@@ -666,14 +688,21 @@ scan(domains=["all"], base_branch="origin/main")
 scan(
     domains=["all"],
     base_branch="origin/main",
-    coverage_threshold_scope="changed",
-    linting_threshold_scope="changed"
+    coverage_threshold_scope="both",
+    duplication_threshold_scope="both"
 )
 ```
 
 ### `check_file`
 
-Check a specific file and return issues with fix instructions. This is a convenience wrapper for partial scanning that automatically detects the file type and runs appropriate checks (linting, type checking) for that single file.
+Check a specific file and return issues with fix instructions. This is a convenience wrapper around `scan(files=[file_path])` that picks domains from the file's language:
+
+- Every language: linting, SAST, SCA
+- Python, JavaScript/TypeScript, Java/Kotlin, Rust, Go, C/C++, PHP, Swift: also type checking, formatting, testing and coverage
+- Terraform: IaC only
+- YAML/JSON: IaC and SAST
+
+Because SCA is project-wide and testing may run the test suite, `check_file` can take as long as a scan.
 
 **Parameters:**
 
@@ -682,9 +711,9 @@ Check a specific file and return issues with fix instructions. This is a conveni
 | `file_path` | string | Yes | Path to file (relative to project root) |
 
 **When to use:**
-- Quick feedback on a single file you just modified
+- Feedback on a single file you just modified, without choosing domains yourself
 - Checking a specific file before committing
-- Faster than `scan()` when you only need to check one file
+- For a faster check, call `scan(domains=["linting", "type_checking"], files=[...])` instead
 
 **Example:**
 ```
@@ -710,7 +739,7 @@ get_fix_instructions(issue_id="security-123")
 
 ### `apply_fix`
 
-Apply auto-fix for a fixable issue. Supports linting and formatting issues.
+Apply a Ruff auto-fix to a Python linting issue from the last scan. It runs `ruff check --select <rule> --fix <file>`, so every occurrence of that rule in the file is fixed. Non-linting issues are rejected. For other linters (ESLint, Biome, ...) and for formatting, use `scan(fix=true)` instead.
 
 **Parameters:**
 
@@ -742,10 +771,12 @@ Get current LucidShark status and configuration.
     "coverage": ["coverage_py", "istanbul", "vitest_coverage", "jacoco", "tarpaulin", "go_cover"],
     "duplication": ["duplo"]
   },
-  "enabled_domains": ["sca", "sast", "linting"],
+  "enabled_domains": ["sca", "sast"],
   "cached_issues": 5
 }
 ```
+
+`enabled_domains` lists only the security domains (sca, sast, iac, container) enabled in `lucidshark.yml`.
 
 ### `get_help`
 
@@ -785,16 +816,16 @@ autoconfigure()
 7. **Install required tools** -- Check if tools are installed, install missing ones, AND add them to dev dependencies (pyproject.toml, requirements-dev.txt, package.json, etc.)
 8. **Generate `lucidshark.yml`** -- Write the config file based on detected project characteristics
 9. **Call `validate_config()`** -- Verify the configuration is valid, fix any errors
-10. **Run verification scan** -- Execute `scan(domains=["all"])` to verify everything works
+10. **Restart the AI tool, then run a verification scan** -- The MCP server loads `lucidshark.yml` once at startup, so restart before calling `scan(domains=["all"])`
 
 **Tool recommendations by language:**
 
 | Language | Linter | Formatter | Type Checker | Test Runner | Coverage |
 |----------|--------|-----------|-------------|-------------|----------|
 | Python | ruff | ruff_format | mypy or pyright | pytest | coverage_py |
-| JavaScript/TypeScript | eslint or biome | prettier | typescript (tsc) | jest, vitest, karma, or playwright | istanbul or vitest_coverage |
+| JavaScript/TypeScript | eslint or biome | prettier | typescript (tsc, TypeScript only) | jest, vitest, mocha, karma, or playwright | istanbul or vitest_coverage |
 | Java | checkstyle, pmd | -- | spotbugs | maven (JUnit) | jacoco |
-| Kotlin | -- | -- | -- | maven (JUnit) | jacoco |
+| Kotlin | ktlint | ktlint_format | detekt | maven (JUnit) | jacoco |
 | Rust | clippy | rustfmt | cargo_check | cargo | tarpaulin |
 | Go | golangci_lint | gofmt | go_vet | go_test | go_cover |
 
@@ -843,13 +874,13 @@ Validate a `lucidshark.yml` configuration file. Returns validation results with 
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `config_path` | string | No | Path to config file (relative to project root). Default: find `lucidshark.yml` |
+| `config_path` | string | No | Path to config file (relative to project root). Default: first of `.lucidshark.yml`, `.lucidshark.yaml`, `lucidshark.yml`, `lucidshark.yaml` in the project root |
 
 **Response format:**
 ```json
 {
   "valid": true,
-  "config_path": "lucidshark.yml",
+  "config_path": "/path/to/project/lucidshark.yml",
   "errors": [],
   "warnings": [
     {
@@ -860,6 +891,8 @@ Validate a `lucidshark.yml` configuration file. Returns validation results with 
   ]
 }
 ```
+
+`config_path` is absolute. When no config file is found, the response is `{"valid": false, "error": "...", "errors": [], "warnings": [], "searched_for": [".lucidshark.yml", ".lucidshark.yaml", "lucidshark.yml", "lucidshark.yaml"]}`.
 
 **Examples:**
 ```
@@ -904,8 +937,7 @@ pipeline:
       - "migrations/**"
       - "generated/**"
     tools:
-      - name: ruff
-        config: ruff.toml  # Optional custom config path
+      - name: ruff             # Reads its own config (pyproject.toml / ruff.toml)
       - name: eslint
       - name: biome
       - name: clippy           # For Rust projects
@@ -936,7 +968,7 @@ pipeline:
 
   security:
     enabled: true
-    exclude:          # Domain-level: exclude from security only (still linted and type-checked)
+    exclude:          # Domain-level: exclude from security only (applied by the MCP scan tool; the CLI uses global excludes only)
       - "tests/**"
       - "examples/**"
     tools:
@@ -951,8 +983,7 @@ pipeline:
     enabled: true
     command: "npm test"             # Optional: custom shell command overrides plugin-based runner
     post_command: "npm run cleanup" # Optional: runs after command completes
-    exclude:          # Domain-level: exclude from test execution only (still linted/type-checked)
-      - "tests/integration/**"
+    # Note: test runners do not read exclude patterns; use your test runner's own config to skip tests
     tools:
       - name: pytest      # Python unit tests
       - name: jest        # JavaScript/TypeScript tests
@@ -966,15 +997,16 @@ pipeline:
   # Testing produces the coverage files that coverage analysis reads
   coverage:
     enabled: true
-    exclude:          # Domain-level: exclude from coverage analysis only
+    exclude:          # Domain-level: applied by jacoco and scoverage only
       - "scripts/**"
     tools: [coverage_py]  # coverage_py for Python, istanbul/vitest_coverage for JS/TS, jacoco for Java, tarpaulin for Rust, go_cover for Go
     threshold: 80  # Fail if coverage below this
-    # extra_args: ["-DskipITs", "-Ddocker.skip=true"]  # For Java: skip integration tests
+    threshold_scope: changed  # With --base-branch: changed (default), project, or both
 
   duplication:
     enabled: true
     threshold: 10.0  # Max allowed duplication percentage
+    threshold_scope: both  # With --base-branch: changed, project, or both (default)
     min_lines: 4     # Minimum lines for a duplicate block
     min_chars: 3     # Minimum characters per line
     exclude:         # Domain-level: exclude from duplication scan only
@@ -983,8 +1015,9 @@ pipeline:
 
 # Failure thresholds (per-domain)
 fail_on:
-  linting: error           # error, none
+  linting: error           # error, none ("error" = any HIGH or CRITICAL issue)
   type_checking: error     # error, none
+  formatting: error        # error, none
   security: high           # critical, high, medium, low, info, none
   testing: any             # any, none
   coverage: below_threshold  # below_threshold, any, none
@@ -1000,14 +1033,14 @@ ignore_issues:
     reason: "Not exploitable in our context"
   - rule_id: CKV_AWS_18                     # Structured form with reason and expiry
     reason: "Access logging not required for dev buckets"
-    expires: 2026-06-01
+    expires: 2027-06-01
   - rule_id: S101                           # Path-scoped: only ignore in specific files
     reason: "Assert is OK in tests"
     paths:
       - "tests/**"
       - "**/test_*.py"
 
-# Global file/directory excludes (applies to all domains)
+# Global file/directory excludes (passed to the tools that support excludes; see "Understanding exclude vs ignore_issues")
 exclude:
   - "**/.git/**"
   - "**/.lucidshark/**"
@@ -1025,6 +1058,22 @@ exclude:
 # Global settings
 settings:
   strict_mode: true  # All configured tools must run successfully (default: true)
+  auto_update: true  # Binary installs: self-update when a new release exists (default: true)
+
+# Scanner options for the security domains (passed to Trivy, OpenGrep, Checkov)
+scanners:
+  sca:
+    ignore_unfixed: true          # Trivy: skip vulnerabilities without a fix
+    skip_db_update: false         # Trivy: don't refresh the vulnerability DB
+    severity: [CRITICAL, HIGH]    # Trivy: only report these severities
+  container:
+    images: [myapp:latest]        # Trivy: images to scan (also: --image on the CLI)
+  sast:
+    ruleset: [auto]               # OpenGrep: ruleset (first entry is used; default auto)
+    timeout: 300                  # OpenGrep: per-file timeout in seconds
+  iac:
+    framework: [terraform, kubernetes]  # Checkov: limit frameworks (default: all)
+    skip_checks: [CKV_AWS_18]           # Checkov: checks to skip
 
 # Output format
 output:
@@ -1032,11 +1081,10 @@ output:
 
 # Quality Overview (QUALITY.md generation)
 overview:
-  enabled: true              # Enable overview generation
   file: QUALITY.md           # Output file name
   history_file: .lucidshark/quality-history.json  # History storage
   history_limit: 90          # Max snapshots to keep
-  domains:                   # Domains to include (null = all executed domains)
+  domains:                   # Domains to show in the table (see the overview section for defaults)
     - linting
     - type_checking
     - sast
@@ -1056,23 +1104,26 @@ overview:
 
 By default, LucidShark runs in **strict mode** (`settings.strict_mode: true`). This means:
 
-- **Every configured tool must run successfully**  -  if a tool is skipped (not installed, missing prerequisites, execution failed), the scan fails with a HIGH severity issue
-- **Testing failures block the scan**  -  if tests fail, a HIGH severity issue is created
-- **Coverage with no data fails**  -  if coverage analysis finds 0 lines measured, the scan fails
+- **Every configured tool must run successfully**  -  if a tool is skipped (missing prerequisites, execution failed), a HIGH severity issue is created and the scan exits 1, whatever `fail_on` says
+- **Test failures are reported as HIGH severity issues**  -  they fail the scan when `fail_on.testing` is set (or via `--fail-on`)
+- **Coverage with no data is reported as an issue**  -  if coverage analysis finds no coverage data, the coverage domain fails; the exit code follows `fail_on.coverage`
 
 **Skip reasons that cause failures in strict mode:**
 | Skip Reason | Example | Blocks Scan? |
 |-------------|---------|--------------|
-| Tool not installed | mypy not installed | ✅ Yes |
 | Missing prerequisite | SpotBugs: no compiled classes | ✅ Yes |
 | Execution failed | Tool timed out or crashed | ✅ Yes |
 | No applicable files | No `.py` files for mypy | ❌ No (informational) |
+
+**Configured tools that are not installed** are caught before the scan starts, whatever `strict_mode` says: the CLI prints install instructions and exits with code 3, and the MCP `scan` tool returns a `missing_tools` error. Managed tools (Trivy, OpenGrep, Checkov, gosec, PMD, Checkstyle, SpotBugs, ktlint, detekt, duplo) are downloaded instead.
 
 **To disable strict mode** (allow tool skips without failing):
 ```yaml
 settings:
   strict_mode: false
 ```
+
+With `strict_mode: false`, a tool skipped for a missing prerequisite is reported as informational, but a tool whose execution fails (timeout, crash) still fails the scan.
 
 **Per-tool mandatory flag** (for fine-grained control when strict_mode is false):
 ```yaml
@@ -1090,9 +1141,8 @@ pipeline:
 
 #### Custom Commands
 
-All pipeline domains support `command`, `pre_command`, and `post_command` fields for custom shell commands.
-This provides a unified way to override plugin-based runners across linting, type checking,
-testing, and coverage domains.
+The linting, type checking, formatting, testing and coverage domains support `command`, `pre_command`, and `post_command` fields for custom shell commands
+(security and duplication do not). This provides a unified way to override plugin-based runners.
 
 **`pre_command`** runs a shell command before the main command (or plugin-based runner)
 executes. If the pre-command fails (non-zero exit code), it is logged as a warning but
@@ -1102,7 +1152,7 @@ generating files, or preparing the environment.
 **`command`** replaces the plugin-based runner with a custom shell command. When set,
 LucidShark executes the command via the shell from the project root directory and skips
 plugin discovery entirely (the `tools` list is ignored). A non-zero exit code is reported
-as a HIGH-severity issue.
+as a HIGH-severity issue for `testing.command`. For linting, type checking and formatting commands the output is parsed for issues (SARIF, JSON or text), with a generic MEDIUM issue if nothing can be parsed; a failing coverage command is reported as MEDIUM.
 
 **`post_command`** runs a shell command after the main command (or plugin-based runner)
 completes. If the post-command fails (non-zero exit code), it is logged as a warning but
@@ -1135,7 +1185,7 @@ Common use cases:
 
 ⚠️ **CRITICAL FOR AUTOCONFIGURE**: Only use tools from the lists below. NEVER use tools not listed here - they are not supported by LucidShark and will cause validation errors.
 
-LucidShark validates that all configured tools are installed before running scans. If a configured tool is missing, the scan fails immediately with an error message and install instructions.
+LucidShark validates that all configured tools are installed before running scans. If a configured tool is missing, the scan stops before it starts (CLI exit code 3) with an error message and, for most tools, install instructions.
 
 #### Complete List of Supported Tools
 
@@ -1243,7 +1293,7 @@ The following tools are **automatically downloaded** by LucidShark:
 
 #### Manually Installed Tools
 
-All other tools must be installed manually before use. If you configure a tool that isn't installed, LucidShark will fail with an error showing the install command.
+All other tools must be installed manually before use. If you configure a tool that isn't installed, LucidShark will fail with an error naming the missing tool (and the install command, where one is known).
 
 **Linters:**
 
@@ -1353,7 +1403,7 @@ The following tools are configured but not installed:
 Please install the missing tools and try again.
 
 Note: Security tools (trivy, opengrep, gosec, checkov), duplo, pmd, checkstyle,
-and spotbugs are downloaded automatically - no manual installation required.
+spotbugs, ktlint and detekt are downloaded automatically - no manual installation required.
 ```
 
 ### Common Configuration Examples
@@ -1570,12 +1620,13 @@ pipeline:
     enabled: true
     tools:
       - name: maven
+    # Optional: skip integration tests by overriding the maven runner's command
+    # command: "mvn test jacoco:report -B -DskipITs"
   coverage:
     enabled: true
     tools:
       - name: jacoco
     threshold: 80
-    extra_args: ["-DskipITs"]
 fail_on:
   linting: error
   type_checking: error
@@ -1691,8 +1742,12 @@ exclude:
 | `type_checking.exclude` | array | [] | Patterns to exclude from type checking (combined with global `exclude`) |
 | `type_checking.threshold_scope` | string | "changed" | With `--base-branch`: apply threshold to `changed`, `project`, or `both` |
 | `type_checking.tools` | array | (auto) | List of type checkers |
+| `formatting.enabled` | bool | true | Enable formatting checks |
+| `formatting.exclude` | array | [] | Patterns to exclude from formatting checks (combined with global `exclude`) |
+| `formatting.threshold_scope` | string | "changed" | With `--base-branch`: apply threshold to `changed`, `project`, or `both` |
+| `formatting.tools` | array | (auto) | List of formatters |
 | `security.enabled` | bool | true | Enable security scanning |
-| `security.exclude` | array | [] | Patterns to exclude from security scanning (combined with global `exclude`) |
+| `security.exclude` | array | [] | Patterns to exclude from security scanning. Applied by the MCP `scan` tool; the CLI currently applies only global excludes to security scanners |
 | `security.tools` | array | (auto) | Security tools with domains |
 | `linting.pre_command` | string | (none) | Shell command to run before linting starts |
 | `linting.command` | string | (none) | Custom shell command (overrides plugin-based runner) |
@@ -1700,21 +1755,22 @@ exclude:
 | `type_checking.pre_command` | string | (none) | Shell command to run before type checking starts |
 | `type_checking.command` | string | (none) | Custom shell command (overrides plugin-based runner) |
 | `type_checking.post_command` | string | (none) | Shell command to run after type checking completes |
-| `testing.enabled` | bool | false | Enable test execution |
+| `formatting.pre_command` / `command` / `post_command` | string | (none) | Same as for linting |
+| `testing.enabled` | bool | true | Enable test execution |
 | `testing.pre_command` | string | (none) | Shell command to run before tests start (e.g., start services) |
 | `testing.command` | string | (none) | Custom shell command to run tests (overrides plugin-based runner) |
 | `testing.post_command` | string | (none) | Shell command to run after tests complete (cleanup, reports, etc.) |
-| `testing.exclude` | array | [] | Patterns to exclude from test execution (combined with global `exclude`) |
+| `testing.exclude` | array | [] | Accepted, but test runners do not read exclude patterns; use the runner's own config to skip tests |
 | `testing.tools` | array | (auto) | Test frameworks |
 | `coverage.enabled` | bool | false | Enable coverage analysis |
 | `coverage.pre_command` | string | (none) | Shell command to run before coverage analysis starts |
 | `coverage.command` | string | (none) | Custom shell command (overrides plugin-based runner) |
 | `coverage.post_command` | string | (none) | Shell command to run after coverage completes |
-| `coverage.exclude` | array | [] | Patterns to exclude from coverage analysis (combined with global `exclude`) |
-| `coverage.tools` | array | **required** | Coverage tools (coverage_py, istanbul, vitest_coverage, jacoco, tarpaulin) |
+| `coverage.exclude` | array | [] | Patterns to exclude from coverage analysis (applied by jacoco and scoverage only) |
+| `coverage.tools` | array | **required** | Coverage tools (coverage_py, istanbul, vitest_coverage, jacoco, tarpaulin, go_cover, dotnet_coverage, gcov, lcov, scoverage, swift_coverage, simplecov, phpunit_coverage) |
 | `coverage.threshold` | int | 80 | Coverage percentage threshold |
 | `coverage.threshold_scope` | string | "changed" | With `--base-branch`: apply threshold to `changed`, `project`, or `both` |
-| `coverage.extra_args` | array | [] | Extra Maven/Gradle arguments (Java only) |
+| `coverage.extra_args` | array | [] | Accepted but currently not used by any coverage plugin. To pass build arguments, use `testing.command` |
 | `duplication.enabled` | bool | false | Enable duplication detection |
 | `duplication.threshold` | float | 10.0 | Max allowed duplication percentage |
 | `duplication.threshold_scope` | string | "both" | With `--base-branch`: apply threshold to `changed`, `project`, or `both`. The default `both` prevents project-wide duplication from creeping up over time. See [Incremental Scanning](incremental-scanning.md#duplication) for details. |
@@ -1726,6 +1782,8 @@ exclude:
 | `duplication.use_git` | bool | true | Use git ls-files for file discovery when available |
 | `duplication.tools` | array | (auto) | Duplication detection tools (duplo) |
 
+`enabled` defaults to `true` for a linting, type checking, formatting, security or testing section that is present, and to `false` for coverage and duplication. A domain with no section at all runs when its CLI flag (or `--all`) is given.
+
 #### Tool Configuration
 
 Each tool in a pipeline section can have:
@@ -1733,10 +1791,11 @@ Each tool in a pipeline section can have:
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | string | Tool identifier (ruff, mypy, trivy, etc.) |
-| `config` | string | Path to tool-specific config file |
-| `strict` | bool | Enable strict mode (type checkers) |
+| `strict` | bool | Strict mode. Read by mypy and pyright only |
 | `domains` | array | Security domains for scanner (sca, sast, iac, container) |
-| `options` | object | Tool-specific options (passed through) |
+| `mandatory` | bool | Tool must run even when `settings.strict_mode` is false |
+
+Tools read their own configuration files (`pyproject.toml`, `ruff.toml`, `.eslintrc*`, `tsconfig.json`, ...). Other keys on a tool entry, such as `config: path` or tool-specific options, are accepted but currently not passed to the tool. Scanner options for Trivy, OpenGrep and Checkov go under the top-level `scanners:` section (see the complete example above).
 
 #### `fail_on`
 
@@ -1746,23 +1805,32 @@ Per-domain failure thresholds:
 |--------|--------------|
 | `linting` | `error`, `none` |
 | `type_checking` | `error`, `none` |
+| `formatting` | `error`, `none` |
 | `security` | `critical`, `high`, `medium`, `low`, `info`, `none` |
 | `testing` | `any`, `none` |
 | `coverage` | `below_threshold`, `any`, `none` |
 | `duplication` | `above_threshold`, `any`, `none`, or percentage (e.g., `5%`) |
 
+**Severity-based values:**
+- `error` (linting, type checking, formatting): Fail if any non-ignored issue in the domain is HIGH or CRITICAL. MEDIUM and LOW issues (for example most Ruff findings) do not fail the scan
+- `critical` ... `info` (security): Fail if any non-ignored issue is at or above that severity
+- `any` (testing, coverage, duplication): Fail on any non-ignored issue in the domain
+
 **Threshold-based values:**
 - `below_threshold` (coverage): Fail if coverage percentage is below `pipeline.coverage.threshold`
 - `above_threshold` (duplication): Fail if duplication percentage exceeds `pipeline.duplication.threshold`
+- `N%` (duplication): Fail if duplication percentage exceeds N
+
+The string form (`fail_on: high`) applies to the security domains only. The CLI flag `--fail-on` overrides `fail_on` for every domain.
 
 #### Understanding `exclude` vs `ignore_issues`
 
 LucidShark provides two distinct mechanisms for filtering unwanted results. It's important to understand when to use each:
 
 **`exclude` - File/Directory Level Filtering**
-- **What it does**: Prevents files and directories from being scanned at all
+- **What it does**: Prevents files and directories from being scanned
 - **When to use**: For build artifacts, dependencies, generated code, cache directories - anything that shouldn't be analyzed
-- **Behavior**: Files matching exclude patterns are completely skipped by all scanners
+- **Behavior**: Patterns are applied by the tools that support them: Ruff, ESLint, Checkstyle, PMD, ktlint, clang-tidy, Scalafix, RuboCop, mypy, all formatters, the security scanners (Trivy, OpenGrep, gosec, Checkov), duplo, and the jacoco and scoverage coverage plugins. Other linters and type checkers, all test runners, and the remaining coverage plugins do not read them; configure excludes in those tools' own config files
 - **Performance**: Improves scan speed by reducing files to analyze
 - **Example use cases**:
   - `node_modules/`, `.venv/`, `dist/`, `build/` - dependencies and build outputs
@@ -1790,9 +1858,9 @@ LucidShark provides two distinct mechanisms for filtering unwanted results. It's
 Within the `exclude` mechanism, you can specify patterns at two levels:
 
 **Global `exclude` (Top-Level Configuration)**
-- **What it does**: Excludes files/directories from ALL domains (linting, type checking, security, testing, coverage, duplication)
+- **What it does**: Excludes files/directories from every domain whose tools support excludes (linting, type checking, formatting, security, duplication; coverage via jacoco and scoverage). Test runners don't read exclude patterns
 - **When to use**: For files that should NEVER be scanned by any tool
-- **Scope**: Applies universally across the entire pipeline
+- **Scope**: Applies across the entire pipeline
 - **Example use cases**:
   - Build outputs: `**/dist/**`, `**/build/**`, `**/target/**`
   - Dependencies: `**/node_modules/**`, `**/.venv/**`, `**/vendor/**`
@@ -1806,8 +1874,8 @@ Within the `exclude` mechanism, you can specify patterns at two levels:
 - **Example use cases**:
   - `pipeline.linting.exclude: ["migrations/**"]` - Don't lint migrations, but still type-check and test them
   - `pipeline.type_checking.exclude: ["**/*_pb2.py"]` - Don't type-check generated protobuf files, but still lint them
-  - `pipeline.testing.exclude: ["tests/integration/**"]` - Skip integration tests, but still lint/type-check the test code
-  - `pipeline.security.exclude: ["tests/**", "examples/**"]` - Don't run security scans on test/example code
+  - `pipeline.security.exclude: ["tests/**", "examples/**"]` - Don't run security scans on test/example code (applied by the MCP `scan` tool; the CLI currently uses only global excludes for security scanners)
+  - `pipeline.testing.exclude` is accepted but has no effect: test runners don't read exclude patterns, so skip tests through the runner's own config
 
 **How They Combine**:
 The effective exclusions for any domain are the **union** of:
@@ -1827,11 +1895,13 @@ exclude:
 
 pipeline:
   linting:
+    tools: [ruff]
     exclude:
       - "migrations/**"        # Don't lint migrations
       - "generated/**"          # Don't lint generated code
 
   type_checking:
+    tools: [mypy]
     exclude:
       - "**/*_pb2.py"          # Don't type-check protobuf files
       - "**/*_pb2.pyi"
@@ -1843,10 +1913,10 @@ pipeline:
 ```
 
 In this example:
-- `dist/`, `node_modules/`, etc. are excluded from **all domains**
+- `dist/`, `node_modules/`, etc. are excluded from **every domain that supports excludes**
 - `migrations/` is excluded from **linting only** (still type-checked, tested, scanned for security)
 - Protobuf files are excluded from **type checking only** (still linted)
-- Tests/examples are excluded from **security scanning only** (still linted and type-checked)
+- Tests/examples are excluded from **security scanning only** when scanning through MCP (still linted and type-checked)
 
 **Quick Decision Guide**:
 - Should this file NEVER be scanned by anything? → Use global `exclude`
@@ -1854,7 +1924,7 @@ In this example:
 
 #### `exclude`
 
-Global array of glob patterns for files/directories to exclude from **all domains**. **Files matching these patterns are not scanned at all.**
+Global array of glob patterns for files/directories to exclude. Patterns are passed to every tool that supports excludes (test runners don't, and among coverage tools only jacoco and scoverage do).
 
 ```yaml
 exclude:
@@ -1890,7 +1960,7 @@ ignore_issues:
   # Structured: with optional reason and expiry
   - rule_id: CKV_AWS_18
     reason: "Access logging not required for dev buckets"
-    expires: 2026-06-01
+    expires: 2027-06-01
 
   # Path-scoped: only ignore in specific files/directories
   - rule_id: S101
@@ -1938,8 +2008,9 @@ ignore_issues:
 - Issues without file paths (e.g., some SCA vulnerabilities) are not matched by path-scoped ignores
 - Expired ignores stop working and produce a warning
 - Unmatched rule IDs (typos, stale entries) produce a warning
+- Use one entry per `rule_id`. If the same `rule_id` appears twice, the later entry replaces the earlier one, so put all `paths` for a rule in a single entry
 
-Works across all domains -- linting, type checking, security, testing, coverage, and duplication. See [Exclude Patterns](exclude-patterns.md) for detailed examples of path-scoped ignores.
+Works for issues in all domains -- linting, type checking, security, testing, coverage, and duplication. Coverage `below_threshold` and duplication `above_threshold` / `N%` checks look at the measured percentage, not at individual issues, so ignoring issues does not change them. See [Exclude Patterns](exclude-patterns.md) for detailed examples of path-scoped ignores.
 
 #### `overview`
 
@@ -1947,11 +2018,11 @@ Configuration for quality overview generation (`QUALITY.md`):
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `enabled` | bool | true | Enable overview generation |
+| `enabled` | bool | true | Accepted but currently not checked: `overview --update` always writes |
 | `file` | string | "QUALITY.md" | Output file path (relative to project root) |
 | `history_file` | string | ".lucidshark/quality-history.json" | History file path |
 | `history_limit` | int | 90 | Maximum snapshots to retain in history |
-| `domains` | array | (all) | Domains to include in overview. If null/empty, includes all executed domains |
+| `domains` | array | (see below) | Domains shown in the status table. Without an `overview` section, all ten domains are shown. If an `overview` section omits `domains`, formatting and testing are left out. An empty list hides every row |
 | `top_files` | int | 5 | Number of top files by issue count to display (0 to disable) |
 | `health_score` | bool | true | Show health score section with visual bar |
 | `domain_table` | bool | true | Show domain status table with trends |
@@ -1995,12 +2066,13 @@ The health score (0-10) is calculated as:
 
 ### Config File Locations
 
-LucidShark searches for configuration in this order:
+LucidShark builds its configuration from up to three layers:
 
-1. CLI `--config PATH` flag
-2. Project root: `.lucidshark.yml`, `.lucidshark.yaml`, `lucidshark.yml`, `lucidshark.yaml`
-3. Global: `~/.lucidshark/config/config.yml`
-4. Built-in defaults
+1. Built-in defaults
+2. Global config: `$LUCIDSHARK_HOME/config/config.yml`, or `.lucidshark/config/config.yml` under the current directory when `LUCIDSHARK_HOME` is not set
+3. Project config: the `--config PATH` file, or else the first of `.lucidshark.yml`, `.lucidshark.yaml`, `lucidshark.yml`, `lucidshark.yaml` in the project root
+
+The global and project configs are deep-merged: mappings are merged key by key, lists are replaced, and the project config wins.
 
 ### Environment Variable Expansion
 
@@ -2021,15 +2093,14 @@ project:
 ./lucidshark init
 ```
 
-```bash
-./lucidshark init
-```
-
 This creates:
 - `.mcp.json` - MCP server configuration (auto-detects lucidshark path)
 - `.claude/skills/lucidshark/SKILL.md` - Proactive scanning skill for Claude
 - `.claude/CLAUDE.md` - Adds a managed section with scanning instructions
-- `.claude/settings.json` - PostToolUse hooks for scan reminders after code edits
+- `.claude/settings.json` - A PostToolUse hook that reminds Claude to scan after code edits, and `enabledMcpjsonServers: ["lucidshark"]`
+- `lucidshark.yml` - Generated for the detected languages, unless it already exists or `--no-config` is given
+
+For Cursor, Windsurf and Aider, use `--cursor`, `--windsurf`, `--aider` or `--all-tools`; see [`lucidshark init`](#lucidshark-init--lucidshark-init) for what each writes.
 
 Or manually create `.mcp.json`:
 
@@ -2185,7 +2256,7 @@ LucidShark scans only changed files (uncommitted changes) by default. This is th
 | Before commit | Full scan | `scan(domains=["all"], all_files=true)` |
 | Security audit | Full scan | `scan(domains=["sca", "sast", "iac"], all_files=true)` |
 
-**Note:** SCA (dependency scanning) always runs project-wide. SAST (OpenGrep, gosec) and most other tools scan only changed files by default.
+**Note:** SCA, SAST (OpenGrep, gosec) and IaC always scan the whole project. Linters, formatters and type checkers that accept file arguments scan only changed files by default.
 
 ### Domain Selection Guidelines
 
@@ -2201,14 +2272,14 @@ LucidShark scans only changed files (uncommitted changes) by default. This is th
 ### Handling Issues
 
 1. **Priority order**: Fix high-priority issues first (priority 1-2)
-2. **Auto-fixable**: Use `apply_fix()` for linting issues
+2. **Auto-fixable**: Use `scan(fix=true)` to apply linter and formatter fixes; `apply_fix()` fixes a single Ruff (Python) linting rule
 3. **Manual fixes**: Follow `fix_steps` from instructions
 4. **Re-scan**: Always re-scan after fixes to verify
 
 ### Performance Tips
 
 - **Default is fast**: Just call `scan()` - it automatically scans only changed files
-- **Use `check_file()`**: For single-file checks, this is the fastest option
+- **Narrow single-file checks**: `scan(domains=["linting", "type_checking"], files=[...])` is faster than `check_file()`, which also runs SCA and, for most languages, tests and coverage
 - **Reserve full scans for commits**: Use `all_files=true` only before committing
 - **SCA is always full**: Dependency scanning requires full project context
 - **Auto-fix is smart**: `scan(domains=["linting"], fix=true)` fixes only changed files
@@ -2230,15 +2301,15 @@ For detailed per-language tool coverage, detection, and configuration examples, 
 | PMD | Java | ✅ Yes |
 | ktlint | Kotlin | ✅ Yes |
 | Clippy | Rust | ❌ No (Cargo workspace) |
-| golangci-lint | Go | ✅ Yes |
-| dotnet format | C# | ✅ Yes |
+| golangci-lint | Go | ❌ No (runs `./...`) |
+| dotnet format | C# | ❌ No (project-wide) |
 | clang-tidy | C, C++ | ✅ Yes |
 | Scalafix | Scala | ✅ Yes |
-| SwiftLint | Swift | ✅ Yes |
+| SwiftLint | Swift | ❌ No (project-wide) |
 | RuboCop | Ruby | ✅ Yes |
 | phpcs | PHP | ✅ Yes |
 
-All linting tools support the `files` parameter for partial scanning, except Clippy which operates on the full Cargo workspace.
+All linting tools support the `files` parameter for partial scanning, except Clippy, golangci-lint, dotnet format and SwiftLint, which always run on the whole project.
 
 ### Type Checking
 
@@ -2248,34 +2319,34 @@ All linting tools support the `files` parameter for partial scanning, except Cli
 | pyright | Python | ✅ Yes |
 | TypeScript (tsc) | TypeScript | ❌ No (project-wide only) |
 | SpotBugs (managed) | Java | ❌ No (requires compiled classes) |
-| detekt (managed) | Kotlin | ❌ No (project-wide) |
+| detekt (managed) | Kotlin | ✅ Yes |
 | cargo check | Rust | ❌ No (Cargo workspace) |
 | go vet | Go | ❌ No (package-wide) |
 | dotnet build | C# | ❌ No (project-wide) |
 | cppcheck | C, C++ | ✅ Yes |
 | scala compile | Scala | ❌ No (project-wide) |
 | Swift compiler | Swift | ❌ No (project-wide) |
-| Sorbet | Ruby | ✅ Yes |
-| PHPStan | PHP | ✅ Yes |
+| Sorbet | Ruby | ❌ No (project-wide) |
+| PHPStan | PHP | ❌ No (project-wide) |
 
-**Note:** TypeScript (tsc) does not support file-level scanning - it always analyzes the full project based on `tsconfig.json`. SpotBugs requires compiled Java classes (run `mvn compile` or `gradle build` first). cargo check operates on the full Cargo workspace. go vet operates on Go packages. dotnet build, detekt, scala compile, and Swift compiler operate on full projects/packages.
+**Note:** TypeScript (tsc) does not support file-level scanning - it always analyzes the full project based on `tsconfig.json`. SpotBugs requires compiled Java classes (run `mvn compile` or `gradle build` first). cargo check operates on the full Cargo workspace. go vet operates on Go packages. dotnet build, scala compile, Swift compiler, Sorbet and PHPStan operate on full projects/packages.
 
 ### Security Scanning
 
 | Tool | Domains | Partial Scan |
 |------|---------|--------------|
 | Trivy | SCA (dependencies), Container images | ❌ No (project-wide) |
-| OpenGrep | SAST (code patterns) | ✅ Yes |
-| gosec | SAST (Go-specific) | ✅ Yes (Go projects only) |
+| OpenGrep | SAST (code patterns) | ❌ No (project-wide) |
+| gosec | SAST (Go-specific) | ❌ No (scans `./...`, Go projects only) |
 | Checkov | IaC (Terraform, K8s, CloudFormation) | ❌ No (project-wide) |
 
-**Note:** OpenGrep (SAST) and gosec (Go SAST) support partial scanning and will scan only changed files by default. Trivy (SCA) and Checkov (IaC) always scan the entire project - dependency analysis requires full project context.
+**Note:** All security scanners scan the entire project. With `base_branch` (MCP) or `--base-branch` (CLI), their results are filtered to changed files.
 
 ### Testing
 
 | Tool | Languages | Partial Scan |
 |------|-----------|--------------|
-| pytest | Python | ✅ Yes |
+| pytest | Python | ❌ No (always runs the full suite) |
 | Jest | JavaScript, TypeScript | ✅ Yes |
 | Vitest | JavaScript, TypeScript | ✅ Yes |
 | Mocha | JavaScript, TypeScript | ✅ Yes |
@@ -2283,15 +2354,15 @@ All linting tools support the `files` parameter for partial scanning, except Cli
 | Playwright | JavaScript, TypeScript (E2E) | ✅ Yes |
 | Maven | Java, Kotlin (JUnit/TestNG) | ❌ No (project-wide) |
 | cargo test | Rust | ❌ No (Cargo workspace) |
-| go test | Go | ⚠️ Partial (package-level) |
+| go test | Go | ❌ No (package-wide) |
 | dotnet test | C# | ❌ No (project-wide) |
 | CTest | C, C++ | ❌ No (project-wide) |
 | sbt test | Scala | ❌ No (project-wide) |
 | swift test | Swift | ❌ No (project-wide) |
-| RSpec | Ruby | ✅ Yes |
-| PHPUnit | PHP | ✅ Yes |
+| RSpec | Ruby | ❌ No (project-wide) |
+| PHPUnit | PHP | ❌ No (project-wide) |
 
-**Note:** Most test runners (pytest, jest, vitest, mocha, maven, go test, dotnet test, swift test) include coverage instrumentation automatically. Others (cargo test, karma, playwright) do not  -  their coverage is handled by separate tools (tarpaulin) or project config (karma). While test runners support running specific test files, it's recommended to run the full test suite before commits to catch regressions.
+**Note:** Most test runners (pytest, jest, vitest, mocha, maven, go test, dotnet test, swift test) include coverage instrumentation automatically. Others do not: the cargo runner switches to `cargo tarpaulin` when coverage is enabled, and karma and playwright coverage depends on project config. Jest, Vitest, Mocha and Playwright can run specific test files; run the full test suite before commits to catch regressions.
 
 ### Coverage
 
@@ -2313,14 +2384,17 @@ All linting tools support the `files` parameter for partial scanning, except Cli
 
 **Note:** Coverage plugins only parse existing coverage data files  -  they never run tests. The testing domain produces coverage files, and the coverage domain reads them. If no coverage data is found, coverage returns a `no_coverage_data` error. Coverage output can be filtered to show only changed files.
 
-**Java Coverage (JaCoCo):** For Java projects with integration tests that require Docker or external services, use `extra_args` to skip them:
+**Java Coverage (JaCoCo):** For Java projects with integration tests that require Docker or external services, skip them by overriding the test command (the maven runner normally runs `mvn test jacoco:report -B`):
 ```yaml
 pipeline:
+  testing:
+    enabled: true
+    tools: [maven]
+    command: "mvn test jacoco:report -B -DskipITs -Ddocker.skip=true"
   coverage:
     enabled: true
     tools: [jacoco]
     threshold: 80
-    extra_args: ["-DskipITs", "-Ddocker.skip=true"]
 ```
 
 ### Duplication Detection
@@ -2385,14 +2459,14 @@ Test runners that support it produce coverage files that the corresponding cover
 | Language | Test Runner | Coverage Plugin | How Coverage Is Generated | Coverage Data File |
 |----------|-------------|-----------------|--------------------------|-------------------|
 | **Python** | pytest | coverage_py | pytest auto-wraps with `coverage run -m pytest` | `.coverage` |
-| **JavaScript/TypeScript** | jest | istanbul | `jest --coverage` (requires `.nyc_output/` via NYC config) | `.nyc_output/` |
+| **JavaScript/TypeScript** | jest | istanbul | The jest runner always adds `--coverage` | `coverage/coverage-final.json` (falls back to `.nyc_output/` + `nyc report`) |
 | **JavaScript/TypeScript** | vitest | vitest_coverage | `vitest run --coverage` | `coverage/coverage-summary.json` |
 | **Java (Maven)** | maven | jacoco | `mvn test jacoco:report` | `target/site/jacoco/jacoco.xml` |
 | **Java (Gradle)** | maven | jacoco | `gradle test jacocoTestReport` | `build/reports/jacoco/test/jacocoTestReport.xml` |
-| **Rust** | cargo | tarpaulin | Separate: `cargo tarpaulin --out json` | `target/tarpaulin/tarpaulin-report.json` |
+| **Rust** | cargo | tarpaulin | When coverage is enabled and tarpaulin is installed, the cargo runner runs `cargo tarpaulin --out Json --output-dir target/tarpaulin` instead of `cargo test` | `target/tarpaulin/tarpaulin-report.json` |
 | **Go** | go_test | go_cover | `go test -coverprofile=coverage.out ./...` | `coverage.out` |
 
-**Note:** For Rust, `cargo test` does not produce coverage data. Tarpaulin is a separate tool that runs its own instrumented test suite. For Karma and Playwright, coverage depends on project-level configuration, not LucidShark flags.
+**Note:** For Rust, plain `cargo test` does not produce coverage data; the cargo runner switches to `cargo tarpaulin` automatically when the coverage domain is enabled and `cargo-tarpaulin` is installed. For Karma and Playwright, coverage depends on project-level configuration, not LucidShark flags.
 
 ### Configuration Requirements
 
@@ -2503,7 +2577,7 @@ pipeline:
 // jest.config.js
 module.exports = {
   coverageDirectory: "coverage",              // DEFAULT — must match what istanbul plugin expects
-  coverageReporters: ["json-summary", "text"], // REQUIRED: json-summary for LucidShark
+  coverageReporters: ["json-summary", "text"], // json-summary (or json) is needed by LucidShark
   collectCoverageFrom: [
     "src/**/*.{js,ts,jsx,tsx}",
     "!src/**/*.d.ts",

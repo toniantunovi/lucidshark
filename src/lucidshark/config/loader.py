@@ -2,7 +2,7 @@
 
 Handles loading configuration from YAML files with:
 - Project-level config (.lucidshark.yml)
-- Global config (~/.lucidshark/config/config.yml)
+- Global config ($LUCIDSHARK_HOME/config/config.yml)
 - Environment variable expansion (${VAR})
 - Config merging with proper precedence
 """
@@ -66,7 +66,7 @@ def load_config(
     Precedence (highest to lowest):
     1. CLI flags (cli_overrides)
     2. Custom config file (cli_config_path) OR project config (.lucidshark.yml)
-    3. Global config (~/.lucidshark/config/config.yml)
+    3. Global config ($LUCIDSHARK_HOME/config/config.yml)
     4. Built-in defaults
 
     Args:
@@ -155,7 +155,10 @@ def find_project_config(project_root: Path) -> Optional[Path]:
 
 
 def find_global_config() -> Optional[Path]:
-    """Find global config at ~/.lucidshark/config/config.yml.
+    """Find global config at $LUCIDSHARK_HOME/config/config.yml.
+
+    Without LUCIDSHARK_HOME this is .lucidshark/config/config.yml under the
+    current directory (see bootstrap.paths.get_lucidshark_home).
 
     Returns:
         Path to global config if it exists, None otherwise.
@@ -278,12 +281,13 @@ def _parse_tool_config(tool_data: Dict[str, Any]) -> ToolConfig:
     config_path = tool_data.get("config")
     strict = tool_data.get("strict", False)
     domains = tool_data.get("domains", [])
+    mandatory = bool(tool_data.get("mandatory", False))
 
     # Everything else is tool-specific options
     options = {
         k: v
         for k, v in tool_data.items()
-        if k not in ("name", "config", "strict", "domains")
+        if k not in ("name", "config", "strict", "domains", "mandatory")
     }
 
     return ToolConfig(
@@ -292,6 +296,7 @@ def _parse_tool_config(tool_data: Dict[str, Any]) -> ToolConfig:
         strict=strict,
         domains=domains,
         options=options,
+        mandatory=mandatory,
     )
 
 

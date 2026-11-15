@@ -8,6 +8,8 @@ LucidShark supports 14 programming languages with varying levels of tool coverag
 |------|-----------|-------------|
 | **Full** | [Python](python.md), [TypeScript](typescript.md), [JavaScript](javascript.md), [Java](java.md), [Kotlin](kotlin.md), [Rust](rust.md), [Go](go.md), [C#](csharp.md), [C](c.md), [C++](cpp.md), [Scala](scala.md), [Swift](swift.md), [Ruby](ruby.md), [PHP](php.md) | Dedicated tools across linting, formatting, type checking, testing, coverage, security, and duplication |
 
+> **Exceptions:** Java has no formatter, and JavaScript has no type checker (the `typescript` checker runs `tsc` only for TypeScript projects). Every other domain listed above has at least one tool for each of these languages.
+
 ## Tools by Domain
 
 | Domain | Tools | Languages |

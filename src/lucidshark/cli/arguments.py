@@ -215,9 +215,9 @@ def _build_scan_parser(subparsers: argparse._SubParsersAction) -> None:
         metavar="BRANCH",
         dest="base_branch",
         help=(
-            "Filter coverage results to files changed since this branch "
-            "(e.g., 'origin/main'). Full tests still run; only reporting is filtered. "
-            "Use in CI pipelines for PR-based coverage."
+            "Filter results (issues, coverage and duplication) to files changed "
+            "since this branch (e.g., 'origin/main'). Full analysis still runs; "
+            "only reporting and thresholds are filtered. Use in CI for PR checks."
         ),
     )
 
@@ -243,7 +243,10 @@ def _build_scan_parser(subparsers: argparse._SubParsersAction) -> None:
         type=float,
         default=None,
         metavar="PERCENT",
-        help="Coverage percentage threshold (default: 80). Fail if below.",
+        help=(
+            "Coverage percentage threshold (default: 80). The domain reports FAIL "
+            "below it; the exit code is 1 only with fail_on.coverage set."
+        ),
     )
     config_group.add_argument(
         "--coverage-threshold-scope",
@@ -289,7 +292,10 @@ def _build_scan_parser(subparsers: argparse._SubParsersAction) -> None:
         type=float,
         default=None,
         metavar="PERCENT",
-        help="Maximum allowed duplication percentage (default: 10). Fail if above.",
+        help=(
+            "Maximum allowed duplication percentage (default: 10). The domain "
+            "reports FAIL above it; the exit code is 1 only with fail_on.duplication set."
+        ),
     )
     config_group.add_argument(
         "--min-lines",
@@ -308,14 +314,18 @@ def _build_scan_parser(subparsers: argparse._SubParsersAction) -> None:
             "When using --base-branch, apply duplication threshold to: "
             "'changed' (changed files only), "
             "'project' (full project), or "
-            "'both' (fail if either exceeds threshold, default)."
+            "'both' (fail if either exceeds threshold; default when a "
+            "duplication section is configured)."
         ),
     )
     config_group.add_argument(
         "--config",
         metavar="PATH",
         type=Path,
-        help="Path to config file (default: .lucidshark.yml in project root).",
+        help=(
+            "Path to config file (default: first of .lucidshark.yml, "
+            ".lucidshark.yaml, lucidshark.yml, lucidshark.yaml in project root)."
+        ),
     )
 
     # Execution options
@@ -352,16 +362,18 @@ def _build_status_parser(subparsers: argparse._SubParsersAction) -> None:
             "and scanner plugin status."
         ),
     )
+    # --tools and --config are accepted for backward compatibility but have
+    # no effect: status always prints the same report. Hidden from --help.
     status_parser.add_argument(
         "--tools",
         action="store_true",
-        help="Show detailed installed tool versions.",
+        help=argparse.SUPPRESS,
     )
     status_parser.add_argument(
         "--config",
         action="store_true",
         dest="show_config",
-        help="Show effective configuration.",
+        help=argparse.SUPPRESS,
     )
 
 
@@ -391,11 +403,13 @@ def _build_serve_parser(subparsers: argparse._SubParsersAction) -> None:
 
     # Server configuration
     config_group = serve_parser.add_argument_group("configuration")
+    # --port is accepted for backward compatibility but unused: there is no
+    # HTTP endpoint. Hidden from --help.
     config_group.add_argument(
         "--port",
         type=int,
         default=7432,
-        help="HTTP port for status endpoint (default: 7432).",
+        help=argparse.SUPPRESS,
     )
     config_group.add_argument(
         "--debounce",
@@ -441,7 +455,10 @@ def _build_validate_parser(subparsers: argparse._SubParsersAction) -> None:
         "--config",
         metavar="PATH",
         type=Path,
-        help="Path to config file (default: find lucidshark.yml in current directory).",
+        help=(
+            "Path to config file (default: first of .lucidshark.yml, "
+            ".lucidshark.yaml, lucidshark.yml, lucidshark.yaml in current directory)."
+        ),
     )
 
 

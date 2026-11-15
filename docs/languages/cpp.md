@@ -8,8 +8,10 @@ C++ projects are fully supported with linting, type checking, testing, coverage,
 
 | Method | Indicators |
 |--------|-----------|
-| **File extensions** | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.h`, `.hh`, `.hxx` |
+| **File extensions** | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hh`, `.hxx` |
 | **Marker files** | `CMakeLists.txt` |
+
+> **Note:** `.h` files count toward C, not C++, during language detection. The C++ tools (clang-tidy, clang-format, cppcheck) still process `.h` files.
 
 ## Tools by Domain
 
@@ -22,7 +24,7 @@ C++ projects are fully supported with linting, type checking, testing, coverage,
 | **Coverage** | lcov | Parses lcov `.info` files from gcov/lcov coverage instrumentation |
 | **Security (SAST)** | OpenGrep | Language-agnostic vulnerability rules (also covers C++) |
 | **Security (SCA)** | Trivy | Scans package manifests for known vulnerabilities |
-| **Duplication** | Duplo | Scans `.cpp`, `.cc`, `.cxx`, `.hpp` files |
+| **Duplication** | Duplo | Scans `.cpp`, `.cc`, `.cxx`, `.h`, `.hpp`, `.hh`, `.hxx` files |
 
 ## Linting
 
@@ -132,6 +134,10 @@ lcov parses gcov/lcov `.info` files for line-level code coverage data. Coverage 
 
 ```yaml
 pipeline:
+  testing:
+    enabled: true
+    tools:
+      - name: ctest
   coverage:
     enabled: true
     tools:
@@ -153,7 +159,7 @@ See the domain-specific sections in the [main documentation](../main.md) for det
 
 ## Duplication
 
-Duplo scans `.cpp`, `.cc`, `.cxx`, `.hpp` files for duplicate code blocks.
+Duplo scans `.cpp`, `.cc`, `.cxx`, `.h`, `.hpp`, `.hh`, `.hxx` files for duplicate code blocks.
 
 ```yaml
 pipeline:

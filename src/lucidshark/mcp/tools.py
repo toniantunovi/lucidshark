@@ -116,20 +116,16 @@ class MCPToolExecutor:
             domains: List of domain names to scan (e.g., ["linting", "security"]).
             files: Optional list of specific files to scan.
             all_files: If True, scan entire project instead of just changed files.
-            fix: Whether to apply auto-fixes (linting only).
+            fix: Whether to apply auto-fixes (linting and formatting).
             base_branch: Filter results to files changed since this branch (e.g., 'origin/main').
             coverage_threshold_scope: When using base_branch, apply coverage threshold to:
                 'changed' (changed files only, default), 'project' (full project),
                 or 'both' (fail if either is below threshold).
-            linting_threshold_scope: When using base_branch, apply linting threshold to:
-                'changed' (changed files only, default), 'project' (full project),
-                or 'both' (fail if either has issues).
-            type_checking_threshold_scope: When using base_branch, apply type checking threshold to:
-                'changed' (changed files only, default), 'project' (full project),
-                or 'both' (fail if either has errors).
+            linting_threshold_scope: Accepted for parity with the CLI; currently unused.
+            type_checking_threshold_scope: Accepted for parity with the CLI; currently unused.
             duplication_threshold_scope: When using base_branch, apply duplication threshold to:
-                'changed' (changed files only, default), 'project' (full project),
-                or 'both' (fail if either exceeds threshold).
+                'changed' (changed files only), 'project' (full project),
+                or 'both' (fail if either exceeds threshold, default).
             on_progress: Optional async callback for progress events (MCP notifications).
 
         Returns:
@@ -754,7 +750,8 @@ class MCPToolExecutor:
                     "what_to_look_for": (
                         "Existing tool configurations to preserve. "
                         "If a tool is already configured, use it rather than replacing. "
-                        "For Python: ruff or flake8 for linting, mypy or pyright for types. "
+                        "For Python: ruff for linting (flake8 has no LucidShark plugin), "
+                        "mypy or pyright for types. "
                         "For JS/TS: eslint or biome for linting, tsconfig.json for TypeScript."
                     ),
                 },
@@ -784,7 +781,8 @@ class MCPToolExecutor:
                         "karma = Angular tests, playwright = E2E tests, "
                         "maven/gradle with JaCoCo = Java tests with coverage. "
                         "For Java: check if project has integration tests (src/test/java/**/*IT.java) "
-                        "that require Docker - if so, suggest extra_args to skip them."
+                        "that require Docker - if so, suggest a testing.command that skips them "
+                        "(e.g. 'mvn test jacoco:report -B -DskipITs -Ddocker.skip=true')."
                     ),
                     "coverage_testing_dependency": (
                         "IMPORTANT: Coverage REQUIRES testing to be enabled. Testing produces the "
@@ -1180,8 +1178,9 @@ class MCPToolExecutor:
                         },
                         "other_languages": {
                             "description": (
-                                "For languages without built-in LucidShark plugins (C++, C#, Ruby, PHP, Swift, etc.), "
-                                "you can still use LucidShark for:"
+                                "Native plugins exist for Python, JavaScript, TypeScript, Java, Kotlin, Rust, Go, "
+                                "C#, C, C++, Scala, Swift, Ruby and PHP. For any other language (Elixir, Dart, "
+                                "Haskell, etc.), you can still use LucidShark for:"
                             ),
                             "available_features": [
                                 "Security scanning: trivy (SCA) and opengrep (SAST) work for most languages",
@@ -1189,9 +1188,9 @@ class MCPToolExecutor:
                             ],
                             "custom_integration": (
                                 "For linting, type checking, testing, and coverage, use the 'command' field to integrate "
-                                "your own tools. Example for C++: "
-                                "linting.command: 'clang-tidy src/**/*.cpp --export-fixes=fixes.yaml', "
-                                "testing.command: 'ctest --output-on-failure'"
+                                "your own tools. Example for Elixir: "
+                                "linting.command: 'mix credo', "
+                                "testing.command: 'mix test'"
                             ),
                             "example_config": (
                                 "pipeline:\\n"
@@ -1232,10 +1231,12 @@ class MCPToolExecutor:
                         "coverage threshold, and ignore patterns."
                     ),
                     "custom_commands_for_unsupported_languages": (
-                        "IMPORTANT: For languages without built-in LucidShark plugins (C++, C#, Ruby, PHP, Swift, etc.), "
+                        "IMPORTANT: For languages without built-in LucidShark plugins (e.g. Elixir, Dart), "
                         "you MUST write appropriate 'command' fields to integrate the language's standard tools. "
                         "Do NOT leave these domains disabled or empty - find the right commands for the project. "
-                        "NOTE: Go, Python, JavaScript/TypeScript, Java/Kotlin, Rust, and C have native plugins - use 'tools' field instead."
+                        "NOTE: Python, JavaScript/TypeScript, Java, Kotlin, Rust, Go, C#, C, C++, Scala, Swift, "
+                        "Ruby and PHP have native plugins - use the 'tools' field instead (see 'Language templates' "
+                        "in get_help() for the tool names per language)."
                     ),
                     "command_examples_by_language": {
                         "go": {
@@ -1245,33 +1246,45 @@ class MCPToolExecutor:
                             "testing_native_plugin": "tools: [go_test]",
                             "coverage_native_plugin": "tools: [go_cover]",
                         },
-                        "c_cpp_cmake": {
-                            "linting": "cmake --build build --target clang-tidy",
-                            "testing": "ctest --test-dir build --output-on-failure",
-                            "coverage": "cmake --build build --target coverage",
-                        },
-                        "c_cpp_make": {
-                            "linting": "make lint",
-                            "testing": "make test",
+                        "c_cpp": {
+                            "note": "C and C++ have native plugins.",
+                            "linting_native_plugin": "tools: [clang_tidy]",
+                            "type_checking_native_plugin": "tools: [cppcheck]",
+                            "formatting_native_plugin": "tools: [clang_format]",
+                            "testing_native_plugin": "tools: [ctest]",
+                            "coverage_native_plugin": "tools: [gcov] (C) or [lcov] (C++)",
                         },
                         "csharp_dotnet": {
-                            "linting": "dotnet format --verify-no-changes",
-                            "testing": "dotnet test --verbosity normal",
-                            "coverage": "dotnet test --collect:'XPlat Code Coverage'",
+                            "note": "C# has native plugins.",
+                            "linting_native_plugin": "tools: [dotnet_format]",
+                            "type_checking_native_plugin": "tools: [dotnet_build]",
+                            "formatting_native_plugin": "tools: [dotnet_format_whitespace]",
+                            "testing_native_plugin": "tools: [dotnet_test]",
+                            "coverage_native_plugin": "tools: [dotnet_coverage]",
                         },
                         "ruby": {
-                            "linting": "bundle exec rubocop",
-                            "testing": "bundle exec rspec",
-                            "coverage": "bundle exec rspec --format documentation",
+                            "note": "Ruby has native plugins.",
+                            "linting_native_plugin": "tools: [rubocop]",
+                            "type_checking_native_plugin": "tools: [sorbet]",
+                            "formatting_native_plugin": "tools: [rubocop_format]",
+                            "testing_native_plugin": "tools: [rspec]",
+                            "coverage_native_plugin": "tools: [simplecov]",
                         },
                         "php": {
-                            "linting": "vendor/bin/phpcs --standard=PSR12 src/",
-                            "type_checking": "vendor/bin/phpstan analyse src/",
-                            "testing": "vendor/bin/phpunit",
+                            "note": "PHP has native plugins.",
+                            "linting_native_plugin": "tools: [phpcs]",
+                            "type_checking_native_plugin": "tools: [phpstan]",
+                            "formatting_native_plugin": "tools: [php_cs_fixer]",
+                            "testing_native_plugin": "tools: [phpunit]",
+                            "coverage_native_plugin": "tools: [phpunit_coverage]",
                         },
                         "swift": {
-                            "linting": "swiftlint",
-                            "testing": "swift test",
+                            "note": "Swift has native plugins.",
+                            "linting_native_plugin": "tools: [swiftlint]",
+                            "type_checking_native_plugin": "tools: [swift_compiler]",
+                            "formatting_native_plugin": "tools: [swiftformat]",
+                            "testing_native_plugin": "tools: [swift_test]",
+                            "coverage_native_plugin": "tools: [swift_coverage]",
                         },
                         "elixir": {
                             "linting": "mix credo",
@@ -1374,11 +1387,14 @@ class MCPToolExecutor:
                         ),
                     },
                     {
-                        "id": "java_extra_args",
+                        "id": "java_skip_integration_tests",
                         "ask_when": "Java project with integration tests (*IT.java files) or Docker dependencies",
                         "question": "Skip integration tests during coverage? (Recommended if tests need Docker/databases)",
                         "options": {
-                            "skip": 'Add extra_args: ["-DskipITs", "-Ddocker.skip=true"] to skip integration tests',
+                            "skip": (
+                                'Set testing.command: "mvn test jacoco:report -B -DskipITs -Ddocker.skip=true" '
+                                "(Gradle: a test command that excludes the integration tests)"
+                            ),
                             "include": "Run all tests including integration tests (requires Docker running)",
                         },
                         "how_to_detect": (
@@ -1386,7 +1402,7 @@ class MCPToolExecutor:
                             "or pom.xml containing docker-maven-plugin, testcontainers dependency, "
                             "or failsafe-maven-plugin configuration."
                         ),
-                        "applies_to": "coverage.extra_args in lucidshark.yml",
+                        "applies_to": "pipeline.testing.command in lucidshark.yml",
                     },
                 ],
                 "always_use_defaults": {
@@ -1406,8 +1422,9 @@ class MCPToolExecutor:
             },
             "common_pitfalls": [
                 (
-                    "CRITICAL: The global 'exclude' list applies to ALL domains (linting, type_checking, "
-                    "security, testing, coverage, AND duplication). Duplication detection scans the entire "
+                    "CRITICAL: The global 'exclude' list is passed to every tool that supports excludes "
+                    "(linters, type checkers, formatters, security scanners, duplo; test runners don't read it). "
+                    "Duplication detection scans the entire "
                     "project, so missing exclusions will cause it to scan build artifacts, caches, and "
                     "generated files — producing noisy false positives. Always include comprehensive "
                     "exclusions from the 'common_exclusions' section AND project-specific exclusions "
@@ -1417,7 +1434,7 @@ class MCPToolExecutor:
                 "Examine the project directory tree for generated, vendored, compiled, or non-source directories and exclude them",
                 "For legacy codebases: start with fail_on: none, fix issues gradually",
                 "Check current coverage with 'pytest --cov' before setting threshold",
-                "For Java with integration tests: use extra_args to skip tests requiring Docker",
+                "For Java with integration tests: set testing.command to a Maven/Gradle command that skips tests requiring Docker",
                 (
                     "COVERAGE: Verify the test runner is configured to produce coverage data. "
                     "Coverage plugins only PARSE files — they never run tests. Common failures: "
@@ -1436,8 +1453,9 @@ class MCPToolExecutor:
             ],
             "common_exclusions": {
                 "description": (
-                    "CRITICAL: Always include comprehensive exclusions in the global 'exclude' (or 'ignore') "
-                    "list. These apply to ALL domains including duplication, which scans the entire project. "
+                    "CRITICAL: Always include comprehensive exclusions in the global 'exclude' "
+                    "list (the key must be 'exclude'; 'ignore' is not a valid key and is dropped). "
+                    "These apply to every tool that supports excludes, including duplication, which scans the entire project. "
                     "Missing exclusions cause false positives, slow scans, and noise — especially for duplication. "
                     "In addition to these predefined patterns, you MUST also examine the project's directory "
                     "structure and add any project-specific directories that contain generated, vendored, "
@@ -1520,7 +1538,7 @@ class MCPToolExecutor:
             },
             "tool_recommendations": {
                 "python": {
-                    "linter": "ruff (recommended, fast and comprehensive) or flake8",
+                    "linter": "ruff (the only supported Python linter)",
                     "type_checker": "mypy (recommended, widely used) or pyright",
                     "test_runner": "pytest (standard choice)",
                     "coverage": "coverage.py (via pytest-cov)",
@@ -1532,13 +1550,14 @@ class MCPToolExecutor:
                     "coverage": "istanbul/nyc (usually included with jest)",
                 },
                 "java_kotlin": {
-                    "linter": "checkstyle (style) + pmd (bugs/design, managed)",
-                    "type_checker": "spotbugs (bug detection via static analysis)",
-                    "test_runner": "maven (runs JUnit/TestNG tests)",
+                    "linter": "Java: checkstyle (style) + pmd (bugs/design), both managed. Kotlin: ktlint (managed)",
+                    "formatter": "Java: none. Kotlin: ktlint_format",
+                    "type_checker": "Java: spotbugs (bug detection via static analysis). Kotlin: detekt (managed)",
+                    "test_runner": "maven (runs JUnit/TestNG tests via Maven or Gradle)",
                     "coverage": "jacoco (Maven/Gradle plugin)",
                     "note": (
                         "For Java projects with integration tests requiring Docker or external services, "
-                        'use extra_args to skip them: extra_args: ["-DskipITs", "-Ddocker.skip=true"]'
+                        'skip them with testing.command: "mvn test jacoco:report -B -DskipITs -Ddocker.skip=true"'
                     ),
                 },
                 "rust": {
@@ -1548,21 +1567,20 @@ class MCPToolExecutor:
                     "coverage": "tarpaulin (cargo-tarpaulin)",
                 },
                 "go": {
-                    "linter": "golangci-lint (use via command field)",
-                    "type_checker": "go vet (built into go, use via command field)",
-                    "test_runner": "go test (built into go, use via command field)",
-                    "coverage": "go test -cover (use via command field)",
-                    "note": (
-                        "Go has no built-in LucidShark plugins. Use the 'command' field in lucidshark.yml "
-                        "to integrate go tools. Example: linting.command: 'golangci-lint run --out-format json'"
-                    ),
+                    "linter": "golangci_lint",
+                    "formatter": "gofmt",
+                    "type_checker": "go_vet",
+                    "test_runner": "go_test",
+                    "coverage": "go_cover",
+                    "security": "gosec (Go-specific SAST, managed) in addition to opengrep",
                 },
                 "other_languages": {
                     "note": (
-                        "For C++, C#, Ruby, PHP, Swift, and other languages without built-in plugins: "
-                        "use the 'command' field to integrate your own tools. Security scanning (trivy, opengrep) "
-                        "and duplication detection (duplo) work for most languages out of the box. "
-                        "C has full native plugin support (clang_tidy, clang_format, cppcheck, ctest, gcov)."
+                        "C#, C, C++, Scala, Swift, Ruby and PHP also have native plugins: see the "
+                        "'Language templates' table in get_help() for their tool names. For languages "
+                        "without plugins (Elixir, Dart, etc.), use the 'command' field to integrate your own "
+                        "tools. Security scanning (trivy, opengrep) and duplication detection (duplo) work for "
+                        "most languages out of the box."
                     ),
                 },
             },
@@ -1619,7 +1637,7 @@ fail_on:
   coverage: any
   duplication: any
 
-ignore:
+exclude:
   - "**/.git/**"
   - "**/.lucidshark/**"
   - "**/.venv/**"
@@ -1677,7 +1695,7 @@ fail_on:
   coverage: any
   duplication: any
 
-ignore:
+exclude:
   - "**/.git/**"
   - "**/.lucidshark/**"
   - "**/node_modules/**"
@@ -1707,12 +1725,12 @@ pipeline:
   testing:
     enabled: true
     tools: [maven]
+    # To skip integration tests that require Docker or external services, override the command:
+    # command: "mvn test jacoco:report -B -DskipITs -Ddocker.skip=true"
   coverage:
     enabled: true
     tools: [jacoco]
     threshold: 80
-    # Use extra_args to skip integration tests that require Docker or external services
-    # extra_args: ["-DskipITs", "-Ddocker.skip=true"]
   duplication:
     enabled: true
     threshold: 5.0
@@ -1726,7 +1744,7 @@ fail_on:
   coverage: any
   duplication: any
 
-ignore:
+exclude:
   - "**/.git/**"
   - "**/.lucidshark/**"
   - "**/target/**"
@@ -1767,7 +1785,7 @@ fail_on:
   security: critical   # Only fail on critical issues
   testing: any
 
-ignore:
+exclude:
   - "**/.git/**"
   - "**/.lucidshark/**"
   - "**/.venv/**"
@@ -2202,7 +2220,7 @@ ignore:
             "message": (
                 "The following tools are configured but not installed. "
                 "Please install them and try again. "
-                "Note: Security tools (trivy, opengrep, checkov) and duplo "
-                "are downloaded automatically."
+                "Note: Security tools (trivy, opengrep, gosec, checkov), duplo, pmd, "
+                "checkstyle, spotbugs, ktlint and detekt are downloaded automatically."
             ),
         }

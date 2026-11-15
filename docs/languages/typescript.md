@@ -29,7 +29,7 @@ TypeScript has full tool coverage in LucidShark across all quality domains inclu
 | **Testing** | Playwright | -- | E2E browser testing |
 | **Coverage** | Istanbul (NYC) | -- | Lines, statements, branches, functions |
 | **Coverage** | Vitest coverage | -- | Istanbul-compatible, reads Vitest coverage output |
-| **Duplication** | Duplo | -- | Scans `.ts` and `.tsx` files |
+| **Duplication** | Duplo | -- | Scans `.ts`, `.tsx`, `.mts`, and `.cts` files |
 
 ## Linting
 
@@ -54,9 +54,8 @@ pipeline:
 
 A fast alternative linter that supports TypeScript, JavaScript, and JSON.
 
-- Supports auto-fix via `biome check --apply`
-- No Node.js dependency -- standalone binary
-- Version-aware (supports 1.x and 2.x)
+- Biome 1.x (auto-fix uses `biome check --apply`)
+- Install with `npm i -D @biomejs/biome` (or put `biome` on PATH); not downloaded by LucidShark
 
 ```yaml
 pipeline:
@@ -91,7 +90,7 @@ pipeline:
 
 Uses the TypeScript compiler in `--noEmit` mode for type checking.
 
-- Strict mode configured via `tsconfig.json`
+- Strict mode configured via `tsconfig.json` (LucidShark always runs `tsc --noEmit --pretty false`; a `strict` option on the tool has no effect)
 - Error codes in `TSXXXX` format
 - Requires `tsconfig.json` in the project
 
@@ -101,7 +100,6 @@ pipeline:
     enabled: true
     tools:
       - name: typescript
-        strict: true
 ```
 
 ## Testing
@@ -161,7 +159,7 @@ pipeline:
 
 Test runner commonly used with Angular projects.
 
-- Config detection: `karma.conf.js`, `karma.conf.ts`
+- Config detection: `karma.conf.js`, `karma.conf.ts`, `karma.config.js`, `karma.config.ts`
 - JSON reporter output
 - Per-browser test results
 
@@ -178,9 +176,10 @@ End-to-end browser testing framework.
 
 **Tool: [Istanbul (NYC)](https://istanbul.js.org/)**
 
-Code coverage for JavaScript/TypeScript via the NYC CLI.
+Code coverage for JavaScript/TypeScript from Istanbul-format reports.
 
-- Parses existing coverage data from `.nyc_output/` directory
+- Reads `coverage/coverage-summary.json` or `coverage/coverage-final.json` first (what Jest writes; the Jest runner always passes `--coverage`)
+- Falls back to `.nyc_output/` plus `nyc report` only when neither file exists (projects that use NYC directly, e.g. Mocha)
 - Tracks lines, statements, branches, and functions
 - Per-file coverage reporting
 - Severity scaling based on threshold gap
@@ -188,6 +187,9 @@ Code coverage for JavaScript/TypeScript via the NYC CLI.
 
 ```yaml
 pipeline:
+  testing:
+    enabled: true
+    tools: [{ name: jest }]
   coverage:
     enabled: true
     tools: [{ name: istanbul }]
@@ -204,6 +206,9 @@ Dedicated coverage plugin for Vitest projects. Reads Istanbul-compatible JSON co
 
 ```yaml
 pipeline:
+  testing:
+    enabled: true
+    tools: [{ name: vitest }]
   coverage:
     enabled: true
     tools: [{ name: vitest_coverage }]
@@ -218,7 +223,7 @@ Trivy SCA scans these TypeScript/JavaScript manifests: `package-lock.json`, `yar
 
 ## Duplication
 
-Duplo scans `.ts` and `.tsx` files for duplicate code blocks.
+Duplo scans `.ts`, `.tsx`, `.mts`, and `.cts` files for duplicate code blocks.
 
 ```yaml
 pipeline:
@@ -244,7 +249,7 @@ pipeline:
     tools: [{ name: prettier }]
   type_checking:
     enabled: true
-    tools: [{ name: typescript, strict: true }]
+    tools: [{ name: typescript }]
   security:
     enabled: true
     tools:
@@ -257,6 +262,7 @@ pipeline:
     tools: [{ name: jest }]
   coverage:
     enabled: true
+    tools: [{ name: istanbul }]
     threshold: 80
   duplication:
     enabled: true

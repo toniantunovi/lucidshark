@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`mandatory: true` on a tool had no effect**: the loader filed the key under the tool's `options`, so `ToolConfig.mandatory` was always false and a mandatory tool could be skipped silently when `strict_mode: false`. It is now honoured
+- **`lucidshark validate` rejected `fail_on.duplication: "5%"`**: scans already accepted a percentage, but the validator only allowed `above_threshold`, `any` and `none`
+- **The scan guidance `init` writes was wrong for the CLI**: the skill, the `CLAUDE.md` section, the Cursor and Windsurf rules and the Claude Code hook gave `scan --fix --format ai` as the after-edit command. Without a domain flag that runs only the security domains, so nothing was linted or formatted. They now pass `--linting --type-checking --formatting`, map Dockerfiles to `iac` (the container domain only scans configured images), describe `domains=["all"]` as all domains on changed files rather than a full scan, give the duplication threshold scope default as `both`, and no longer break a multi-line example with a trailing comment after `\`
+- **Autoconfigure guidance contradicted the plugins**: it said Go, C#, C++, Ruby, PHP and Swift had no built-in plugins, recommended flake8 (no plugin) and `coverage.extra_args` (not read since coverage stopped running tests), and its example configs used a top-level `ignore:` key, which is not valid and was dropped. It now names the native tools, suggests `testing.command` for skipping Java integration tests, and uses `exclude:`
+
+### Changed
+- **`serve --port`, `status --tools` and `status --config` are hidden from `--help`**: they never had an effect. They are still accepted, so existing scripts keep working
+- **Help text matches behaviour**: `scan --base-branch` filters issues, coverage and duplication (not just coverage); `--config` lists all four file names searched; the MCP `scan`, `apply_fix` and `get_status` descriptions now state that `formatting` is a valid domain, that `apply_fix` is Ruff-only, that `get_status` reports only security domains, and that `linting_threshold_scope`/`type_checking_threshold_scope` currently have no effect over MCP
+- **Documentation synced with the code** across `README.md`, `docs/help.md` (also served by `lucidshark help` and the MCP `get_help` tool), `docs/main.md`, `docs/incremental-scanning.md`, `docs/exclude-patterns.md` and `docs/languages/`. Among other things: pip/uvx installation and the CI examples that lost their install step when pip distribution was removed; which domains a flagless `scan` runs; the default output format; `--fail-on` scope; exit codes (4 is never returned); the MCP response shape; `check_file` domains; the `scanners:` section; which tools apply `exclude` patterns; `ignore_issues` duplicate handling; config file layering; and which tools LucidShark downloads
+
 ## [0.10.0] - 2026-11-08
 
 ### Added

@@ -9,7 +9,7 @@ C projects are fully supported with linting, formatting, type checking (static a
 | Method | Indicators |
 |--------|-----------|
 | **File extensions** | `.c`, `.h` |
-| **Marker files** | `CMakeLists.txt`, `Makefile`, `configure`, `configure.ac`, `meson.build` |
+| **Marker files** | `CMakeLists.txt`, `Makefile`, `makefile`, `GNUmakefile`, `meson.build` |
 
 ## Tools by Domain
 
@@ -73,8 +73,8 @@ pipeline:
 
 cppcheck is a static analysis tool for C and C++ code. It detects bugs, undefined behavior, and dangerous coding patterns that compilers do not catch.
 
-- Runs with `--enable=all --language=c` for comprehensive analysis
-- Supports strict mode via `--inconclusive` for additional heuristic checks
+- Runs with `--enable=all --xml --xml-version=2 --inline-suppr` (suppressing `missingIncludeSystem` and `unmatchedSuppression`)
+- Adds `--project=compile_commands.json` when the CMake build directory contains one; otherwise analyzes the source files directly
 - No compilation required -- works directly on source code
 
 ```yaml
@@ -113,17 +113,21 @@ pipeline:
 
 **Tool: [gcov/lcov](https://gcc.gnu.org/onlinedocs/gcc/Gcov.html)**
 
-gcov is GCC's coverage analysis tool, used together with lcov for generating human-readable and machine-parseable coverage reports. LucidShark parses lcov info files (`coverage.info`).
+gcov is GCC's coverage analysis tool, used together with lcov for generating human-readable and machine-parseable coverage reports. LucidShark parses lcov info files (`coverage.info` or `lcov.info`).
 
 - Requires compiling with the `--coverage` flag (adds `-fprofile-arcs -ftest-coverage`)
 - Requires running tests to generate `.gcda` data files
 - Parses existing `coverage.info` produced by `lcov --capture`
 - Returns error if no coverage data found (requires testing domain to be active)
 
-> **Note:** When both the `testing` and `coverage` domains are active, LucidShark will look for `coverage.info` in the build directory after tests complete. Ensure your CMake build is configured with `--coverage` and that lcov runs as a post-test step to generate the info file.
+> **Note:** When both the `testing` and `coverage` domains are active, LucidShark will look for `coverage.info` or `lcov.info` in the project root or the CMake build directory after tests complete. It does not read `.gcda` files itself. Ensure your CMake build is configured with `--coverage` and that lcov runs as a post-test step to generate the info file.
 
 ```yaml
 pipeline:
+  testing:
+    enabled: true
+    tools:
+      - name: ctest
   coverage:
     enabled: true
     tools:
@@ -174,7 +178,7 @@ pipeline:
 - **clang-format**: Install via LLVM/Clang packages (`apt install clang-format`, `brew install llvm`)
 - **cppcheck**: `apt install cppcheck` or `brew install cppcheck`
 - **CTest**: Ships with CMake (`apt install cmake`, `brew install cmake`); requires a CMake build directory with `CMakeCache.txt`
-- **gcov**: Ships with GCC (no separate installation); lcov is optional (`apt install lcov`, `brew install lcov`)
+- **gcov**: Ships with GCC (no separate installation); lcov (or another tool that writes an lcov-format `.info` file) is required to produce the `coverage.info` LucidShark reads (`apt install lcov`, `brew install lcov`)
 
 ## Example Configuration
 

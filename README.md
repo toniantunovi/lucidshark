@@ -35,23 +35,26 @@ AI writes code → LucidShark checks → AI fixes → repeat
 # 1. Install LucidShark
 curl -fsSL https://raw.githubusercontent.com/toniantunovi/lucidshark/main/install.sh | bash
 
-# 2. Configure Claude Code integration (add --cursor, --windsurf, --aider for other tools)
+# 2. Configure Claude Code and generate lucidshark.yml
+#    (--cursor, --windsurf, --aider or --all-tools select other AI tools)
 ./lucidshark init
 
-# 3. Restart your AI tool, then ask it:
+# 3. Restart your AI tool. To tailor the generated config, ask it:
 #    "Autoconfigure LucidShark for this project"
 ```
 
-That's it! Your AI assistant will analyze your codebase, ask you a few questions, and generate the `lucidshark.yml` configuration.
+That's it! `init` detects your languages and writes a `lucidshark.yml` with every supported tool enabled. Autoconfigure has your AI assistant analyze the codebase, ask you a few questions, and refine that configuration.
 
 ### Installation Options
 
 | Method | Command | Usage | Notes |
 |--------|---------|-------|-------|
-| **Install Script (Linux/macOS)** | `curl -fsSL .../install.sh \| bash` | `./lucidshark` | Recommended, installs to current directory |
+| **Install Script (Linux/macOS)** | `curl -fsSL .../install.sh \| bash` | `./lucidshark` | Recommended, installs to current directory, self-updates |
 | **Manual** | Download from [Releases](https://github.com/toniantunovi/lucidshark/releases) | `./lucidshark` | Pre-built binaries for Linux and macOS |
+| **pip** | `pip install lucidshark` | `lucidshark` | Requires Python 3.10+ |
+| **uvx** | `uvx lucidshark` | `uvx lucidshark` | Run without installing |
 
-**Important:** LucidShark is distributed as a standalone binary. The installation creates a project-local `./lucidshark` file. Always use `./lucidshark` to ensure you're running the project-specific version.
+**Important:** The install script and the release binaries create a project-local `./lucidshark` file; use `./lucidshark` to run the project-specific version. With pip or uvx, the command is `lucidshark`. The examples below use `./lucidshark`.
 
 ### Verified Downloads
 
@@ -75,7 +78,7 @@ Nothing LucidShark installs runs unverified:
 ./lucidshark scan --all --dry-run   # Preview what would be scanned
 ```
 
-Scan domains: `--linting`, `--type-checking`, `--formatting`, `--sast`, `--sca`, `--iac`, `--container`, `--testing`, `--coverage`, `--duplication`
+Scan domains: `--linting`, `--type-checking`, `--formatting`, `--sast`, `--sca`, `--iac`, `--container`, `--testing`, `--coverage`, `--duplication`. With no domain flag, `scan` runs only the security domains enabled in `lucidshark.yml`.
 
 ### Incremental Scanning
 
@@ -94,14 +97,14 @@ By default, LucidShark scans only uncommitted changes (staged, unstaged, untrack
 
 See [Incremental Scanning](docs/incremental-scanning.md) for threshold scopes, CI integration, and advanced usage.
 
-**Note:** LucidShark runs in **strict mode** by default  -  all configured tools must run successfully. If a tool is missing, not applicable, or fails to execute, the scan fails with a HIGH severity issue and fix suggestions. Security tools (trivy, opengrep, gosec, checkov), duplo, PMD, Checkstyle, SpotBugs, ktlint, and detekt are downloaded automatically.
+**Note:** LucidShark runs in **strict mode** by default  -  all configured tools must run successfully. If a configured tool isn't installed, the scan stops up front (exit code 3) with install hints. If a tool is skipped for a missing prerequisite or fails while running, the scan fails with a HIGH severity issue and fix suggestions. A tool with no applicable files is skipped without failing. Security tools (trivy, opengrep, gosec, checkov), duplo, PMD, Checkstyle, SpotBugs, ktlint, and detekt are downloaded automatically.
 
 ### Example Output
 
 When issues are found:
 
 ```
-$ ./lucidshark scan --linting --type-checking --sast
+$ ./lucidshark scan --linting --type-checking --sast --format summary
 Total issues: 4
 
 By severity:
@@ -109,22 +112,30 @@ By severity:
   MEDIUM: 2
   LOW: 1
 
-By scanner domain:
-  LINTING: 2
-  TYPE_CHECKING: 1
-  SAST: 1
+By domain:
+  SAST: 1 issues
+  LINTING: 2 issues
+  TYPE_CHECKING: 1 issues
 
 Scan duration: 1243ms
+Project: /path/to/project
 ```
 
 When everything passes:
 
 ```
-$ ./lucidshark scan --all
-No issues found.
+$ ./lucidshark scan --linting --type-checking --format summary
+Total issues: 0
+
+By domain:
+  LINTING: PASS
+  TYPE_CHECKING: PASS
+
+Scan duration: 812ms
+Project: /path/to/project
 ```
 
-Use `--format table` for a detailed per-issue breakdown, or `--format json` for machine-readable output.
+Output is JSON by default. Use `--format summary` for the overview above, `--format table` for a per-issue breakdown, `--format ai` for AI agents, or `--format sarif` for code-scanning tools.
 
 ### Diagnostics
 
@@ -143,13 +154,13 @@ This checks:
 
 ### AI Tool Setup
 
-`init` configures Claude Code by default. Tool flags select other tools and combine freely; `--all-tools` configures all of them. `--dry-run`, `--force` and `--remove` apply to every selected tool, and shared files (`CLAUDE.md`, `CONVENTIONS.md`, `.aider.conf.yml`, MCP JSON files) are merged, never overwritten.
+`init` configures Claude Code by default. Tool flags select other tools instead and combine freely (add `--claude-code` to keep Claude Code alongside them); `--all-tools` configures all of them. `--dry-run`, `--force` and `--remove` apply to every selected tool, and shared files (`CLAUDE.md`, `CONVENTIONS.md`, `.aider.conf.yml`, MCP JSON files) are merged, not overwritten (an MCP JSON file that can't be parsed is replaced). Every run also writes `lucidshark.yml` unless it already exists or `--no-config` is given.
 
 | Tool | Command | What it writes |
 |------|---------|----------------|
 | Claude Code | `./lucidshark init` | `.mcp.json`, `.claude/skills/lucidshark/SKILL.md`, `.claude/CLAUDE.md` section, `.claude/settings.json` hook |
 | Cursor | `./lucidshark init --cursor` | `.cursor/mcp.json`, `.cursor/rules/lucidshark.mdc` (always applied) |
-| Windsurf | `./lucidshark init --windsurf` | `.windsurf/rules/lucidshark.md` (`trigger: always_on`); prints the MCP snippet for `~/.codeium/windsurf/mcp_config.json`, since Windsurf keeps MCP servers in your home directory and `init` does not write there |
+| Windsurf | `./lucidshark init --windsurf` | `.windsurf/rules/lucidshark.md` (`trigger: always_on`); prints an MCP snippet with absolute paths to merge into `~/.codeium/windsurf/mcp_config.json` (or `.devin/mcp_config.json` in Devin Desktop). `init` writes neither file |
 | Aider | `./lucidshark init --aider` | `.aider.conf.yml` keys `lint-cmd` (LucidShark on every edited file), `auto-lint`, `read: [CONVENTIONS.md]`, plus a `CONVENTIONS.md` section. Aider has no MCP support |
 | All of the above | `./lucidshark init --all-tools` | |
 
@@ -166,6 +177,8 @@ LucidShark supports 14 programming languages with full tool coverage:
 | Languages | What's Included |
 |-----------|-----------------|
 | Python, TypeScript, JavaScript, Java, Kotlin, Rust, Go, C#, C, C++, Scala, Swift, Ruby, PHP | Linting, type checking, formatting, testing, coverage, security, duplication |
+
+Two gaps: Java has no formatter, and plain JavaScript has no type checker (TypeScript uses `tsc`).
 
 For detailed per-language tool coverage, configuration examples, and detection info, see the [Language Reference](docs/languages/README.md).
 
@@ -199,7 +212,7 @@ This creates `QUALITY.md` at your repo root showing:
 - Domain status table with trends
 - Issues breakdown by severity
 - Top files by issue count
-- Test coverage and duplication metrics
+- Test coverage
 - Historical trend chart
 
 Add to your CI pipeline to auto-update on merge to main. See [docs/help.md](docs/help.md#lucidshark-overview) for configuration options.
@@ -245,7 +258,7 @@ fail_on:
 ignore_issues:
   - rule_id: CVE-2021-3807
     reason: "Not exploitable in our context"
-    expires: 2026-06-01
+    expires: 2027-06-01
 exclude: ["**/node_modules/**", "**/.venv/**"]
 ```
 
@@ -259,7 +272,7 @@ See [docs/help.md](docs/help.md) for the full configuration reference.
 | `./lucidshark scan --linting --fix` | Lint and auto-fix |
 | `./lucidshark scan --formatting --fix` | Format and auto-fix |
 | `./lucidshark overview --update` | Generate/update QUALITY.md |
-| `./lucidshark init` | Configure AI tool integration (Claude Code by default; `--cursor`, `--windsurf`, `--aider`, `--all-tools`) |
+| `./lucidshark init` | Configure AI tool integration (Claude Code by default; `--cursor`, `--windsurf`, `--aider`, `--all-tools`) and generate `lucidshark.yml` (skip with `--no-config`) |
 | `./lucidshark doctor` | Check setup and environment health |
 | `./lucidshark validate` | Validate `lucidshark.yml` |
 
