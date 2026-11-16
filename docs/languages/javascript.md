@@ -52,7 +52,7 @@ pipeline:
 
 A fast alternative linter that supports JavaScript, TypeScript, and JSON.
 
-- Biome 1.x (auto-fix uses `biome check --apply`)
+- Biome 1.8 or later, including Biome 2 (auto-fix uses `biome check --write`)
 - Install with `npm i -D @biomejs/biome` (or put `biome` on PATH); not downloaded by LucidShark
 - Also lints JSON files
 

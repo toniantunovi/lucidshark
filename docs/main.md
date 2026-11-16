@@ -534,11 +534,11 @@ pipeline:
     threshold_scope: string  # Default: "changed". Options: "changed", "project", "both" (applies with --base-branch)
     tools:
       - name: string
-        strict: boolean  # Read by mypy and pyright
+        strict: boolean  # Read by mypy only (set typeCheckingMode in pyright's own config)
 
   security:
     enabled: boolean
-    exclude: [string]  # Patterns to exclude from security scanning (applied by MCP scans; the CLI currently ignores it)
+    exclude: [string]  # Patterns to exclude from security scanning
     tools:
       - name: string
         domains: [sca, sast, iac, container]
@@ -1561,7 +1561,7 @@ Configuration:
   --coverage-threshold-scope {changed,project,both}       With --base-branch (default: changed)
   --linting-threshold-scope {changed,project,both}        With --base-branch (default: changed)
   --type-checking-threshold-scope {changed,project,both}  With --base-branch (default: changed)
-  --duplication-threshold-scope {changed,project,both}    With --base-branch (default: both when a duplication section is configured)
+  --duplication-threshold-scope {changed,project,both}    With --base-branch (default: both)
   --config PATH        Path to config file
 
 Execution:

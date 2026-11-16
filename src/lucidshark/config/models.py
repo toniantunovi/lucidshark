@@ -155,10 +155,11 @@ class DuplicationPipelineConfig:
     enabled: bool = False
     threshold: float = 10.0  # Max allowed duplication percentage
     # Scope for threshold check when using --base-branch:
-    # "changed" - apply to changed files only (default)
+    # "changed" - apply to changed files only
     # "project" - apply to full project
     # "both" - fail if either changed files or full project exceeds threshold
-    threshold_scope: str = "changed"
+    #          (default, as in the config loader and MCP)
+    threshold_scope: str = "both"
     min_lines: int = 4  # Minimum lines for a duplicate block
     min_chars: int = 3  # Minimum characters per line
     exclude: List[str] = field(

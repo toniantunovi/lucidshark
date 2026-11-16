@@ -123,7 +123,7 @@ pipeline:
 
   security:
     enabled: true
-    exclude:                  # Additional excludes for security scanning only (MCP scans only)
+    exclude:                  # Additional excludes for security scanning only
       - "tests/**"
       - "examples/**"
     tools:
@@ -154,7 +154,6 @@ pipeline:
 
 - **Testing:** test runners don't read exclude patterns. They use their own discovery (e.g. pytest `testpaths`), so `pipeline.testing.exclude` skips nothing. Exclude tests in the runner's own config instead.
 - **Coverage:** only the JaCoCo and Scoverage plugins filter their reports by exclude patterns. For other coverage tools (coverage.py, Istanbul, go cover, ...), configure omissions in the tool's own config.
-- **Security:** `pipeline.security.exclude` is applied by the MCP `scan` tool but not by `lucidshark scan` on the CLI. Global `exclude` patterns and `.lucidsharkignore` apply to security scanners in both.
 
 ### How Domain Excludes Combine
 

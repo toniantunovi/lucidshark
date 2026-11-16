@@ -2222,7 +2222,7 @@ echo "Exit code: $?"
 ```
 
 **Verify:**
-- [ ] Biome `check --apply` invoked
+- [ ] Biome `check --write` invoked
 - [ ] Auto-fixable issues fixed
 - [ ] Re-scan shows fewer issues
 

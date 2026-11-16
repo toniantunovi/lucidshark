@@ -344,6 +344,11 @@ class TestBiomeFix:
                     assert result.issues_fixed == 1
                     assert result.issues_remaining == 1
 
+                    # Biome 2 removed `--apply`; `--write` works from 1.8 on
+                    fix_cmd = mock_run.call_args_list[1].kwargs["cmd"]
+                    assert fix_cmd[1:3] == ["check", "--write"]
+                    assert "--apply" not in fix_cmd
+
     def test_fix_timeout(self) -> None:
         """Test fix handles timeout during fix step."""
         linter = BiomeLinter()
@@ -381,6 +386,139 @@ class TestBiomeFix:
                     ]
                     result = linter.fix(context)
                     assert result.issues_fixed == 0
+
+
+# Trimmed from real `biome lint --reporter json b.js` output for
+#   let a = 1;
+#   if (a == 1) { debugger; }
+_SOURCE = "let a = 1;\nif (a == 1) { debugger; }\n"
+
+# Biome 2.6.7: path is a string, positions are 1-based start/end objects.
+_BIOME2_OUTPUT = {
+    "summary": {"errors": 1, "warnings": 1},
+    "diagnostics": [
+        {
+            "severity": "warning",
+            "message": "This let declares a variable that is only assigned once.",
+            "category": "lint/style/useConst",
+            "location": {
+                "path": "b.js",
+                "start": {"line": 1, "column": 1},
+                "end": {"line": 1, "column": 4},
+            },
+            "advices": [],
+        },
+        {
+            "severity": "error",
+            "message": "Using == may be unsafe if you are relying on type coercion.",
+            "category": "lint/suspicious/noDoubleEquals",
+            "location": {
+                "path": "b.js",
+                "start": {"line": 2, "column": 7},
+                "end": {"line": 2, "column": 9},
+            },
+            "advices": [],
+        },
+    ],
+    "command": "lint",
+}
+
+# Biome 1.9.4: path is {"file": ...}, position is a byte span into sourceCode.
+_BIOME1_OUTPUT = {
+    "summary": {"errors": 2},
+    "diagnostics": [
+        {
+            "category": "lint/suspicious/noDoubleEquals",
+            "severity": "error",
+            "description": "Use === instead of ==.",
+            "message": [
+                {"elements": [], "content": "Use "},
+                {"elements": ["Emphasis"], "content": "==="},
+                {"elements": [], "content": " instead of "},
+                {"elements": ["Emphasis"], "content": "=="},
+            ],
+            "location": {
+                "path": {"file": "b.js"},
+                "span": [17, 19],
+                "sourceCode": _SOURCE,
+            },
+            "tags": ["fixable"],
+            "source": None,
+        },
+        {
+            "category": "lint/suspicious/noDebugger",
+            "severity": "error",
+            "description": "This is an unexpected use of the debugger statement.",
+            "message": "This is an unexpected use of the debugger statement.",
+            "location": {
+                "path": {"file": "b.js"},
+                "span": [25, 34],
+                "sourceCode": _SOURCE,
+            },
+            "tags": [],
+            "source": None,
+        },
+    ],
+    "command": "lint",
+}
+
+
+class TestBiomeReporterVersions:
+    """Real JSON layouts from Biome 1 and Biome 2 must both parse."""
+
+    def test_parses_biome2_output(self) -> None:
+        issues = BiomeLinter()._parse_output(
+            json.dumps(_BIOME2_OUTPUT), Path("/project")
+        )
+
+        assert [i.rule_id for i in issues] == [
+            "lint/style/useConst",
+            "lint/suspicious/noDoubleEquals",
+        ]
+        first, second = issues
+        assert first.file_path == Path("/project/b.js")
+        assert (first.line_start, first.column_start) == (1, 1)
+        assert first.severity == Severity.MEDIUM
+        assert (second.line_start, second.column_start) == (2, 7)
+        assert (second.line_end, second.column_end) == (2, 9)
+        assert second.severity == Severity.HIGH
+
+    def test_parses_biome1_span_into_lines(self) -> None:
+        issues = BiomeLinter()._parse_output(
+            json.dumps(_BIOME1_OUTPUT), Path("/project")
+        )
+
+        assert len(issues) == 2
+        double_equals, debugger = issues
+        assert double_equals.file_path == Path("/project/b.js")
+        assert (double_equals.line_start, double_equals.column_start) == (2, 7)
+        assert (double_equals.line_end, double_equals.column_end) == (2, 9)
+        assert double_equals.fixable is True
+        assert "Use === instead of ==" in double_equals.title
+        assert (debugger.line_start, debugger.column_start) == (2, 15)
+        assert debugger.fixable is False
+
+    def test_biome1_span_counts_bytes_not_characters(self) -> None:
+        # "é" is two bytes in UTF-8, so `x` on line 2 starts at byte 16
+        # although it is character 15. Counting characters would give 2:2.
+        source = 'const s = "é";\nx;\n'
+        assert source.encode("utf-8").index(b"x") == 16
+        output = {
+            "diagnostics": [
+                {
+                    "category": "lint/x",
+                    "severity": "error",
+                    "message": "m",
+                    "location": {
+                        "path": {"file": "c.js"},
+                        "span": [16, 17],
+                        "sourceCode": source,
+                    },
+                }
+            ]
+        }
+        (issue,) = BiomeLinter()._parse_output(json.dumps(output), Path("/p"))
+        assert (issue.line_start, issue.column_start) == (2, 1)
 
 
 class TestBiomeParseOutput:

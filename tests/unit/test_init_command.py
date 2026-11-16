@@ -7,6 +7,7 @@ from argparse import Namespace
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 import yaml
 
 from lucidshark.cli.commands.init import (
@@ -156,6 +157,40 @@ class TestSetupClaudeCode:
         config = json.loads(config_path.read_text())
         assert "other-tool" in config["mcpServers"]
         assert "lucidshark" in config["mcpServers"]
+
+    @pytest.mark.parametrize("force", [False, True])
+    def test_unparseable_mcp_json_is_left_unchanged(
+        self, tmp_path: Path, capsys, force: bool
+    ) -> None:
+        """A broken .mcp.json must not be replaced, losing the other servers."""
+        cmd = InitCommand(version="1.0.0")
+        config_path = tmp_path / ".mcp.json"
+        # Trailing comma: invalid JSON, but the user's servers are all there
+        broken = '{"mcpServers": {"other-tool": {"command": "other"}},}\n'
+        config_path.write_text(broken)
+
+        args = Namespace(
+            claude_code=True,
+            init_all=False,
+            dry_run=False,
+            force=force,
+            remove=False,
+        )
+
+        with patch.object(Path, "cwd", return_value=tmp_path):
+            with patch.object(
+                cmd, "_get_claude_code_config_path", return_value=config_path
+            ):
+                with patch.object(
+                    cmd,
+                    "_find_lucidshark_path",
+                    return_value="/usr/local/bin/lucidshark",
+                ):
+                    exit_code = cmd.execute(args)
+
+        assert exit_code != EXIT_SUCCESS
+        assert config_path.read_text() == broken
+        assert "left unchanged" in capsys.readouterr().out
 
     def test_skips_if_already_configured(self, tmp_path: Path, capsys) -> None:
         """Test that setup skips if LucidShark already configured."""

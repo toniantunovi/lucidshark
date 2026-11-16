@@ -19,7 +19,7 @@ Python has the deepest tool coverage in LucidShark, with dedicated tools across 
 | **Linting** | Ruff | Yes | Fast Rust-based linter with 100+ rule categories |
 | **Formatting** | Ruff Format | Yes | Fast Rust-based formatter, shares config with Ruff linter |
 | **Type Checking** | mypy | -- | Strict mode available |
-| **Type Checking** | Pyright | -- | Strict mode available |
+| **Type Checking** | Pyright | -- | Strict mode via `typeCheckingMode` in pyright's config |
 | **Security (SAST)** | OpenGrep | -- | Python-specific vulnerability rules |
 | **Security (SCA)** | Trivy | -- | Scans `requirements.txt`, `Pipfile.lock`, `pyproject.toml` |
 | **Testing** | pytest | -- | JSON report via pytest-json-report, JUnit XML fallback |
@@ -85,7 +85,7 @@ pipeline:
 
 Microsoft's Python type checker. Can be used as an alternative or complement to mypy.
 
-- Strict mode available
+- Strict mode is set in pyright's own config, not in `lucidshark.yml`: add `typeCheckingMode = "strict"` to `[tool.pyright]` in `pyproject.toml` or to `pyrightconfig.json`. Pyright has no command-line switch for it, so `strict: true` on pyright has no effect and logs a warning
 - Supports `.venv`, `node_modules`, and system PATH installations
 - 0-based indexing auto-adjusted to 1-based
 
@@ -95,7 +95,12 @@ pipeline:
     enabled: true
     tools:
       - name: pyright
-        strict: true
+```
+
+```toml
+# pyproject.toml
+[tool.pyright]
+typeCheckingMode = "strict"
 ```
 
 ## Testing
@@ -237,8 +242,10 @@ project:
 pipeline:
   type_checking:
     enabled: true
-    tools: [{ name: pyright, strict: true }]
+    tools: [{ name: pyright }]
 ```
+
+For strict checking, set `typeCheckingMode = "strict"` under `[tool.pyright]` in `pyproject.toml`.
 
 ## See Also
 

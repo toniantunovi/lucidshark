@@ -682,10 +682,15 @@ class InitCommand(Command):
             print("  Warning: 'lucidshark' command not found in PATH or venv.")
             print("  Using 'lucidshark' as command (must be in PATH at runtime).")
 
-        # Read existing config
+        # Read existing config. A missing file means start fresh; a file that
+        # exists but cannot be parsed is left alone, because writing to it
+        # would drop every other server the user has configured there.
         config, error = self._read_json_config(config_path)
-        if error and not remove:
-            # For new config, start fresh
+        if error and config_path.exists():
+            print(f"  Error: {error}")
+            print(f"  {config_path} was left unchanged. Fix it and run init again.")
+            return False
+        if error:
             config = {}
 
         # Get or create the MCP servers section

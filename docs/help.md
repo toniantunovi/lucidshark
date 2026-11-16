@@ -968,7 +968,7 @@ pipeline:
 
   security:
     enabled: true
-    exclude:          # Domain-level: exclude from security only (applied by the MCP scan tool; the CLI uses global excludes only)
+    exclude:          # Domain-level: exclude from security only
       - "tests/**"
       - "examples/**"
     tools:
@@ -1747,7 +1747,7 @@ exclude:
 | `formatting.threshold_scope` | string | "changed" | With `--base-branch`: apply threshold to `changed`, `project`, or `both` |
 | `formatting.tools` | array | (auto) | List of formatters |
 | `security.enabled` | bool | true | Enable security scanning |
-| `security.exclude` | array | [] | Patterns to exclude from security scanning. Applied by the MCP `scan` tool; the CLI currently applies only global excludes to security scanners |
+| `security.exclude` | array | [] | Patterns to exclude from security scanning, added to the global excludes |
 | `security.tools` | array | (auto) | Security tools with domains |
 | `linting.pre_command` | string | (none) | Shell command to run before linting starts |
 | `linting.command` | string | (none) | Custom shell command (overrides plugin-based runner) |
@@ -1791,7 +1791,7 @@ Each tool in a pipeline section can have:
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | string | Tool identifier (ruff, mypy, trivy, etc.) |
-| `strict` | bool | Strict mode. Read by mypy and pyright only |
+| `strict` | bool | Strict mode. Read by mypy only; for pyright, set `typeCheckingMode = "strict"` in pyrightconfig.json or `[tool.pyright]` |
 | `domains` | array | Security domains for scanner (sca, sast, iac, container) |
 | `mandatory` | bool | Tool must run even when `settings.strict_mode` is false |
 
@@ -1874,7 +1874,7 @@ Within the `exclude` mechanism, you can specify patterns at two levels:
 - **Example use cases**:
   - `pipeline.linting.exclude: ["migrations/**"]` - Don't lint migrations, but still type-check and test them
   - `pipeline.type_checking.exclude: ["**/*_pb2.py"]` - Don't type-check generated protobuf files, but still lint them
-  - `pipeline.security.exclude: ["tests/**", "examples/**"]` - Don't run security scans on test/example code (applied by the MCP `scan` tool; the CLI currently uses only global excludes for security scanners)
+  - `pipeline.security.exclude: ["tests/**", "examples/**"]` - Don't run security scans on test/example code
   - `pipeline.testing.exclude` is accepted but has no effect: test runners don't read exclude patterns, so skip tests through the runner's own config
 
 **How They Combine**:
@@ -1916,7 +1916,7 @@ In this example:
 - `dist/`, `node_modules/`, etc. are excluded from **every domain that supports excludes**
 - `migrations/` is excluded from **linting only** (still type-checked, tested, scanned for security)
 - Protobuf files are excluded from **type checking only** (still linted)
-- Tests/examples are excluded from **security scanning only** when scanning through MCP (still linted and type-checked)
+- Tests/examples are excluded from **security scanning only** (still linted and type-checked)
 
 **Quick Decision Guide**:
 - Should this file NEVER be scanned by anything? → Use global `exclude`

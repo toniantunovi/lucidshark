@@ -29,6 +29,7 @@ from lucidshark.config.models import (
 from lucidshark.core.models import (
     CoverageSummary,
     DuplicationSummary,
+    ScanContext,
     ScanDomain,
     ScanResult,
     Severity,
@@ -1314,3 +1315,287 @@ class TestMandatoryToolFailures:
         exit_code = cmd.execute(args, config)
 
         assert exit_code == EXIT_SUCCESS
+
+
+# ---------------------------------------------------------------------------
+# Thresholds of 0, security excludes, duplication scope, executed domains
+# ---------------------------------------------------------------------------
+
+
+def _runner_mock() -> MagicMock:
+    runner = MagicMock()
+    for method in (
+        "run_linting",
+        "run_type_checking",
+        "run_formatting",
+        "run_tests",
+        "run_coverage",
+        "run_duplication",
+    ):
+        getattr(runner, method).return_value = []
+    return runner
+
+
+def _plain_ctx() -> MagicMock:
+    ctx = MagicMock()
+    ctx.coverage_result = None
+    ctx.duplication_result = None
+    return ctx
+
+
+@patch("lucidshark.cli.commands.scan.PipelineExecutor")
+@patch("lucidshark.cli.commands.scan.DomainRunner")
+@patch("lucidshark.cli.commands.scan.ScanContext.create")
+@patch("lucidshark.cli.commands.scan.ConfigBridge.get_enabled_domains")
+class TestZeroThresholdsAreKept:
+    """A threshold of 0 is a real setting, not a missing one."""
+
+    def test_coverage_threshold_zero_from_config(
+        self, mock_get_domains, mock_create_ctx, mock_runner_cls, _exec, tmp_path
+    ) -> None:
+        mock_get_domains.return_value = []
+        mock_create_ctx.return_value = _plain_ctx()
+        runner = _runner_mock()
+        mock_runner_cls.return_value = runner
+        config = _make_config(
+            pipeline=PipelineConfig(
+                testing=DomainPipelineConfig(enabled=True),
+                coverage=CoveragePipelineConfig(enabled=True, threshold=0),
+            )
+        )
+
+        ScanCommand(version="1.0.0")._run_scan(
+            _make_args(tmp_path, testing=True, coverage=True), config
+        )
+
+        assert runner.run_coverage.call_args.args[1] == 0
+
+    def test_coverage_threshold_zero_from_cli_overrides_config(
+        self, mock_get_domains, mock_create_ctx, mock_runner_cls, _exec, tmp_path
+    ) -> None:
+        mock_get_domains.return_value = []
+        mock_create_ctx.return_value = _plain_ctx()
+        runner = _runner_mock()
+        mock_runner_cls.return_value = runner
+        config = _make_config(
+            pipeline=PipelineConfig(
+                testing=DomainPipelineConfig(enabled=True),
+                coverage=CoveragePipelineConfig(enabled=True, threshold=90),
+            )
+        )
+        args = _make_args(tmp_path, testing=True, coverage=True, coverage_threshold=0)
+
+        ScanCommand(version="1.0.0")._run_scan(args, config)
+
+        assert runner.run_coverage.call_args.args[1] == 0
+
+    def test_duplication_threshold_zero_from_config(
+        self, mock_get_domains, mock_create_ctx, mock_runner_cls, _exec, tmp_path
+    ) -> None:
+        mock_get_domains.return_value = []
+        mock_create_ctx.return_value = _plain_ctx()
+        runner = _runner_mock()
+        mock_runner_cls.return_value = runner
+        config = _make_config(
+            pipeline=PipelineConfig(
+                duplication=DuplicationPipelineConfig(enabled=True, threshold=0.0)
+            )
+        )
+
+        ScanCommand(version="1.0.0")._run_scan(
+            _make_args(tmp_path, duplication=True), config
+        )
+
+        assert runner.run_duplication.call_args.args[1] == 0.0
+
+
+class TestDryRunThresholds:
+    def test_dry_run_shows_configured_duplication_threshold(
+        self, tmp_path: Path, capsys
+    ) -> None:
+        config = _make_config(
+            pipeline=PipelineConfig(
+                duplication=DuplicationPipelineConfig(enabled=True, threshold=3.0)
+            )
+        )
+
+        ScanCommand(version="1.0.0")._dry_run(
+            _make_args(tmp_path, duplication=True), config
+        )
+
+        assert "duplo (threshold: 3.0%)" in capsys.readouterr().out
+
+    def test_dry_run_shows_zero_coverage_threshold(
+        self, tmp_path: Path, capsys
+    ) -> None:
+        config = _make_config(
+            pipeline=PipelineConfig(
+                coverage=CoveragePipelineConfig(enabled=True, threshold=0)
+            )
+        )
+
+        ScanCommand(version="1.0.0")._dry_run(
+            _make_args(tmp_path, coverage=True), config
+        )
+
+        assert "coverage (threshold: 0%)" in capsys.readouterr().out
+
+
+@patch("lucidshark.cli.commands.scan.PipelineExecutor")
+@patch("lucidshark.cli.commands.scan.DomainRunner")
+@patch("lucidshark.cli.commands.scan.ScanContext.create")
+@patch("lucidshark.cli.commands.scan.ConfigBridge.get_enabled_domains")
+class TestSecurityExcludeOnCli:
+    """pipeline.security.exclude reaches the security scanners, as in MCP."""
+
+    def _scan(
+        self,
+        mock_get_domains,
+        mock_create_ctx,
+        mock_runner_cls,
+        mock_executor_cls,
+        tmp_path,
+        security,
+    ):
+        mock_get_domains.return_value = [ScanDomain.SCA]
+        context = ScanContext(
+            project_root=tmp_path, paths=[tmp_path], enabled_domains=[]
+        )
+        mock_create_ctx.return_value = context
+        mock_runner_cls.return_value = _runner_mock()
+        executor = MagicMock()
+        executor.execute.return_value = ScanResult(issues=[])
+        mock_executor_cls.return_value = executor
+        config = _make_config(pipeline=PipelineConfig(security=security))
+
+        ScanCommand(version="1.0.0")._run_scan(_make_args(tmp_path, sca=True), config)
+
+        executor.execute.assert_called_once()
+        scanner_names, scanned_context = executor.execute.call_args.args
+        assert scanner_names == ["trivy"]
+        return context, scanned_context
+
+    def test_security_exclude_is_applied(
+        self,
+        mock_get_domains,
+        mock_create_ctx,
+        mock_runner_cls,
+        mock_executor_cls,
+        tmp_path,
+    ) -> None:
+        security = DomainPipelineConfig(
+            exclude=["fixtures/**"],
+            tools=[ToolConfig(name="trivy", domains=["sca"])],
+        )
+
+        _, scanned = self._scan(
+            mock_get_domains,
+            mock_create_ctx,
+            mock_runner_cls,
+            mock_executor_cls,
+            tmp_path,
+            security,
+        )
+
+        assert scanned.ignore_patterns is not None
+        assert scanned.ignore_patterns.matches(
+            tmp_path / "fixtures" / "secrets.py", tmp_path
+        )
+        assert not scanned.ignore_patterns.matches(tmp_path / "app.py", tmp_path)
+
+    def test_context_unchanged_without_security_exclude(
+        self,
+        mock_get_domains,
+        mock_create_ctx,
+        mock_runner_cls,
+        mock_executor_cls,
+        tmp_path,
+    ) -> None:
+        security = DomainPipelineConfig(
+            tools=[ToolConfig(name="trivy", domains=["sca"])]
+        )
+
+        original, scanned = self._scan(
+            mock_get_domains,
+            mock_create_ctx,
+            mock_runner_cls,
+            mock_executor_cls,
+            tmp_path,
+            security,
+        )
+
+        assert scanned is original
+
+
+@patch("lucidshark.cli.commands.scan.PipelineExecutor")
+@patch("lucidshark.cli.commands.scan.DomainRunner")
+@patch("lucidshark.cli.commands.scan.ScanContext.create")
+@patch("lucidshark.cli.commands.scan.ConfigBridge.get_enabled_domains")
+class TestDuplicationScopeDefault:
+    def test_without_duplication_section_scope_is_both(
+        self, mock_get_domains, mock_create_ctx, mock_runner_cls, _exec, tmp_path
+    ) -> None:
+        """--duplication with no config section uses 'both', like the loader."""
+        mock_get_domains.return_value = []
+        full = MagicMock(passed=False)
+        changed = MagicMock(passed=True)
+        changed.to_summary.return_value = DuplicationSummary(
+            duplication_percent=1.0, passed=True
+        )
+        full.filter_to_changed_files.return_value = changed
+        full.to_summary.return_value = DuplicationSummary(
+            duplication_percent=20.0, passed=False
+        )
+        ctx = _plain_ctx()
+        ctx.duplication_result = full
+        mock_create_ctx.return_value = ctx
+        mock_runner_cls.return_value = _runner_mock()
+        args = _make_args(
+            tmp_path,
+            duplication=True,
+            base_branch="main",
+            duplication_threshold_scope=None,
+        )
+
+        with patch(
+            "lucidshark.core.git.get_changed_files_since_branch",
+            return_value=[tmp_path / "a.py"],
+        ):
+            result = ScanCommand(version="1.0.0")._run_scan(args, _make_config())
+
+        # The changed files pass, the project does not: 'both' must fail
+        assert result.duplication_summary is not None
+        assert result.duplication_summary.passed is False
+
+
+def test_duplication_model_scope_default_matches_loader() -> None:
+    assert DuplicationPipelineConfig().threshold_scope == "both"
+
+
+@patch("lucidshark.cli.commands.scan.PipelineExecutor")
+@patch("lucidshark.cli.commands.scan.DomainRunner")
+@patch("lucidshark.cli.commands.scan.ScanContext.create")
+@patch("lucidshark.cli.commands.scan.ConfigBridge.get_enabled_domains")
+def test_executed_domains_are_listed_once(
+    mock_get_domains, mock_create_ctx, mock_runner_cls, mock_executor_cls, tmp_path
+) -> None:
+    """Tool domains used to appear twice, which duplicated QUALITY.md rows."""
+    mock_get_domains.return_value = [ScanDomain.SCA]
+    mock_create_ctx.return_value = _plain_ctx()
+    mock_runner_cls.return_value = _runner_mock()
+    executor = MagicMock()
+    executor.execute.return_value = ScanResult(issues=[])
+    mock_executor_cls.return_value = executor
+    config = _make_config(
+        pipeline=PipelineConfig(
+            security=DomainPipelineConfig(
+                tools=[ToolConfig(name="trivy", domains=["sca"])]
+            )
+        )
+    )
+    args = _make_args(tmp_path, linting=True, type_checking=True, sca=True)
+
+    result = ScanCommand(version="1.0.0")._run_scan(args, config)
+
+    assert result.metadata is not None
+    assert result.metadata.executed_domains == ["linting", "type_checking", "sca"]

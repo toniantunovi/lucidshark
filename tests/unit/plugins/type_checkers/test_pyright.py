@@ -10,6 +10,12 @@ from unittest.mock import patch
 
 import pytest
 
+from lucidshark.config.models import (
+    DomainPipelineConfig,
+    LucidSharkConfig,
+    PipelineConfig,
+    ToolConfig,
+)
 from lucidshark.core.models import ScanContext, Severity, ToolDomain
 from lucidshark.plugins.type_checkers.pyright import (
     PyrightChecker,
@@ -48,9 +54,9 @@ class TestPyrightCheckerProperties:
         assert checker.domain == ToolDomain.TYPE_CHECKING
 
     def test_supports_strict_mode(self) -> None:
-        """Test strict mode is supported."""
+        """Strict mode is set in pyright's own config, not by LucidShark."""
         checker = PyrightChecker()
-        assert checker.supports_strict_mode is True
+        assert checker.supports_strict_mode is False
 
     def test_init_with_project_root(self) -> None:
         """Test initialization with project root."""
@@ -252,6 +258,58 @@ class TestPyrightCheck:
                     checker.check(context)
                     cmd = mock_run.call_args[0][0]
                     assert "." in cmd
+
+
+def _context_with_type_checkers(tmpdir: str, *tools: ToolConfig) -> ScanContext:
+    config = LucidSharkConfig(
+        pipeline=PipelineConfig(type_checking=DomainPipelineConfig(tools=list(tools)))
+    )
+    return ScanContext(
+        project_root=Path(tmpdir),
+        paths=[Path(tmpdir)],
+        enabled_domains=[],
+        config=config,
+    )
+
+
+class TestPyrightStrict:
+    """pyright has no command-line strict switch; strict must not break the run."""
+
+    def _run(self, context: ScanContext) -> list:
+        checker = PyrightChecker()
+        mock_result = make_completed_process(0, '{"generalDiagnostics": []}')
+        with patch.object(
+            checker, "ensure_binary", return_value=Path("/usr/bin/pyright")
+        ):
+            with patch("subprocess.run", return_value=mock_result) as mock_run:
+                checker.check(context)
+        return mock_run.call_args[0][0]
+
+    def test_strict_on_pyright_is_not_passed_and_warns(self, caplog) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            context = _context_with_type_checkers(
+                tmpdir, ToolConfig(name="pyright", strict=True)
+            )
+            with caplog.at_level("WARNING"):
+                cmd = self._run(context)
+
+        # `--level strict` makes pyright exit before checking anything
+        assert "--level" not in cmd
+        assert "strict" not in cmd
+        assert "typeCheckingMode" in caplog.text
+
+    def test_strict_on_mypy_does_not_affect_pyright(self, caplog) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            context = _context_with_type_checkers(
+                tmpdir,
+                ToolConfig(name="mypy", strict=True),
+                ToolConfig(name="pyright"),
+            )
+            with caplog.at_level("WARNING"):
+                cmd = self._run(context)
+
+        assert "--level" not in cmd
+        assert "typeCheckingMode" not in caplog.text
 
 
 class TestPyrightParseOutput:

@@ -16,7 +16,11 @@ from lucidshark.cli.exit_codes import (
     EXIT_SUCCESS,
 )
 from lucidshark.config.models import LucidSharkConfig
-from lucidshark.core.domain_runner import DomainRunner, check_severity_threshold
+from lucidshark.core.domain_runner import (
+    DomainRunner,
+    check_severity_threshold,
+    context_with_domain_excludes,
+)
 from lucidshark.core.logging import get_logger
 from lucidshark.core.models import (
     CoverageSummary,
@@ -423,7 +427,8 @@ class ScanCommand(Command):
             coverage_threshold = getattr(args, "coverage_threshold", None)
             if coverage_threshold is None and config.pipeline.coverage:
                 coverage_threshold = config.pipeline.coverage.threshold
-            coverage_threshold = coverage_threshold or 80.0
+            if coverage_threshold is None:  # 0 is a valid threshold
+                coverage_threshold = 80.0
             coverage_exclude = None
             coverage_command = None
             coverage_pre_command = None
@@ -549,8 +554,9 @@ class ScanCommand(Command):
                 min_chars = config.pipeline.duplication.min_chars or min_chars
                 exclude_patterns = config.pipeline.duplication.exclude or None
 
-            # Apply defaults
-            duplication_threshold = duplication_threshold or 10.0
+            # Apply defaults (0 is a valid threshold)
+            if duplication_threshold is None:
+                duplication_threshold = 10.0
             min_lines = min_lines or 4
 
             # Get baseline/cache/git flags from config
@@ -617,7 +623,17 @@ class ScanCommand(Command):
                     lucidshark_version=self._version,
                 )
 
-                pipeline_result = executor.execute(needed_scanners, context)
+                # pipeline.security.exclude applies to every security scanner,
+                # the same as in MCP scans.
+                security_exclude = (
+                    config.pipeline.security.exclude
+                    if config.pipeline.security
+                    else None
+                )
+                security_context = context_with_domain_excludes(
+                    context, security_exclude
+                )
+                pipeline_result = executor.execute(needed_scanners, security_context)
                 all_issues.extend(pipeline_result.issues)
 
         # Apply ignore_issues
@@ -672,7 +688,8 @@ class ScanCommand(Command):
                     dup_scope = getattr(args, "duplication_threshold_scope", None)
                     if dup_scope is None and config.pipeline.duplication:
                         dup_scope = config.pipeline.duplication.threshold_scope
-                    dup_scope = dup_scope or "changed"
+                    # Same default as the config loader and MCP
+                    dup_scope = dup_scope or "both"
 
                     if dup_scope == "changed":
                         dup_passed = context.duplication_result.passed
@@ -730,9 +747,11 @@ class ScanCommand(Command):
             executed_domains.append("coverage")
         if duplication_enabled:
             executed_domains.append("duplication")
-        # Add security domains that were run
+        # Add security domains that were run. enabled_domains also holds the
+        # tool domains appended above, so skip those to avoid duplicates.
         for domain in enabled_domains:
-            executed_domains.append(domain.value)
+            if domain.value not in executed_domains:
+                executed_domains.append(domain.value)
 
         # Fallback: when no config file is present, get_all_configured_domains()
         # returns [] because all pipeline sections are None. Use the actually
@@ -975,7 +994,7 @@ class ScanCommand(Command):
             domain_config = getattr(config.pipeline, domain, None)
             if domain_config and hasattr(domain_config, "threshold_scope"):
                 return domain_config.threshold_scope
-            return "changed"
+            return "both" if domain == "duplication" else "changed"
 
         # Iterate over every configured fail_on domain — not just domains
         # with surviving issues. Coverage and duplication produce summary-only
@@ -1179,7 +1198,8 @@ class ScanCommand(Command):
             threshold = getattr(args, "coverage_threshold", None)
             if threshold is None and config.pipeline.coverage:
                 threshold = config.pipeline.coverage.threshold
-            threshold = threshold or 80.0
+            if threshold is None:
+                threshold = 80.0
             tools_to_run.append(("coverage", f"coverage (threshold: {threshold}%)"))
 
         # Duplication
@@ -1189,7 +1209,11 @@ class ScanCommand(Command):
         )
         if duplication_flag or (all_flag and duplication_configured):
             domains_to_run.append("duplication")
-            threshold = getattr(args, "duplication_threshold", None) or 10.0
+            threshold = getattr(args, "duplication_threshold", None)
+            if threshold is None and config.pipeline.duplication:
+                threshold = config.pipeline.duplication.threshold
+            if threshold is None:
+                threshold = 10.0
             tools_to_run.append(("duplication", f"duplo (threshold: {threshold}%)"))
 
         # Security domains

@@ -9,7 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from lucidshark.core.logging import get_logger
 from lucidshark.core.models import (
@@ -29,6 +29,52 @@ SEVERITY_MAP = {
     "warning": Severity.MEDIUM,
     "info": Severity.LOW,
 }
+
+
+def _location_position(
+    location: Dict[str, Any],
+) -> Tuple[int, int, int, Optional[int]]:
+    """Return (line_start, column_start, line_end, column_end), 1-based.
+
+    Biome 2 reports ``start``/``end`` objects with ``line`` and ``column``.
+    Biome 1 reports a byte ``span`` into ``sourceCode``. Flat ``lineStart``
+    style keys are accepted as a fallback.
+    """
+    start = location.get("start")
+    if isinstance(start, dict) and "line" in start:
+        end_field = location.get("end")
+        end: Dict[str, Any] = end_field if isinstance(end_field, dict) else {}
+        line_start = int(start["line"])
+        column_start = int(start.get("column", 1))
+        return (
+            line_start,
+            column_start,
+            int(end.get("line", line_start)),
+            end.get("column"),
+        )
+
+    span = location.get("span")
+    source = location.get("sourceCode")
+    if isinstance(span, list) and len(span) == 2 and isinstance(source, str):
+        encoded = source.encode("utf-8")
+
+        def to_line_col(offset: int) -> Tuple[int, int]:
+            before = encoded[: max(offset, 0)].decode("utf-8", errors="ignore")
+            line = before.count("\n") + 1
+            column = len(before) - (before.rfind("\n") + 1) + 1
+            return line, column
+
+        line_start, column_start = to_line_col(int(span[0]))
+        line_end, column_end = to_line_col(int(span[1]))
+        return line_start, column_start, line_end, column_end
+
+    line_start = location.get("lineStart", 1)
+    return (
+        line_start,
+        location.get("columnStart", 1),
+        location.get("lineEnd", line_start),
+        location.get("columnEnd"),
+    )
 
 
 class BiomeLinter(LinterPlugin):
@@ -150,7 +196,8 @@ class BiomeLinter(LinterPlugin):
 
         pre_issues = self.lint(context)
 
-        cmd = [str(binary), "check", "--apply"]
+        # `--write` replaced `--apply` in Biome 1.8; Biome 2 removed `--apply`.
+        cmd = [str(binary), "check", "--write"]
         cmd.extend(self._resolve_target_paths(context))
 
         LOGGER.debug(f"Running: {' '.join(cmd)}")
@@ -207,23 +254,26 @@ class BiomeLinter(LinterPlugin):
         try:
             severity_str = diagnostic.get("severity", "error")
             message = diagnostic.get("message", "")
-            # Handle structured message format
+            # Biome 1 splits the message into parts that carry their own spacing
             if isinstance(message, list):
-                message = " ".join(
+                message = "".join(
                     m.get("content", "") if isinstance(m, dict) else str(m)
                     for m in message
                 )
 
             category = diagnostic.get("category", "")
-            location = diagnostic.get("location", {})
+            location = diagnostic.get("location") or {}
 
-            # Get file path from location
-            file_path_str = location.get("path", {}).get("file", "")
+            # Biome 2 gives the path as a string, Biome 1 as {"file": ...}
+            path_field = location.get("path") or ""
+            if isinstance(path_field, dict):
+                file_path_str = str(path_field.get("file") or "")
+            else:
+                file_path_str = str(path_field)
 
-            # Get position info
-            line_start = location.get("lineStart", 1)
-            line_end = location.get("lineEnd", line_start)
-            column_start = location.get("columnStart", 1)
+            line_start, column_start, line_end, column_end = _location_position(
+                location
+            )
 
             # Get severity
             severity = SEVERITY_MAP.get(severity_str, Severity.MEDIUM)
@@ -241,8 +291,10 @@ class BiomeLinter(LinterPlugin):
             # Build title
             title = f"[{category}] {message}" if category else message
 
-            # Get column end
-            column_end = location.get("columnEnd")
+            # Biome 1 marks fixable diagnostics with a "fixable" tag
+            fixable = bool(diagnostic.get("fixable")) or "fixable" in (
+                diagnostic.get("tags") or []
+            )
 
             return UnifiedIssue(
                 id=issue_id,
@@ -260,7 +312,7 @@ class BiomeLinter(LinterPlugin):
                 line_end=line_end,
                 column_start=column_start,
                 column_end=column_end,
-                fixable=diagnostic.get("fixable", False),
+                fixable=fixable,
                 metadata={
                     "severity_raw": severity_str,
                 },

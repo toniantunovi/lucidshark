@@ -314,8 +314,7 @@ def _build_scan_parser(subparsers: argparse._SubParsersAction) -> None:
             "When using --base-branch, apply duplication threshold to: "
             "'changed' (changed files only), "
             "'project' (full project), or "
-            "'both' (fail if either exceeds threshold; default when a "
-            "duplication section is configured)."
+            "'both' (fail if either exceeds threshold; default)."
         ),
     )
     config_group.add_argument(

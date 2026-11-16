@@ -330,6 +330,33 @@ def _has_jest_config(project_root: Path) -> bool:
     return False
 
 
+def context_with_domain_excludes(
+    context: ScanContext,
+    domain_exclude_patterns: Optional[List[str]],
+) -> ScanContext:
+    """Return a ScanContext with domain-specific exclude patterns merged in.
+
+    The patterns are added to the context's existing ignore patterns. When
+    there are none, the original context is returned unchanged.
+
+    Args:
+        context: Original scan context.
+        domain_exclude_patterns: Additional exclude patterns for this domain.
+
+    Returns:
+        ScanContext with merged ignore patterns, or the original context.
+    """
+    if not domain_exclude_patterns:
+        return context
+    from dataclasses import replace
+
+    from lucidshark.config.ignore import IgnorePatterns
+
+    domain_patterns = IgnorePatterns(domain_exclude_patterns, source="domain-config")
+    merged = IgnorePatterns.merge(context.ignore_patterns, domain_patterns)
+    return replace(context, ignore_patterns=merged)
+
+
 class DomainRunner:
     """Executes plugin-based domain scans.
 
@@ -441,17 +468,7 @@ class DomainRunner:
         Returns:
             ScanContext with merged ignore patterns, or the original context.
         """
-        if not domain_exclude_patterns:
-            return context
-        from dataclasses import replace
-
-        from lucidshark.config.ignore import IgnorePatterns
-
-        domain_patterns = IgnorePatterns(
-            domain_exclude_patterns, source="domain-config"
-        )
-        merged = IgnorePatterns.merge(context.ignore_patterns, domain_patterns)
-        return replace(context, ignore_patterns=merged)
+        return context_with_domain_excludes(context, domain_exclude_patterns)
 
     def run_linting(
         self,
