@@ -330,6 +330,33 @@ def _has_jest_config(project_root: Path) -> bool:
     return False
 
 
+def context_with_domain_excludes(
+    context: ScanContext,
+    domain_exclude_patterns: Optional[List[str]],
+) -> ScanContext:
+    """Return a ScanContext with domain-specific exclude patterns merged in.
+
+    The patterns are added to the context's existing ignore patterns. When
+    there are none, the original context is returned unchanged.
+
+    Args:
+        context: Original scan context.
+        domain_exclude_patterns: Additional exclude patterns for this domain.
+
+    Returns:
+        ScanContext with merged ignore patterns, or the original context.
+    """
+    if not domain_exclude_patterns:
+        return context
+    from dataclasses import replace
+
+    from lucidshark.config.ignore import IgnorePatterns
+
+    domain_patterns = IgnorePatterns(domain_exclude_patterns, source="domain-config")
+    merged = IgnorePatterns.merge(context.ignore_patterns, domain_patterns)
+    return replace(context, ignore_patterns=merged)
+
+
 class DomainRunner:
     """Executes plugin-based domain scans.
 
@@ -441,17 +468,7 @@ class DomainRunner:
         Returns:
             ScanContext with merged ignore patterns, or the original context.
         """
-        if not domain_exclude_patterns:
-            return context
-        from dataclasses import replace
-
-        from lucidshark.config.ignore import IgnorePatterns
-
-        domain_patterns = IgnorePatterns(
-            domain_exclude_patterns, source="domain-config"
-        )
-        merged = IgnorePatterns.merge(context.ignore_patterns, domain_patterns)
-        return replace(context, ignore_patterns=merged)
+        return context_with_domain_excludes(context, domain_exclude_patterns)
 
     def run_linting(
         self,
@@ -885,7 +902,10 @@ class DomainRunner:
                     id=f"custom-{domain.value}-failure",
                     domain=domain,
                     source_tool="custom",
-                    severity=Severity.MEDIUM,
+                    # The check itself did not run to a usable result, so
+                    # this must trip fail_on "error" like a failed test
+                    # command does. MEDIUM would let the scan pass.
+                    severity=Severity.HIGH,
                     rule_id=f"{domain.value}-failure",
                     title=f"Custom {domain.value} command failed",
                     description=f"Command `{command}` exited with code {result.returncode}.\n\nOutput:\n{output_snippet}",
@@ -1412,7 +1432,7 @@ class DomainRunner:
                         id="custom-coverage-failure",
                         domain=ToolDomain.COVERAGE,
                         source_tool="custom",
-                        severity=Severity.MEDIUM,
+                        severity=Severity.HIGH,
                         rule_id="coverage-failure",
                         title="Custom coverage command failed",
                         description=f"Command `{command}` exited with code {result.returncode}.\n\n{output}",

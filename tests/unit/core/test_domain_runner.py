@@ -701,7 +701,7 @@ class TestParseCommandOutput:
         issues = runner._parse_command_output(result, ToolDomain.LINTING, "lint cmd")
 
         assert len(issues) == 1
-        assert issues[0].severity == Severity.MEDIUM
+        assert issues[0].severity == Severity.HIGH
         assert "exited with code 1" in issues[0].description
         assert "error detail" in issues[0].description
 
@@ -742,7 +742,7 @@ class TestParseCommandOutput:
 
         # Falls through JSON attempt → plain text path
         assert len(issues) == 1
-        assert issues[0].severity == Severity.MEDIUM
+        assert issues[0].severity == Severity.HIGH
         assert "exited with code 1" in issues[0].description
 
 
@@ -1144,7 +1144,7 @@ class TestLintingCommand:
             issues = runner.run_linting(context, command="broken-lint")
 
         assert len(issues) == 1
-        assert issues[0].severity == Severity.MEDIUM
+        assert issues[0].severity == Severity.HIGH
         assert "exited with code 2" in issues[0].description
 
     def test_command_success_no_issues(self, tmp_path: Path) -> None:
@@ -1380,7 +1380,7 @@ class TestCoverageCommand:
         assert len(issues) == 1
         assert issues[0].id == "custom-coverage-failure"
         assert issues[0].domain == ToolDomain.COVERAGE
-        assert issues[0].severity == Severity.MEDIUM
+        assert issues[0].severity == Severity.HIGH
         assert "Coverage below threshold" in issues[0].description
 
     def test_command_skips_plugin_discovery(self, tmp_path: Path) -> None:

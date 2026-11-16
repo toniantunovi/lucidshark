@@ -456,6 +456,8 @@ def create_snapshot_from_scan(
     executed = enabled_domains or []
     if scan_result.metadata and hasattr(scan_result.metadata, "executed_domains"):
         executed = scan_result.metadata.executed_domains or executed
+    # Scans cached by older versions listed tool domains twice
+    executed = list(dict.fromkeys(executed))
 
     # Special handling for coverage and duplication (they have percentage metrics)
     special_domains = {"coverage", "duplication"}

@@ -5,7 +5,7 @@ Exit codes follow Section 14 of the specification:
 - 1: Issues found at or above severity threshold
 - 2: Scanner error
 - 3: Invalid usage (bad arguments, missing config)
-- 4: Bootstrap failure (binary download failed)
+- 4: Bootstrap failure (reserved; not currently returned)
 """
 
 from __future__ import annotations

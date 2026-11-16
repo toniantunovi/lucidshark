@@ -5,6 +5,8 @@ LucidShark supports two modes of incremental scanning:
 1. **Default Mode (Uncommitted Changes)** - Scans only files with uncommitted changes (staged, unstaged, untracked). No extra flags needed.
 2. **Branch Comparison Mode (`--base-branch`)** - Filters results to files changed since a branch. Useful for PR reviews and CI pipelines.
 
+CLI examples use `./lucidshark`, the project-local binary installed by `curl -fsSL https://raw.githubusercontent.com/toniantunovi/lucidshark/main/install.sh | bash`. If you installed with `pip install lucidshark` (or run it with `uvx lucidshark`), use `lucidshark` instead.
+
 ## Default Mode: Uncommitted Changes
 
 **When developing locally, you don't need any special flags.** By default, LucidShark scans only uncommitted changes:
@@ -53,24 +55,7 @@ This approach ensures data is accurate (tests aren't skipped, cross-file issues 
 ./lucidshark scan --linting --type-checking --all-files
 ```
 
-```bash
-# Scan only uncommitted changes (default behavior)
-./lucidshark scan --linting --type-checking
-
-# Full project scan
-./lucidshark scan --linting --type-checking --all-files
-```
-
 ### PR/CI (Branch Comparison)
-
-```bash
-# Filter all results to files changed since main
-./lucidshark scan --all --base-branch origin/main
-
-# With specific domains
-./lucidshark scan --linting --type-checking --coverage --duplication \
-  --base-branch origin/main
-```
 
 ```bash
 # Filter all results to files changed since main
@@ -108,6 +93,8 @@ mcp__lucidshark__scan(domains=["all"], base_branch="origin/main")
 | `project` | Changed files only | Check ALL project issues |
 | `both` | Changed files only | Check both; fail if either has issues |
 
+The scope only matters when `fail_on.linting` / `fail_on.type_checking` is set in `lucidshark.yml`. Their failing value is `error`, which counts only HIGH/CRITICAL-severity issues (Ruff `E`/`F` findings, for example, are MEDIUM).
+
 **Example with `scope: project`:**
 ```
 Display: 2 issues in changed files
@@ -115,7 +102,7 @@ Project total: 15 issues
 fail_on: error
 Scope: project
 
-Result: FAIL (15 project issues checked, not just the 2 displayed)
+Result: FAIL if any of the 15 project issues is HIGH/CRITICAL, not just the 2 displayed
 ```
 
 This is useful when you want to see only your changes, but ensure the entire project stays clean.
@@ -127,7 +114,7 @@ Project total: 15 issues
 fail_on: error
 Scope: changed
 
-Result: FAIL only if those 2 issues are errors (project issues ignored)
+Result: FAIL only if one of those 2 issues is HIGH/CRITICAL (project issues ignored)
 ```
 
 ### Coverage
@@ -272,22 +259,45 @@ This uses git's three-dot syntax which compares against the merge-base.
 pipeline:
   linting:
     enabled: true
-    threshold_scope: changed  # or "project" or "both"
+    threshold_scope: changed  # default; or "project" or "both"
+    tools:
+      - name: ruff
 
   type_checking:
     enabled: true
-    threshold_scope: changed
+    threshold_scope: changed  # default
+    tools:
+      - name: mypy
+
+  testing:
+    enabled: true  # coverage requires testing
+    tools:
+      - name: pytest
 
   coverage:
     enabled: true
     threshold: 80
-    threshold_scope: changed
+    threshold_scope: changed  # default
+    tools:
+      - name: coverage_py
 
   duplication:
     enabled: true
     threshold: 10
     threshold_scope: both  # default; use "changed" for lenient checking
+    tools:
+      - name: duplo
+
+# threshold_scope only affects the exit code of domains listed here
+fail_on:
+  linting: error
+  type_checking: error
+  testing: any
+  coverage: below_threshold
+  duplication: above_threshold
 ```
+
+CLI flags (`--coverage-threshold-scope`, etc.) take precedence over `threshold_scope` in the config file.
 
 ### MCP Parameters
 
@@ -295,12 +305,12 @@ pipeline:
 mcp__lucidshark__scan(
     domains=["all"],
     base_branch="origin/main",
-    coverage_threshold_scope="changed",
-    linting_threshold_scope="changed",
-    type_checking_threshold_scope="changed",
+    coverage_threshold_scope="changed",  # default
     duplication_threshold_scope="both"  # default
 )
 ```
+
+> **Note:** The MCP `scan` tool does not read `threshold_scope` from `lucidshark.yml`. Coverage defaults to `"changed"` and duplication to `"both"` unless you pass `coverage_threshold_scope` / `duplication_threshold_scope` explicitly. `linting_threshold_scope` and `type_checking_threshold_scope` are accepted but currently have no effect, and the MCP scan does not apply `fail_on`: it reports the filtered issues plus the coverage/duplication `passed` flags.
 
 ## CI Platform Integration
 
@@ -328,18 +338,20 @@ jobs:
 
       - name: Install dependencies
         run: |
-          
-          
+          pip install lucidshark
+          pip install -e ".[dev]"  # your project's dependencies, for the test run
 
       - name: Run incremental scan
         run: |
-          ./lucidshark scan --all \
+          lucidshark scan --all \
             --base-branch origin/${{ github.base_ref }} \
             --coverage-threshold 80 \
             --duplication-threshold 10
 ```
 
 **Important:** Use `fetch-depth: 0` to ensure full git history is available.
+
+The job's exit code follows the `fail_on` section of `lucidshark.yml`: `--coverage-threshold` and `--duplication-threshold` set the thresholds, but the build only fails on them when `fail_on.coverage` / `fail_on.duplication` are set (see the [configuration example](#configuration-file-lucidsharkyml)).
 
 ### GitLab CI
 
@@ -353,9 +365,9 @@ quality:
   variables:
     GIT_DEPTH: 0
   script:
-    - 
-    - 
-    - ./lucidshark scan --all
+    - pip install lucidshark
+    - pip install -e ".[dev]"  # your project's dependencies, for the test run
+    - lucidshark scan --all
         --base-branch origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME
         --coverage-threshold 80
   rules:
@@ -374,8 +386,8 @@ pipelines:
           clone:
             depth: full
           script:
-            - 
-            - 
+            - pip install lucidshark
+            - pip install -e ".[dev]"  # your project's dependencies, for the test run
             - lucidshark scan --all
                 --base-branch origin/$BITBUCKET_PR_DESTINATION_BRANCH
                 --coverage-threshold 80
@@ -400,12 +412,12 @@ steps:
       versionSpec: '3.11'
 
   - script: |
-      
-      
+      pip install lucidshark
+      pip install -e ".[dev]"  # your project's dependencies, for the test run
     displayName: 'Install dependencies'
 
   - script: |
-      ./lucidshark scan --all \
+      lucidshark scan --all \
         --base-branch origin/$(System.PullRequest.TargetBranch) \
         --coverage-threshold 80
     displayName: 'Run incremental scan'
@@ -413,14 +425,11 @@ steps:
 
 ## Example Scenarios
 
+These scenarios fail the scan only for domains that have a `fail_on` entry in `lucidshark.yml`; without one, results are reported but the exit code is 0. The CLI `--fail-on <severity>` flag overrides the config `fail_on` and applies to every non-ignored issue in every scanned domain, so threshold scopes have no effect when it is used.
+
 ### Scenario 1: Strict PR linting
 
-Fail if ANY linting issue in changed files, even if project has existing issues.
-
-```bash
-./lucidshark scan --linting --base-branch origin/main \
-  --linting-threshold-scope changed
-```
+Check linting only for issues in changed files, even if the project has existing issues. With `fail_on.linting: error`, the scan fails only on HIGH/CRITICAL linting issues in changed files (Ruff `E`/`F` findings are MEDIUM). To fail on any LOW-or-higher linting issue in changed files, add `--fail-on low`.
 
 ```bash
 ./lucidshark scan --linting --base-branch origin/main \
@@ -436,11 +445,6 @@ Changed files must have 80% coverage, but overall project can be lower.
   --coverage-threshold 80 --coverage-threshold-scope changed
 ```
 
-```bash
-./lucidshark scan --testing --coverage --base-branch origin/main \
-  --coverage-threshold 80 --coverage-threshold-scope changed
-```
-
 ### Scenario 3: Enforce both project and changed files
 
 Fail if either project OR changed files exceed duplication threshold.
@@ -450,22 +454,9 @@ Fail if either project OR changed files exceed duplication threshold.
   --duplication-threshold 10 --duplication-threshold-scope both
 ```
 
-```bash
-./lucidshark scan --duplication --base-branch origin/main \
-  --duplication-threshold 10 --duplication-threshold-scope both
-```
-
 ### Scenario 4: Full incremental scan before PR
 
 Run all checks filtered to changed files:
-
-```bash
-./lucidshark scan --all --base-branch origin/main \
-  --coverage-threshold 80 \
-  --duplication-threshold 10 \
-  --coverage-threshold-scope changed \
-  --linting-threshold-scope changed
-```
 
 ```bash
 ./lucidshark scan --all --base-branch origin/main \
@@ -494,32 +485,7 @@ git add .
 git commit -m "Add new utility function"
 ```
 
-```bash
-# On your feature branch
-git checkout feature/my-new-feature
-
-# Edit some files
-vim src/myapp/utils.py
-
-# Check all quality metrics for your changes
-./lucidshark scan --all --base-branch main
-
-# Fix any issues, then commit
-git add .
-git commit -m "Add new utility function"
-```
-
 ### Before creating a PR
-
-```bash
-# Ensure all changes meet quality standards
-./lucidshark scan --all --base-branch origin/main \
-  --coverage-threshold 80 \
-  --duplication-threshold 10
-
-# If it passes, push
-git push origin feature/my-new-feature
-```
 
 ```bash
 # Ensure all changes meet quality standards
@@ -541,17 +507,23 @@ git push origin feature/my-new-feature
 | Type Checking | Yes | No (always shows changed) | Yes |
 | Coverage | Yes | No (always shows changed) | Yes |
 | Duplication | Yes | No (always shows changed) | Yes |
-| Security | No | N/A | N/A |
-| Testing | No | N/A | N/A |
+| Security | Yes (except findings with no file path) | N/A (no scope option) | N/A (`fail_on` sees the filtered findings) |
+| Testing | No (all failures are shown) | N/A (no scope option) | N/A (`fail_on` sees every failure) |
 
 **Key difference:** For linting/type_checking, `threshold_scope` only affects which issues are checked against `fail_on`, not what's displayed. For coverage/duplication, filtering affects both display and the metrics.
 
-### Security Domains Are Not Filtered
+### Security Results Are Filtered Too, Test Failures Are Not
 
-Security scans (SAST, SCA, IAC, Container) always report full project results, even with `--base-branch`. This is intentional:
-- Security issues often span files or dependencies
-- Filtering could hide critical vulnerabilities in unchanged but affected code
-- Dependency vulnerabilities (SCA) apply project-wide
+With `--base-branch` (CLI and MCP), issues are filtered to the changed files, including SAST, SCA and IaC findings. Two kinds of issue are never filtered:
+- **Test failures.** The full suite runs, so a failing test is reported and trips `fail_on.testing: any` even when its test file didn't change on the branch
+- **Issues with no file path**, such as container image findings or a tool that failed to run. They can't be attributed to a file, so they are always reported
+
+In practice:
+- An SCA vulnerability is reported only if the manifest/lockfile it was found in changed on the branch
+- `fail_on.security` sees findings in changed files plus any finding without a file path
+- Coverage and duplication are evaluated from their filtered percentages, according to `threshold_scope`
+
+Run without `--base-branch` (for example with `--all-files`) to see project-wide security results.
 
 ### Deleted Files Not Reported
 
@@ -573,7 +545,7 @@ This gives context: "50 duplicate lines involving your changes represent 0.5% of
 
 ### Testing Always Runs Full Suite
 
-Even with `--base-branch`, all tests run. Only coverage/failure **reporting** is filtered. This ensures:
+Even with `--base-branch`, all tests run and every test failure is reported (see [above](#security-results-are-filtered-too-test-failures-are-not)). Only coverage **reporting** is filtered. This ensures:
 - Indirect coverage is measured (test for `module_a` covers `module_b`)
 - Regressions are caught
 - Coverage percentages are accurate
@@ -582,7 +554,7 @@ Even with `--base-branch`, all tests run. Only coverage/failure **reporting** is
 
 ### Does this skip tests for unchanged files?
 
-No. All tests run for accurate coverage measurement. Only **reporting** is filtered.
+No. All tests run for accurate coverage measurement, and every test failure is reported. Only the reporting of other domains is filtered.
 
 ### What if I have no changes on my branch?
 

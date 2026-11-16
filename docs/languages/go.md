@@ -124,6 +124,10 @@ pipeline:
 
 ```yaml
 pipeline:
+  testing:
+    enabled: true
+    tools:
+      - name: go_test
   coverage:
     enabled: true
     tools:

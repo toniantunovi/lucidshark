@@ -87,19 +87,21 @@ LucidShark applies exclude patterns in two layers:
 | Testing | cargo test | Project-wide (Cargo workspace); runs all unit, integration, and doc tests |
 | Coverage | Tarpaulin | Project-wide (Cargo workspace); parses existing tarpaulin report |
 | Duplication | Duplo | Pre-filtered by LucidShark; always excludes `.git`, `node_modules`, `__pycache__`, `.venv`, `target`, `build`, `dist`, `.lucidshark` |
-| Linting | golangci-lint | `--exclude-dirs`, `--skip-dirs` (respects `.golangci.yml` exclude patterns) |
+| Linting | golangci-lint | Package-level; runs `./...`; LucidShark does not pass patterns to CLI, so configure exclusions in `.golangci.yml` |
 | Formatting | gofmt | File list filtering (only receives pre-filtered `.go` file paths) |
 | Linting | go vet | Package-level; runs `./...`; `vendor/` automatically excluded by Go tooling |
 | Testing | go test | Package-level; runs `./...`; `vendor/` automatically excluded by Go tooling |
-| Coverage | go cover | File-level filtering (filters coverage report to non-excluded files) |
+| Coverage | go cover | No exclude filtering; parses the full `coverage.out` profile |
+| Coverage | JaCoCo, Scoverage | Report filtering (excluded files are dropped from the coverage totals) |
+| Coverage | Other coverage plugins (coverage.py, Istanbul, etc.) | Exclude patterns not applied; configure omissions in the tool's own config |
 
 ## Per-Domain Exclude Patterns
 
-Every pipeline domain supports its own `exclude` list that works alongside the global exclude patterns. This lets you exclude files from specific domains without affecting others.
+Pipeline domains accept their own `exclude` list that works alongside the global exclude patterns. This lets you exclude files from specific domains without affecting others.
 
 ```yaml
 exclude:
-  - "**/node_modules/**"     # Global: excluded from ALL domains
+  - "**/node_modules/**"     # Global: passed to every domain (see caveats below)
   - "**/.venv/**"
 
 pipeline:
@@ -108,29 +110,35 @@ pipeline:
     exclude:                  # Additional excludes for linting only
       - "scripts/**"
       - "migrations/**"
+    tools:
+      - name: ruff
 
   type_checking:
     enabled: true
     exclude:                  # Additional excludes for type checking only
       - "tests/conftest.py"
       - "**/*_pb2.py"         # Generated protobuf files
+    tools:
+      - name: mypy
 
   security:
     enabled: true
     exclude:                  # Additional excludes for security scanning only
       - "tests/**"
       - "examples/**"
+    tools:
+      - name: opengrep
+        domains: [sast]
 
   testing:
     enabled: true
-    exclude:                  # Additional excludes for test execution only
-      - "tests/integration/**"
+    tools:
+      - name: pytest
 
   coverage:
     enabled: true
-    exclude:                  # Additional excludes for coverage analysis only
-      - "tests/**"
-      - "scripts/**"
+    tools:
+      - name: coverage_py     # coverage.py ignores exclude patterns -- use [tool.coverage.run] omit
 
   duplication:
     enabled: true
@@ -138,7 +146,14 @@ pipeline:
       - "htmlcov/**"
       - "docs/**"
       - "tests/**"
+    tools:
+      - name: duplo
 ```
+
+**Caveats** -- exclude patterns (global and per-domain) only take effect where a tool or LucidShark actually applies them (see the table above):
+
+- **Testing:** test runners don't read exclude patterns. They use their own discovery (e.g. pytest `testpaths`), so `pipeline.testing.exclude` skips nothing. Exclude tests in the runner's own config instead.
+- **Coverage:** only the JaCoCo and Scoverage plugins filter their reports by exclude patterns. For other coverage tools (coverage.py, Istanbul, go cover, ...), configure omissions in the tool's own config.
 
 ### How Domain Excludes Combine
 
@@ -148,7 +163,7 @@ For any given domain, the effective exclude patterns are the union of:
 2. Global `exclude` patterns from the config file
 3. Domain-specific `exclude` patterns from the pipeline section
 
-For example, if global `exclude` has `**/node_modules/**` and `pipeline.linting.exclude` has `scripts/**`, then linting will exclude both `node_modules` and `scripts`, while other domains only exclude `node_modules` (unless they have their own domain-specific patterns).
+For example, if global `exclude` has `**/node_modules/**` and `pipeline.linting.exclude` has `scripts/**`, then linting will exclude both `node_modules` and `scripts`, while other domains only exclude `node_modules` (unless they have their own domain-specific patterns). Whether a domain honors the result depends on its tools -- see the caveats above.
 
 ### When to Use Domain-Specific Excludes
 
@@ -157,8 +172,8 @@ For example, if global `exclude` has `**/node_modules/**` and `pipeline.linting.
 | **Linting** | Generated code, database migrations, vendored files |
 | **Type Checking** | Generated protobuf stubs, auto-generated API clients, legacy untyped code |
 | **Security** | Test fixtures with intentional "vulnerable" code, example configurations |
-| **Testing** | Slow integration tests (run separately), E2E tests |
-| **Coverage** | Test files themselves, CLI scripts, entry points |
+| **Testing** | None -- not applied; exclude tests in the runner's own config (e.g. pytest `testpaths` / `--ignore`) |
+| **Coverage** | Test files themselves, CLI scripts, entry points (JaCoCo and Scoverage only) |
 | **Duplication** | Test files, documentation, HTML coverage reports, generated code |
 
 ## Inline Ignores (Per-Finding)
@@ -605,7 +620,7 @@ ignore_issues:
     reason: "Access logging not required for internal dev buckets"
   - rule_id: CVE-2024-1234
     reason: "Not exploitable -- we don't use the affected API"
-    expires: 2026-06-01
+    expires: 2027-06-01
 ```
 
 ### Path-Scoped Ignores
@@ -618,9 +633,10 @@ ignore_issues:
   - rule_id: S101
     reason: "Assert is the standard way to write tests"
     paths:
-      - "tests/**"           # All files under tests/
-      - "**/test_*.py"       # Any file starting with test_
-      - "**/conftest.py"     # pytest fixtures
+      - "tests/**"               # All files under tests/
+      - "**/test_*.py"           # Any file starting with test_
+      - "**/conftest.py"         # pytest fixtures
+      - "!tests/integration/**"  # Negation: but NOT in integration tests (put it last)
 
   # Ignore line length in generated code only
   - rule_id: E501
@@ -637,16 +653,12 @@ ignore_issues:
   # Combine paths with expiry for temporary exceptions
   - rule_id: B101
     reason: "Temporary: assert in scripts during migration"
-    expires: 2026-06-01
+    expires: 2027-06-01
     paths:
       - "scripts/**"
-
-  # Use negation to exclude specific subdirectories
-  - rule_id: S101
-    paths:
-      - "tests/**"
-      - "!tests/integration/**"  # But NOT in integration tests
 ```
+
+**One entry per `rule_id`:** entries are keyed by `rule_id`, so if the same `rule_id` appears twice, the last entry wins and the earlier entry's `paths`, `reason` and `expires` are silently dropped (an expired later entry is skipped rather than replacing the earlier one). Put all paths for a rule in a single entry, as with `S101` above.
 
 ### Path Pattern Syntax
 
@@ -657,7 +669,7 @@ The `paths` field uses gitignore-style patterns (same syntax as `exclude` and `.
 | `*` | Match any characters except `/` | `*.py` matches `foo.py` |
 | `**` | Match any directory depth | `tests/**` matches `tests/unit/deep/test_foo.py` |
 | `**/name` | Match at any depth | `**/test_*.py` matches `src/tests/test_main.py` |
-| `!` | Negate (exclude from match) | `tests/**` + `!tests/slow/**` |
+| `!` | Negate (exclude from match); list it after the patterns it overrides | `tests/**` + `!tests/slow/**` |
 | `/` (trailing) | Match directories only | `scripts/` matches the `scripts` directory |
 
 ### Supported Fields
@@ -675,6 +687,7 @@ The `paths` field uses gitignore-style patterns (same syntax as `exclude` and `.
 - Expired ignores stop suppressing -- the issue is reported normally and a warning is emitted
 - Unmatched rule IDs produce a warning (catches typos and stale entries)
 - Works across all domains (linting, type checking, security, testing, coverage, duplication)
+- Ignored issues are excluded from `fail_on` checks, but `fail_on.coverage: below_threshold` and `fail_on.duplication: above_threshold` (or a percentage such as `"5%"`) are decided from the domain's pass/fail summary rather than from issues, so `ignore_issues` doesn't change them
 
 **Path-specific:**
 - **Empty or missing `paths`** = global ignore (applies to all files)
@@ -725,7 +738,7 @@ ignore_issues:
   # Legacy package has relaxed rules
   - rule_id: E501
     reason: "Legacy code, will refactor later"
-    expires: 2026-06-01
+    expires: 2027-06-01
     paths: ["packages/legacy/**"]
 
   # Scripts have different conventions
@@ -772,10 +785,17 @@ pipeline:
     enabled: false  # Skip linting entirely
   type_checking:
     enabled: true
+    tools:
+      - name: mypy
   security:
     enabled: true
+    tools:
+      - name: trivy
+        domains: [sca]
   testing:
     enabled: true
+    tools:
+      - name: pytest
   coverage:
     enabled: false  # Skip coverage checks
   duplication:

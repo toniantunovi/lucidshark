@@ -196,8 +196,20 @@ VALID_FAIL_ON_VALUES: Dict[str, Set[str]] = {
         "any",
         "none",
         "above_threshold",
-    },  # Can also be a percentage like "5%" - validated separately
+    },  # Can also be a percentage like "5%" - see _is_percentage
 }
+
+
+def _is_percentage(value: str) -> bool:
+    """Return True for a percentage string such as "5%" or "2.5%"."""
+    if not value.endswith("%"):
+        return False
+    try:
+        float(value[:-1])
+    except ValueError:
+        return False
+    return True
+
 
 # Valid keys under ai section
 VALID_AI_KEYS: Set[str] = {
@@ -311,6 +323,9 @@ def validate_config(
                             key=f"fail_on.{domain}",
                         )
                     )
+                elif domain == "duplication" and _is_percentage(value):
+                    # e.g. "5%": fail if duplication exceeds this percentage
+                    pass
                 else:
                     valid_values = VALID_FAIL_ON_VALUES.get(domain, set())
                     if value.lower() not in valid_values:
@@ -622,9 +637,12 @@ def validate_config(
                             warnings.append(warning)
                             _log_warning(warning)
 
-                    # Check tools is specified when enabled
+                    # Check tools is specified when enabled. A custom
+                    # 'command' replaces the plugin-based runner, so tools
+                    # are not needed then.
                     tools = domain_config.get("tools")
-                    if is_enabled and tools is None:
+                    has_command = bool(domain_config.get("command"))
+                    if is_enabled and tools is None and not has_command:
                         warnings.append(
                             ConfigValidationWarning(
                                 message=f"'pipeline.{domain}.tools' is required when {domain} is enabled",

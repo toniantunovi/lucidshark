@@ -374,6 +374,27 @@ class TestValidateConfigFailOnDict:
         assert len(warnings) == 1
         assert "must be a string" in warnings[0].message
 
+    def test_accepts_duplication_percentage(self) -> None:
+        """A percentage like "5%" is a valid duplication fail_on value."""
+        for value in ("5%", "2.5%", "0%"):
+            data = {"version": 1, "fail_on": {"duplication": value}}
+            warnings = validate_config(data, source="test.yml")
+            assert warnings == [], value
+
+    def test_rejects_malformed_duplication_percentage(self) -> None:
+        """A malformed percentage is still reported as invalid."""
+        data = {"version": 1, "fail_on": {"duplication": "five%"}}
+        warnings = validate_config(data, source="test.yml")
+        assert len(warnings) == 1
+        assert "Invalid value" in warnings[0].message
+
+    def test_rejects_percentage_outside_duplication(self) -> None:
+        """Percentages are only meaningful for duplication."""
+        data = {"version": 1, "fail_on": {"coverage": "5%"}}
+        warnings = validate_config(data, source="test.yml")
+        assert len(warnings) == 1
+        assert "Invalid value" in warnings[0].message
+
 
 class TestValidateConfigPipeline:
     """Tests for pipeline section validation."""
@@ -384,6 +405,26 @@ class TestValidateConfigPipeline:
         warnings = validate_config(data, source="test.yml")
         assert len(warnings) == 1
         assert "must be a mapping" in warnings[0].message
+
+    def test_warns_when_enabled_domain_has_no_tools(self) -> None:
+        """An enabled domain needs tools unless it has a custom command."""
+        data = {"version": 1, "pipeline": {"linting": {"enabled": True}}}
+        warnings = validate_config(data, source="test.yml")
+        assert len(warnings) == 1
+        assert "'pipeline.linting.tools' is required" in warnings[0].message
+
+    def test_custom_command_does_not_require_tools(self) -> None:
+        """A custom command replaces the plugin runner, so tools are optional."""
+        data = {
+            "version": 1,
+            "pipeline": {
+                "linting": {"enabled": True, "command": "npm run lint"},
+                "type_checking": {"command": "npm run typecheck"},
+                "testing": {"enabled": True, "command": "make test"},
+            },
+        }
+        warnings = validate_config(data, source="test.yml")
+        assert warnings == []
 
     def test_warns_on_unknown_pipeline_key(self) -> None:
         """Test warning for unknown pipeline key."""

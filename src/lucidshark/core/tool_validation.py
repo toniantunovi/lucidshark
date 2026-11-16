@@ -170,7 +170,7 @@ def validate_configured_tools(
     """Validate all configured tools are available.
 
     Only validates tools explicitly configured in lucidshark.yml.
-    Skips auto-downloadable tools (trivy, opengrep, checkov, duplo).
+    Skips auto-downloadable tools (see AUTO_DOWNLOADABLE_TOOLS).
 
     Args:
         config: LucidShark configuration.
@@ -243,10 +243,11 @@ def format_validation_errors(errors: List[ToolValidationError]) -> str:
     lines.append("Please install the missing tools and try again.")
     lines.append("")
     lines.append(
-        "Note: Security tools (trivy, opengrep, checkov), duplo, pmd, checkstyle,"
+        "Note: Security tools (trivy, opengrep, gosec, checkov), duplo, pmd, checkstyle,"
     )
     lines.append(
-        "and spotbugs are downloaded automatically - no manual installation required."
+        "spotbugs, ktlint and detekt are downloaded automatically - no manual "
+        "installation required."
     )
 
     return "\n".join(lines)

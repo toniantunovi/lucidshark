@@ -139,6 +139,10 @@ SimpleCov is a code coverage analysis tool for Ruby. It integrates with test run
 
 ```yaml
 pipeline:
+  testing:
+    enabled: true
+    tools:
+      - name: rspec
   coverage:
     enabled: true
     tools:

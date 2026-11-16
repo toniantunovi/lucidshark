@@ -42,6 +42,8 @@ Clippy supports auto-fix via `cargo clippy --fix`.
 pipeline:
   linting:
     enabled: true
+    tools:
+      - name: clippy
 ```
 
 ## Formatting
@@ -59,6 +61,8 @@ The official Rust code formatter.
 pipeline:
   formatting:
     enabled: true
+    tools:
+      - name: rustfmt
 ```
 
 ## Type Checking
@@ -76,6 +80,8 @@ Clippy lints are filtered out of type checking results to avoid domain overlap.
 pipeline:
   type_checking:
     enabled: true
+    tools:
+      - name: cargo_check
 ```
 
 ## Testing
@@ -86,6 +92,8 @@ pipeline:
 pipeline:
   testing:
     enabled: true
+    tools:
+      - name: cargo
 ```
 
 ## Coverage
@@ -95,8 +103,14 @@ pipeline:
 - Parses existing `target/tarpaulin/tarpaulin-report.json` produced by the test runner
 - Returns error if no tarpaulin report found (requires testing domain to be active)
 
+> **Note:** When both the `testing` and `coverage` domains are active and `cargo-tarpaulin` is installed, the cargo test runner runs `cargo tarpaulin --out Json --output-dir target/tarpaulin` instead of `cargo test`, producing test results and the coverage report in the same pass. No separate coverage step is needed. Without tarpaulin it falls back to plain `cargo test` and no coverage report is produced.
+
 ```yaml
 pipeline:
+  testing:
+    enabled: true
+    tools:
+      - name: cargo
   coverage:
     enabled: true
     tools: [{ name: tarpaulin }]
@@ -131,12 +145,16 @@ project:
 pipeline:
   linting:
     enabled: true
+    tools: [{ name: clippy }]
   formatting:
     enabled: true
+    tools: [{ name: rustfmt }]
   type_checking:
     enabled: true
+    tools: [{ name: cargo_check }]
   testing:
     enabled: true
+    tools: [{ name: cargo }]
   coverage:
     enabled: true
     tools: [{ name: tarpaulin }]

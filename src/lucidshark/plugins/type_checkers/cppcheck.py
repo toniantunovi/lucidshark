@@ -24,7 +24,7 @@ from lucidshark.core.models import (
 )
 from lucidshark.core.subprocess_runner import run_with_streaming, temporary_env
 from lucidshark.plugins.cpp_utils import (
-    CPP_EXTENSIONS,
+    C_CPP_EXTENSIONS,
     ensure_cpp_tools_in_path,
     find_build_dir,
     find_cppcheck,
@@ -176,7 +176,7 @@ class CppcheckChecker(TypeCheckerPlugin):
             for path in context.paths:
                 if path.is_dir():
                     targets.append(str(path))
-                elif path.suffix.lower() in CPP_EXTENSIONS:
+                elif path.suffix.lower() in C_CPP_EXTENSIONS:
                     targets.append(str(path))
             return targets
 

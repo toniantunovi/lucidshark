@@ -78,7 +78,7 @@ class ScalafmtFormatter(FormatterPlugin):
         raise FileNotFoundError(
             "scalafmt is not installed. Install it with:\n"
             "  cs install scalafmt\n"
-            "or add sbt-scalafmt plugin to your build."
+            "LucidShark needs the scalafmt CLI on PATH (the sbt plugin alone is not used)."
         )
 
     def check(self, context: ScanContext) -> List[UnifiedIssue]:

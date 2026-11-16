@@ -90,7 +90,7 @@ class ScalafixLinter(LinterPlugin):
         raise FileNotFoundError(
             "scalafix is not installed. Install it with:\n"
             "  cs install scalafix\n"
-            "or add sbt-scalafix plugin to your build."
+            "LucidShark needs the scalafix CLI on PATH (the sbt plugin alone is not used)."
         )
 
     def lint(self, context: ScanContext) -> List[UnifiedIssue]:

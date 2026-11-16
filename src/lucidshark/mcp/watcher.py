@@ -72,6 +72,9 @@ class LucidSharkFileWatcher:
         self._callbacks: List[Callable[[Dict[str, Any]], None]] = []
         self._observer: Optional[Observer] = None  # type: ignore[valid-type]
         self._running = False
+        # Event loop running start(). Watchdog delivers events on its own
+        # thread, so they are handed over to this loop.
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
 
     def on_result(self, callback: Callable[[Dict[str, Any]], None]):
         """Register callback for scan results.
@@ -88,6 +91,7 @@ class LucidSharkFileWatcher:
             return
 
         self._running = True
+        self._loop = asyncio.get_running_loop()
         handler = _FileChangeHandler(self._on_file_change)
         observer = Observer()
         self._observer = observer
@@ -127,6 +131,29 @@ class LucidSharkFileWatcher:
 
         LOGGER.debug(f"File changed: {path}")
 
+        try:
+            running_loop: Optional[asyncio.AbstractEventLoop] = (
+                asyncio.get_running_loop()
+            )
+        except RuntimeError:
+            running_loop = None
+
+        if running_loop is None and self._loop is not None:
+            # Called from watchdog's thread: asyncio objects are not
+            # thread-safe and this thread has no event loop, so hand the
+            # change over to the loop that runs the watcher.
+            self._loop.call_soon_threadsafe(self._schedule_scan, path)
+        else:
+            self._schedule_scan(path)
+
+    def _schedule_scan(self, path: Path):
+        """Queue a changed file and (re)start the debounce timer.
+
+        Must run on the watcher's event loop thread.
+
+        Args:
+            path: Path to the changed file.
+        """
         # Add to pending files
         self._pending_files.add(path)
 
@@ -135,7 +162,10 @@ class LucidSharkFileWatcher:
             self._debounce_task.cancel()
 
         # Schedule new debounce task
-        loop = asyncio.get_event_loop()
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = self._loop or asyncio.get_event_loop()
         self._debounce_task = loop.create_task(self._process_pending())
 
     async def _process_pending(self):

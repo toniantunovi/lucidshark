@@ -64,9 +64,10 @@ class LucidSharkMCPServer:
                         "Use fix=true to auto-fix linting and formatting issues. "
                         "DOMAIN SELECTION: Pick domains based on files changed — "
                         '.py/.js/.ts/.rs/.go/.java → ["linting", "type_checking"]; '
-                        'Dockerfile → ["container"]; Terraform/K8s → ["iac"]; '
+                        'Dockerfile/Terraform/K8s → ["iac"]; '
+                        'container images listed in lucidshark.yml → ["container"]; '
                         'dependency files → ["sca"]; security-sensitive code → ["sast"]; '
-                        'to run tests → ["testing"]; to check coverage → ["coverage"]; '
+                        'to run tests → ["testing"]; to check coverage → ["testing", "coverage"]; '
                         'before commits or mixed changes → ["all"]. '
                         "OUTPUT FORMAT: (1) Announce what you're checking. "
                         "(2) List ALL issues grouped by domain. "
@@ -81,7 +82,8 @@ class LucidSharkMCPServer:
                                 "items": {"type": "string"},
                                 "description": (
                                     "Domains to check. Options: linting, type_checking, "
-                                    "sast, sca, iac, container, testing, coverage, duplication, all"
+                                    "formatting, sast, sca, iac, container, testing, coverage, "
+                                    "duplication, all"
                                 ),
                                 "default": ["all"],
                             },
@@ -111,9 +113,9 @@ class LucidSharkMCPServer:
                             "base_branch": {
                                 "type": "string",
                                 "description": (
-                                    "Filter coverage results to files changed since this branch "
-                                    "(e.g., 'origin/main'). Full tests still run; only reporting "
-                                    "is filtered. Use in CI pipelines for PR-based coverage."
+                                    "Filter results (issues, coverage and duplication) to files "
+                                    "changed since this branch (e.g., 'origin/main'). Full analysis "
+                                    "still runs; only reporting is filtered. Use for PR-based checks."
                                 ),
                             },
                             "coverage_threshold_scope": {
@@ -130,16 +132,16 @@ class LucidSharkMCPServer:
                                 "type": "string",
                                 "enum": ["changed", "project", "both"],
                                 "description": (
-                                    "When using base_branch, apply linting threshold to: "
-                                    "'changed' (default), 'project', or 'both'."
+                                    "Accepted for parity with the CLI; currently has no effect "
+                                    "in MCP scans."
                                 ),
                             },
                             "type_checking_threshold_scope": {
                                 "type": "string",
                                 "enum": ["changed", "project", "both"],
                                 "description": (
-                                    "When using base_branch, apply type checking threshold to: "
-                                    "'changed' (default), 'project', or 'both'."
+                                    "Accepted for parity with the CLI; currently has no effect "
+                                    "in MCP scans."
                                 ),
                             },
                             "duplication_threshold_scope": {
@@ -190,8 +192,9 @@ class LucidSharkMCPServer:
                 Tool(
                     name="apply_fix",
                     description=(
-                        "Apply auto-fix for a fixable issue. "
-                        "Currently only supports linting issues."
+                        "Apply a Ruff auto-fix for a Python linting issue from the last scan. "
+                        "Fixes every occurrence of that rule in the file. "
+                        "For other linters and for formatting, use scan(fix=true)."
                     ),
                     inputSchema={
                         "type": "object",
@@ -207,10 +210,9 @@ class LucidSharkMCPServer:
                 Tool(
                     name="get_status",
                     description=(
-                        "Get current LucidShark status, configuration, and capabilities. "
-                        "Shows which scan domains are enabled (linting, type_checking, sast, sca, "
-                        "iac, container, testing, coverage, duplication), available tools per domain, "
-                        "thresholds, and any cached issues from previous scans."
+                        "Get current LucidShark status: project root, available tools per "
+                        "domain, the security domains enabled in lucidshark.yml (sca, sast, "
+                        "iac, container), and the number of issues cached from previous scans."
                     ),
                     inputSchema={
                         "type": "object",

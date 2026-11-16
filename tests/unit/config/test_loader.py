@@ -133,6 +133,25 @@ class TestDictToConfig:
         config = dict_to_config({"fail_on": "high"})
         assert config.fail_on == "high"
 
+    def test_parses_tool_mandatory_flag(self) -> None:
+        config = dict_to_config(
+            {
+                "pipeline": {
+                    "linting": {
+                        "tools": [
+                            {"name": "ruff", "mandatory": True},
+                            {"name": "eslint"},
+                        ]
+                    }
+                }
+            }
+        )
+        assert config.pipeline.linting is not None
+        ruff, eslint = config.pipeline.linting.tools
+        assert ruff.mandatory is True
+        assert "mandatory" not in ruff.options
+        assert eslint.mandatory is False
+
     def test_parses_exclude_patterns(self) -> None:
         config = dict_to_config({"exclude": ["tests/**", "*.md"]})
         assert config.exclude == ["tests/**", "*.md"]

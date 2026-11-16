@@ -64,8 +64,13 @@ class PyrightChecker(TypeCheckerPlugin):
 
     @property
     def supports_strict_mode(self) -> bool:
-        """pyright supports strict mode."""
-        return True
+        """pyright's strict mode cannot be switched on from the command line.
+
+        It is set with ``typeCheckingMode = "strict"`` in pyrightconfig.json
+        or the [tool.pyright] section of pyproject.toml, which pyright reads
+        on its own.
+        """
+        return False
 
     def ensure_binary(self) -> Path:
         """Ensure pyright is available.
@@ -133,13 +138,15 @@ class PyrightChecker(TypeCheckerPlugin):
             "--outputjson",
         ]
 
-        # Check for strict mode in config
-        if context.config and context.config.pipeline.type_checking:
-            type_config = context.config.pipeline.type_checking
-            for tool in type_config.tools:
-                if tool.strict:
-                    cmd.extend(["--level", "strict"])
-                    break
+        # pyright has no command-line switch for strict mode. `--level` sets the
+        # minimum severity reported and rejects "strict", so passing it made
+        # pyright exit before checking anything.
+        if self._strict_requested(context):
+            LOGGER.warning(
+                "pyright: 'strict: true' in lucidshark.yml has no effect. Set "
+                'typeCheckingMode = "strict" in pyrightconfig.json or in the '
+                "[tool.pyright] section of pyproject.toml instead."
+            )
 
         # Add paths to check (filter to Python files or directories)
         python_extensions = {".py", ".pyi", ".pyw"}
@@ -205,6 +212,16 @@ class PyrightChecker(TypeCheckerPlugin):
 
         LOGGER.info(f"pyright found {len(issues)} issues")
         return issues
+
+    @staticmethod
+    def _strict_requested(context: ScanContext) -> bool:
+        """Return True if lucidshark.yml sets ``strict: true`` on pyright itself."""
+        if not context.config or not context.config.pipeline.type_checking:
+            return False
+        return any(
+            tool.name == "pyright" and tool.strict
+            for tool in context.config.pipeline.type_checking.tools
+        )
 
     def _parse_output(self, output: str, project_root: Path) -> List[UnifiedIssue]:
         """Parse pyright JSON output.

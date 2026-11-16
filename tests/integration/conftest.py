@@ -216,8 +216,21 @@ def _is_node_available() -> bool:
 
 
 def _is_java_available() -> bool:
-    """Check if Java is available."""
-    return shutil.which("java") is not None
+    """Check if a working Java runtime is available.
+
+    Finding ``java`` on PATH is not enough: macOS ships a /usr/bin/java stub
+    that exists without a JRE and exits non-zero, so run it to be sure.
+    """
+    java = shutil.which("java")
+    if java is None:
+        return False
+    try:
+        result = subprocess.run(
+            [java, "-version"], capture_output=True, timeout=30, check=False
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return result.returncode == 0
 
 
 def _is_maven_available() -> bool:

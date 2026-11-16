@@ -37,7 +37,7 @@ Java style checker distributed as a JAR file. Requires Java runtime.
 
 - **Managed tool**  -  auto-downloaded on first use, cached at `.lucidshark/bin/checkstyle/{version}/`
 - Default configuration: bundled Google Java Style (`checkstyle-google.xml`) with relaxed Javadoc rules
-- Custom config detection: `checkstyle.xml`, `.checkstyle.xml`, `config/checkstyle/checkstyle.xml`
+- Custom config detection: `checkstyle.xml`, `.checkstyle.xml`, `config/checkstyle/checkstyle.xml`, `config/checkstyle.xml`
 - Does not support auto-fix
 - Only requires Java (which any Java project already has)
 
@@ -48,7 +48,7 @@ Java style checker distributed as a JAR file. Requires Java runtime.
 Source code analyzer that finds common programming flaws  -  unused variables, empty catch blocks, unnecessary object creation, God classes, and more.
 
 - **Managed tool**  -  auto-downloaded on first use, cached at `.lucidshark/bin/pmd/{version}/`
-- Default ruleset: `rulesets/java/quickstart.xml` (118 rules)
+- Default ruleset: bundled `pmd-ruleset.xml` (all standard Java rule categories, with noisy rules excluded); PMD's `rulesets/java/quickstart.xml` is used only as a fallback if the bundled file cannot be loaded
 - Custom config detection: `pmd-ruleset.xml`, `pmd.xml`, `ruleset.xml`, `.pmd/rulesets.xml`, `config/pmd/pmd.xml`, `config/pmd/ruleset.xml`
 - Does not support auto-fix
 - Only requires Java (which any Java project already has)
@@ -72,6 +72,7 @@ Static analysis tool that finds bugs in Java code by analyzing bytecode.
 - **Managed tool**  -  auto-downloaded on first use, cached at `.lucidshark/bin/spotbugs/{version}/`
 - Requires compiled `.class` files (runs after build)
 - Looks for classes in `target/classes` (Maven) or `build/classes` (Gradle)
+- Exclude filter: uses the first of `spotbugs-exclude.xml`, `spotbugs-filter.xml`, `.spotbugs/exclude.xml`, `config/spotbugs/exclude.xml`, `config/spotbugs/spotbugs-exclude.xml`; if none exists, applies the bundled `spotbugs-exclude.xml`, which excludes noisy bug patterns
 - Bug categories: BAD_PRACTICE, CORRECTNESS, MT_CORRECTNESS, PERFORMANCE, SECURITY, STYLE, MALICIOUS_CODE
 - Rank-based severity adjustment
 - Only requires Java runtime (which any Java project already has)
@@ -116,6 +117,9 @@ Java Code Coverage library integrated with Maven and Gradle.
 
 ```yaml
 pipeline:
+  testing:
+    enabled: true
+    tools: [{ name: maven }]
   coverage:
     enabled: true
     tools: [{ name: jacoco }]

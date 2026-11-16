@@ -27,11 +27,15 @@ Scala projects have dedicated tools across linting, formatting, type checking, t
 
 ## Build System Support
 
-Scala plugins auto-detect the project's build system:
+The Scala compile, test, and coverage plugins pick the build tool in this order:
 
-1. **sbt** -- detected via `build.sbt` marker file (preferred)
-2. **Maven** -- detected via `mvnw` wrapper or `pom.xml` with scala-maven-plugin
-3. **Gradle** -- detected via `gradlew` wrapper or `build.gradle` with Scala plugin
+1. **sbt** -- if `build.sbt` exists and `sbt` is on PATH
+2. **Gradle wrapper** -- `gradlew` in the project root
+3. **Maven wrapper** -- `mvnw` in the project root
+4. **Gradle** -- system `gradle` on PATH, if `build.gradle` or `build.gradle.kts` exists
+5. **Maven** -- system `mvn` on PATH, if `pom.xml` exists
+
+LucidShark does not check for scala-maven-plugin or the Gradle Scala plugin; your Maven or Gradle build must already be set up to compile Scala.
 
 ## Linting
 
@@ -39,13 +43,10 @@ Scala plugins auto-detect the project's build system:
 
 Scalafix is a refactoring and linting tool for Scala. It supports built-in rules (e.g., `RemoveUnused`, `DisableSyntax`, `OrganizeImports`) and custom rules.
 
-**Installation:**
+**Installation:** The `scalafix` CLI must be on PATH; LucidShark does not use the sbt-scalafix plugin.
 ```bash
 # Via Coursier
 cs install scalafix
-
-# Or add sbt-scalafix plugin to project/plugins.sbt:
-addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.11.1")
 ```
 
 **Configuration:** `.scalafix.conf` in project root.
@@ -69,13 +70,10 @@ DisableSyntax.noNulls = true
 
 Scalafmt is the standard code formatter for Scala, supporting Scala 2 and Scala 3.
 
-**Installation:**
+**Installation:** The `scalafmt` CLI must be on PATH; LucidShark does not use the sbt-scalafmt plugin.
 ```bash
 # Via Coursier
 cs install scalafmt
-
-# Or add sbt-scalafmt plugin to project/plugins.sbt:
-addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.5.2")
 ```
 
 **Configuration:** `.scalafmt.conf` in project root.

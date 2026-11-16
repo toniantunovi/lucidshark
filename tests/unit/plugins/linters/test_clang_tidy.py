@@ -228,6 +228,24 @@ class TestLint:
             assert len(files) == 1
             assert files[0] == str(cpp_file)
 
+    def test_collect_files_includes_c_sources(self) -> None:
+        """C projects use this plugin too, so .c files must be linted."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            c_file = tmpdir_path / "main.c"
+            c_file.write_text("int main(void) { return 0; }")
+            (tmpdir_path / "util.h").write_text("int f(void);")
+
+            linter = ClangTidyLinter()
+            for paths in ([tmpdir_path], [c_file], []):
+                context = ScanContext(
+                    project_root=tmpdir_path,
+                    paths=paths,
+                    enabled_domains=[],
+                )
+                files = linter._collect_files(context)
+                assert str(c_file) in files, paths
+
 
 class TestCategorySeverityMapping:
     """Tests for category severity constants."""

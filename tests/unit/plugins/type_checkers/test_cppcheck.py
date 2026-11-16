@@ -282,6 +282,20 @@ class TestCheck:
             targets = checker._get_targets(context)
             assert str(cpp_file) in targets
 
+    def test_get_targets_with_c_file(self) -> None:
+        """A changed .c file must be passed to cppcheck, not dropped."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmpdir_path = Path(tmpdir)
+            c_file = tmpdir_path / "main.c"
+            c_file.write_text("int main(void) { return 0; }")
+            checker = CppcheckChecker()
+            context = ScanContext(
+                project_root=tmpdir_path,
+                paths=[c_file],
+                enabled_domains=[],
+            )
+            assert checker._get_targets(context) == [str(c_file)]
+
     def test_get_targets_filters_non_cpp(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = Path(tmpdir)

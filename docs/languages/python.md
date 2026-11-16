@@ -19,7 +19,7 @@ Python has the deepest tool coverage in LucidShark, with dedicated tools across 
 | **Linting** | Ruff | Yes | Fast Rust-based linter with 100+ rule categories |
 | **Formatting** | Ruff Format | Yes | Fast Rust-based formatter, shares config with Ruff linter |
 | **Type Checking** | mypy | -- | Strict mode available |
-| **Type Checking** | Pyright | -- | Strict mode available |
+| **Type Checking** | Pyright | -- | Strict mode via `typeCheckingMode` in pyright's config |
 | **Security (SAST)** | OpenGrep | -- | Python-specific vulnerability rules |
 | **Security (SCA)** | Trivy | -- | Scans `requirements.txt`, `Pipfile.lock`, `pyproject.toml` |
 | **Testing** | pytest | -- | JSON report via pytest-json-report, JUnit XML fallback |
@@ -30,7 +30,7 @@ Python has the deepest tool coverage in LucidShark, with dedicated tools across 
 
 **Tool: [Ruff](https://docs.astral.sh/ruff/)**
 
-Ruff is an extremely fast Python linter and formatter written in Rust. LucidShark downloads the binary automatically.
+Ruff is an extremely fast Python linter and formatter written in Rust. Ruff must be installed in the project venv or on PATH (`pip install ruff` / `uv add --dev ruff`); LucidShark does not download it.
 
 - Supports auto-fix via `--fix`
 - 100+ rule categories including: pyflakes (F), pycodestyle (E/W), isort (I), pep8-naming (N), flake8-bugbear (B), flake8-security (S), and many more
@@ -85,7 +85,7 @@ pipeline:
 
 Microsoft's Python type checker. Can be used as an alternative or complement to mypy.
 
-- Strict mode available
+- Strict mode is set in pyright's own config, not in `lucidshark.yml`: add `typeCheckingMode = "strict"` to `[tool.pyright]` in `pyproject.toml` or to `pyrightconfig.json`. Pyright has no command-line switch for it, so `strict: true` on pyright has no effect and logs a warning
 - Supports `.venv`, `node_modules`, and system PATH installations
 - 0-based indexing auto-adjusted to 1-based
 
@@ -95,7 +95,12 @@ pipeline:
     enabled: true
     tools:
       - name: pyright
-        strict: true
+```
+
+```toml
+# pyproject.toml
+[tool.pyright]
+typeCheckingMode = "strict"
 ```
 
 ## Testing
@@ -129,6 +134,9 @@ Parses existing `.coverage` data files produced by the pytest test runner.
 
 ```yaml
 pipeline:
+  testing:
+    enabled: true
+    tools: [{ name: pytest }]
   coverage:
     enabled: true
     tools: [{ name: coverage_py }]
@@ -182,6 +190,7 @@ pipeline:
     tools: [{ name: pytest }]
   coverage:
     enabled: true
+    tools: [{ name: coverage_py }]
     threshold: 80
   duplication:
     enabled: true
@@ -233,8 +242,10 @@ project:
 pipeline:
   type_checking:
     enabled: true
-    tools: [{ name: pyright, strict: true }]
+    tools: [{ name: pyright }]
 ```
+
+For strict checking, set `typeCheckingMode = "strict"` under `[tool.pyright]` in `pyproject.toml`.
 
 ## See Also
 
