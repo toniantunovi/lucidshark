@@ -448,7 +448,9 @@ class MCPToolExecutor:
         # Add coverage summary with scope-based threshold checking
         if context.coverage_result is not None:
             if base_branch and changed_files:
-                scope = coverage_threshold_scope or "changed"
+                scope = self._threshold_scope(
+                    "coverage", coverage_threshold_scope, "changed"
+                )
 
                 # Compute effective passed based on scope
                 if scope == "changed":
@@ -479,7 +481,9 @@ class MCPToolExecutor:
         # Add duplication summary with scope-based threshold checking
         if context.duplication_result is not None:
             if base_branch and changed_files:
-                scope = duplication_threshold_scope or "both"
+                scope = self._threshold_scope(
+                    "duplication", duplication_threshold_scope, "both"
+                )
 
                 # Compute effective passed based on scope
                 if scope == "changed":
@@ -1823,6 +1827,18 @@ exclude:
             ],
         }
 
+    def _threshold_scope(
+        self, domain: str, requested: Optional[str], default: str
+    ) -> str:
+        """Resolve a threshold scope: tool argument, then lucidshark.yml, then default."""
+        if requested:
+            return requested
+        domain_config = getattr(self.config.pipeline, domain, None)
+        configured = getattr(domain_config, "threshold_scope", None)
+        if isinstance(configured, str) and configured:
+            return configured
+        return default
+
     def _parse_domains(self, domains: List[str]) -> List[DomainType]:
         """Parse domain strings to domain enums.
 
@@ -2143,8 +2159,9 @@ exclude:
         """
         loop = asyncio.get_event_loop()
         # Get threshold and options from config
-        threshold = 5.0
-        min_lines = 7
+        # Same fallbacks as the CLI and DuplicationPipelineConfig
+        threshold = 10.0
+        min_lines = 4
         min_chars = 3
         exclude_patterns = None
         use_baseline = False

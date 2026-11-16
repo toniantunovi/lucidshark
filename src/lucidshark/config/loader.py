@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 import yaml
 
 from lucidshark.config.models import (
+    DEFAULT_OVERVIEW_DOMAINS,
     CoveragePipelineConfig,
     DomainPipelineConfig,
     DuplicationPipelineConfig,
@@ -437,18 +438,11 @@ def _parse_overview_config(
             "history_file", ".lucidshark/quality-history.json"
         ),
         history_limit=overview_data.get("history_limit", 90),
-        domains=overview_data.get(
-            "domains",
-            [
-                "linting",
-                "type_checking",
-                "sast",
-                "sca",
-                "iac",
-                "container",
-                "coverage",
-                "duplication",
-            ],
+        # A missing or null domains key means every domain
+        domains=list(
+            DEFAULT_OVERVIEW_DOMAINS
+            if overview_data.get("domains") is None
+            else overview_data["domains"]
         ),
         health_score=overview_data.get("health_score", True),
         domain_table=overview_data.get("domain_table", True),

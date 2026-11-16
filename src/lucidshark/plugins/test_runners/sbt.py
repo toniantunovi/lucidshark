@@ -112,8 +112,16 @@ class SbtTestRunner(TestRunnerPlugin):
         return build_system
 
     def _run_sbt_tests(self, binary: Path, context: ScanContext) -> TestResult:
-        """Run tests using sbt."""
-        cmd = [str(binary), "--no-colors", "test"]
+        """Run tests using sbt.
+
+        With the sbt-scoverage plugin installed the run also writes a fresh
+        Scoverage report, so the coverage domain never reads a report left
+        over from an earlier run.
+        """
+        if self._has_sbt_scoverage(context.project_root):
+            cmd = [str(binary), "--no-colors", "coverage", "test", "coverageReport"]
+        else:
+            cmd = [str(binary), "--no-colors", "test"]
 
         LOGGER.debug(f"Running: {' '.join(cmd)}")
 
@@ -140,6 +148,22 @@ class SbtTestRunner(TestRunnerPlugin):
 
         # Parse JUnit XML reports from sbt's test-reports directory
         return self._parse_sbt_reports(context.project_root, tool_name="sbt")
+
+    @staticmethod
+    def _has_sbt_scoverage(project_root: Path) -> bool:
+        """Return True if the sbt build declares the sbt-scoverage plugin."""
+        project_dir = project_root / "project"
+        if not project_dir.is_dir():
+            return False
+        for sbt_file in project_dir.glob("*.sbt"):
+            try:
+                if "sbt-scoverage" in sbt_file.read_text(
+                    encoding="utf-8", errors="replace"
+                ):
+                    return True
+            except OSError:
+                continue
+        return False
 
     def _run_maven_tests(self, binary: Path, context: ScanContext) -> TestResult:
         """Run tests using Maven with JaCoCo/Scoverage coverage."""

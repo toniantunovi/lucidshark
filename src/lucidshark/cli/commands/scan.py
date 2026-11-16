@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from argparse import Namespace
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 from lucidshark.cli.commands import Command
 from lucidshark.cli.config_bridge import ConfigBridge
@@ -134,6 +134,14 @@ class ScanCommand(Command):
                 # CLI flag applies to all issues regardless of domain
                 active_issues = [i for i in result.issues if not i.ignored]
                 if check_severity_threshold(active_issues, args.fail_on):
+                    return EXIT_ISSUES_FOUND
+                # A severity level can't express the coverage and duplication
+                # percentage rules, so those still come from the config.
+                fail_reason = self._check_domain_thresholds(
+                    result, config, args, domains=("coverage", "duplication")
+                )
+                if fail_reason:
+                    print(f"\nFailed fail_on policy: {fail_reason}", file=sys.stderr)
                     return EXIT_ISSUES_FOUND
             else:
                 # Check per-domain thresholds from config
@@ -925,7 +933,11 @@ class ScanCommand(Command):
         return reason
 
     def _check_domain_thresholds(
-        self, result: ScanResult, config: LucidSharkConfig, args: Namespace
+        self,
+        result: ScanResult,
+        config: LucidSharkConfig,
+        args: Namespace,
+        domains: Optional[Sequence[str]] = None,
     ) -> Optional[str]:
         """Check if any issues exceed their domain's fail_on threshold.
 
@@ -936,6 +948,10 @@ class ScanCommand(Command):
             result: Scan result containing issues and summaries.
             config: Configuration with per-domain thresholds.
             args: CLI arguments for scope and base_branch.
+            domains: Limit the check to these fail_on domains, and to their
+                percentage rules (``below_threshold``, ``above_threshold``,
+                ``N%``). Used with ``--fail-on``, which replaces the severity
+                rules. None checks every domain and every rule.
 
         Returns:
             Why the first failing domain exceeded its threshold, or None if
@@ -1004,6 +1020,15 @@ class ScanCommand(Command):
 
         for domain_name in VALID_FAIL_ON_DOMAINS:
             threshold = config.get_fail_on_threshold(domain_name)
+            if domains is not None and not (
+                domain_name in domains
+                and threshold
+                and (
+                    threshold in ("below_threshold", "above_threshold")
+                    or threshold.endswith("%")
+                )
+            ):
+                continue
             if threshold:
                 domain_issues = issues_by_domain.get(domain_name, [])
                 # Get scope for this domain

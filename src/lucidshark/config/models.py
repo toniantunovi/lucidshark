@@ -273,6 +273,21 @@ class SettingsConfig:
     auto_update: bool = True  # Background auto-update (opt out via false)
 
 
+# Domain rows shown in the quality overview unless overview.domains says otherwise
+DEFAULT_OVERVIEW_DOMAINS = (
+    "linting",
+    "type_checking",
+    "formatting",
+    "testing",
+    "sast",
+    "sca",
+    "iac",
+    "container",
+    "coverage",
+    "duplication",
+)
+
+
 @dataclass
 class OverviewConfig:
     """Configuration for quality overview generation.
@@ -287,20 +302,7 @@ class OverviewConfig:
     history_limit: int = 90  # Number of snapshots to retain
 
     # Domains to include in overview
-    domains: List[str] = field(
-        default_factory=lambda: [
-            "linting",
-            "type_checking",
-            "formatting",
-            "testing",
-            "sast",
-            "sca",
-            "iac",
-            "container",
-            "coverage",
-            "duplication",
-        ]
-    )
+    domains: List[str] = field(default_factory=lambda: list(DEFAULT_OVERVIEW_DOMAINS))
 
     # Section toggles
     health_score: bool = True

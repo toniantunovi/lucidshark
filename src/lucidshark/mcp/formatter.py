@@ -332,6 +332,12 @@ class InstructionFormatter:
         if domain == ToolDomain.COVERAGE:
             return f"{prefix}GAP"
 
+        if domain == ToolDomain.FORMATTING:
+            return "FIX_FORMATTING"
+
+        if domain == ToolDomain.DUPLICATION:
+            return "REDUCE_DUPLICATION"
+
         return "FIX_ISSUE"
 
     def _generate_summary_line(self, issue: UnifiedIssue) -> str:

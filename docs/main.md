@@ -635,12 +635,11 @@ settings:
 
 # Quality Overview (QUALITY.md generation)
 overview:
-  enabled: boolean           # Default: true  -  parsed but not currently checked
+  enabled: boolean           # Default: true  -  false makes `overview --update` write nothing
   file: string               # Default: "QUALITY.md"  -  output file name
   history_file: string       # Default: ".lucidshark/quality-history.json"
   history_limit: number      # Default: 90  -  max snapshots to keep
-  domains: [string]          # Domain rows to show. No overview section, or domains: null = all 10 domains;
-                             # an overview section without a domains key = all except formatting and testing;
+  domains: [string]          # Domain rows to show. Default (key missing or null): all 10 domains;
                              # [] = no domain rows
   top_files: number          # Default: 5  -  number of top files by issues (0 to disable)
   health_score: boolean      # Default: true  -  show health score section
@@ -1224,7 +1223,7 @@ class MCPToolExecutor:
 
 The MCP server sends progress notifications during scans, reporting domain start/completion events to the AI client.
 
-MCP `scan` caveats: the `*_threshold_scope` params only matter together with `base_branch`; `linting_threshold_scope` and `type_checking_threshold_scope` are accepted but currently have no effect; the coverage/duplication scope defaults are hardcoded and do not read `threshold_scope` from `lucidshark.yml`. MCP `scan` does not apply `fail_on`; its response reports `blocking` (true when any critical/high issue is present) instead.
+MCP `scan` caveats: the `*_threshold_scope` params only matter together with `base_branch`; `linting_threshold_scope` and `type_checking_threshold_scope` are accepted but currently have no effect; without a scope param, coverage and duplication use `threshold_scope` from `lucidshark.yml` (default `changed` for coverage, `both` for duplication). MCP `scan` does not apply `fail_on`; its response reports `blocking` (true when any critical/high issue is present) instead.
 
 **Partial Scanning Support (Default Behavior):**
 
@@ -1554,7 +1553,9 @@ Output:
 
 Configuration:
   --fail-on LEVEL      Fail on any non-ignored issue at or above LEVEL (critical, high,
-                       medium, low) in every domain; overrides fail_on in config
+                       medium, low) in every domain; replaces the severity rules in
+                       fail_on. The coverage and duplication percentage rules
+                       (below_threshold, above_threshold, N%) still apply
   --coverage-threshold N  Coverage percentage threshold (default: 80)
   --duplication-threshold N  Max duplication percentage (default: 10)
   --min-lines N        Min lines for duplicate block (default: 4)
@@ -1599,7 +1600,7 @@ Examples:
   ./lucidshark serve --watch           # File watcher mode
 ```
 
-On binary installs, `serve --mcp` self-updates before serving unless `settings.auto_update: false`. Other commands check for and download a new release in the background; a downloaded update is applied the next time LucidShark starts.
+On binary installs, `serve --mcp` self-updates before serving unless `settings.auto_update: false`. Other commands check for and download a new release in the background; a downloaded update is applied the next time LucidShark starts, unless `settings.auto_update: false` has been set in the meantime.
 
 #### 8.2.5 `status`
 
@@ -1834,7 +1835,7 @@ pipeline:
     threshold: 80
 ```
 
-`coverage.extra_args` is accepted by the config validator but currently ignored; skip integration tests that need Docker or external services in your build configuration instead.
+`coverage.extra_args` is accepted but ignored, and `lucidshark validate` warns about it; skip integration tests that need Docker or external services in your build configuration instead.
 
 ### 9.7 Duplication Detection
 
@@ -2001,8 +2002,7 @@ src/lucidshark/
 │   ├── frameworks.py       # Framework detection
 │   └── tools.py            # Tool config detection
 ├── generation/             # Config generation
-│   ├── config_generator.py # lucidshark.yml generation
-│   └── package_installer.py # Package installation (not called by any command)
+│   └── config_generator.py # lucidshark.yml generation
 ├── pipeline/               # Scan pipeline
 │   ├── executor.py         # PipelineExecutor
 │   └── parallel.py         # ParallelScannerExecutor

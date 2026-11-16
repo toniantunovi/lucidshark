@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -75,6 +76,22 @@ def _location_position(
         location.get("lineEnd", line_start),
         location.get("columnEnd"),
     )
+
+
+def _rule_documentation_url(category: str) -> Optional[str]:
+    """Return the docs page for a lint rule, or None for other diagnostics.
+
+    ``lint/suspicious/noDoubleEquals`` is documented at
+    ``https://biomejs.dev/linter/rules/no-double-equals``. Parse errors,
+    format diagnostics and the like have no rule page.
+    """
+    parts = category.split("/")
+    if len(parts) < 3 or parts[0] != "lint" or not parts[-1]:
+        return None
+    slug = re.sub(
+        r"(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])", "-", parts[-1]
+    ).lower()
+    return f"https://biomejs.dev/linter/rules/{slug}"
 
 
 class BiomeLinter(LinterPlugin):
@@ -304,9 +321,7 @@ class BiomeLinter(LinterPlugin):
                 rule_id=category or "unknown",
                 title=title,
                 description=message,
-                documentation_url=f"https://biomejs.dev/linter/rules/{category.lower().replace('/', '-')}"
-                if category
-                else None,
+                documentation_url=_rule_documentation_url(category),
                 file_path=file_path,
                 line_start=line_start,
                 line_end=line_end,

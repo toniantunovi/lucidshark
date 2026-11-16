@@ -26,7 +26,7 @@ PLUGIN_LANGUAGES: Dict[str, List[str]] = {
     # Linters
     "ruff": ["python"],
     "eslint": ["javascript", "typescript"],
-    "biome": ["javascript", "typescript"],
+    "biome": ["javascript", "typescript", "json"],
     "clippy": ["rust"],
     "golangci_lint": ["go"],
     "checkstyle": ["java"],
@@ -37,6 +37,7 @@ PLUGIN_LANGUAGES: Dict[str, List[str]] = {
     "rubocop": ["ruby"],
     "phpcs": ["php"],
     "swiftlint": ["swift"],
+    "scalafix": ["scala"],
     # Type checkers
     "mypy": ["python"],
     "pyright": ["python"],
@@ -50,6 +51,7 @@ PLUGIN_LANGUAGES: Dict[str, List[str]] = {
     "sorbet": ["ruby"],
     "phpstan": ["php"],
     "swift_compiler": ["swift"],
+    "scala_compile": ["scala"],
     # Test runners
     "pytest": ["python"],
     "jest": ["javascript", "typescript"],
@@ -65,6 +67,7 @@ PLUGIN_LANGUAGES: Dict[str, List[str]] = {
     "rspec": ["ruby"],
     "phpunit": ["php"],
     "swift_test": ["swift"],
+    "sbt": ["scala"],
     # Coverage
     "coverage_py": ["python"],
     "istanbul": ["javascript", "typescript"],
@@ -78,6 +81,7 @@ PLUGIN_LANGUAGES: Dict[str, List[str]] = {
     "simplecov": ["ruby"],
     "phpunit_coverage": ["php"],
     "swift_coverage": ["swift"],
+    "scoverage": ["scala"],
     # Duplication detection
     "duplo": [
         "python",
@@ -91,12 +95,17 @@ PLUGIN_LANGUAGES: Dict[str, List[str]] = {
         "csharp",
         "go",
         "swift",
+        "scala",
         "ruby",
         "php",
+        "erlang",
+        "vb",
+        "html",
+        "css",
     ],
     # Formatters
     "ruff_format": ["python"],
-    "prettier": ["javascript", "typescript"],
+    "prettier": ["javascript", "typescript", "css", "json", "markdown"],
     "rustfmt": ["rust"],
     "scalafmt": ["scala"],
     "google_java_format": ["java"],

@@ -813,13 +813,36 @@ def validate_config(
             coverage_enabled = (
                 coverage_config is not None
                 and isinstance(coverage_config, dict)
-                and coverage_config.get("enabled", True)
+                # Coverage is off unless enabled is set, as in the config loader
+                and coverage_config.get("enabled", False)
             )
             testing_enabled = (
                 testing_config is not None
                 and isinstance(testing_config, dict)
                 and testing_config.get("enabled", True)
             )
+
+            # Keys that are accepted for compatibility but change nothing
+            for section, key, advice in (
+                (
+                    coverage_config,
+                    "pipeline.coverage.extra_args",
+                    "Pass build arguments with 'pipeline.testing.command' instead.",
+                ),
+                (
+                    testing_config,
+                    "pipeline.testing.exclude",
+                    "Exclude tests in the test runner's own config instead.",
+                ),
+            ):
+                if isinstance(section, dict) and section.get(key.rsplit(".", 1)[1]):
+                    warnings.append(
+                        ConfigValidationWarning(
+                            message=f"'{key}' has no effect. {advice}",
+                            source=source,
+                            key=key,
+                        )
+                    )
 
             if coverage_enabled and not testing_enabled:
                 warnings.append(

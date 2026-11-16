@@ -8,10 +8,10 @@ Kotlin has full tool coverage in LucidShark across all quality domains, with ded
 
 | Method | Indicators |
 |--------|-----------|
-| **File extensions** | `.kt`, `.kts` |
+| **File extensions** | `.kt`, `.kts` (Gradle build scripts, `*.gradle.kts`, are not counted) |
 | **Marker files** | None (Kotlin is detected from `.kt`/`.kts` files only) |
 
-> **Note:** `build.gradle.kts` and `settings.gradle.kts` are themselves `.kts` files, so any Gradle Kotlin-DSL project is detected as Kotlin. `build.gradle.kts` is also a Java marker file, so such projects are detected as both Java and Kotlin.
+> **Note:** `pom.xml`, `build.gradle` and `build.gradle.kts` are Java marker files, but in a project with Kotlin sources and no `.java` files they are not taken as a sign of Java, so a pure Kotlin project is detected as Kotlin only. A project with both `.kt` and `.java` files is detected as both.
 
 ## Tools by Domain
 

@@ -465,13 +465,17 @@ def check_and_apply_update(cache_dir: Path, current_version: str) -> Optional[st
 # config check, and re-exec — so callers stay thin.
 
 
-def maybe_apply_pending_and_reexec(current_version: str) -> None:
+def maybe_apply_pending_and_reexec(
+    current_version: str, *, auto_update: bool = True
+) -> None:
     """Phase B entry point: apply a staged update and re-exec.
 
     Called once at CLI startup (before any command runs). Only active
-    for frozen (PyInstaller) binaries.
+    for frozen (PyInstaller) binaries with auto_update enabled.
     """
     if not getattr(sys, "frozen", False):
+        return
+    if auto_update is False:
         return
     try:
         binary_path = get_self_binary_path()

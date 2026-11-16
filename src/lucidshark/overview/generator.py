@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional
 
+from lucidshark.config.models import DEFAULT_OVERVIEW_DOMAINS
 from lucidshark.overview.models import (
     DomainStatus,
     IssuesBySeverity,
@@ -41,18 +42,7 @@ class OverviewConfig:
 
     def __post_init__(self):
         if self.domains is None:
-            self.domains = [
-                "linting",
-                "type_checking",
-                "formatting",
-                "testing",
-                "sast",
-                "sca",
-                "iac",
-                "container",
-                "coverage",
-                "duplication",
-            ]
+            self.domains = list(DEFAULT_OVERVIEW_DOMAINS)
 
 
 class OverviewGenerator:

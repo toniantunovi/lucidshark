@@ -141,6 +141,13 @@ class OverviewCommand(Command):
             return EXIT_SUCCESS
 
         if update:
+            if overview_config.get("enabled") is False:
+                print(
+                    "Overview is disabled (overview.enabled: false in "
+                    "lucidshark.yml). Nothing was written."
+                )
+                return EXIT_SUCCESS
+
             # Write markdown file
             output_path = project_root / overview_config.get("file", "QUALITY.md")
             output_path.write_text(markdown, encoding="utf-8")

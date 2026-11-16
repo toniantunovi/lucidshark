@@ -248,6 +248,25 @@ class TestScanCommandExecute:
 
     @patch.object(ScanCommand, "_run_scan")
     @patch("lucidshark.cli.commands.scan.get_reporter_plugin")
+    def test_execute_fail_on_keeps_coverage_rule(
+        self, mock_get_reporter, mock_run_scan, tmp_path: Path
+    ) -> None:
+        """--fail-on is a severity level; a coverage miss must still fail."""
+        result = ScanResult(issues=[])
+        result.coverage_summary = CoverageSummary(
+            coverage_percentage=40.0, threshold=80.0, passed=False
+        )
+        mock_run_scan.return_value = result
+        mock_get_reporter.return_value = MagicMock()
+
+        cmd = ScanCommand(version="1.0.0")
+        config = _make_config(fail_on=FailOnConfig(coverage="below_threshold"))
+        args = _make_args(tmp_path, fail_on="critical")
+
+        assert cmd.execute(args, config) == EXIT_ISSUES_FOUND
+
+    @patch.object(ScanCommand, "_run_scan")
+    @patch("lucidshark.cli.commands.scan.get_reporter_plugin")
     @patch.object(ScanCommand, "_check_domain_thresholds", return_value=True)
     def test_execute_domain_thresholds_fail(
         self, mock_check, mock_get_reporter, mock_run_scan, tmp_path: Path

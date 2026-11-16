@@ -131,6 +131,10 @@ def detect_languages(project_root: Path) -> list[LanguageInfo]:
 
     for file_path in _walk_files(project_root):
         ext = file_path.suffix.lower()
+        # Gradle build scripts are written in Kotlin but say nothing about
+        # the language of the project they build.
+        if file_path.name.lower().endswith(".gradle.kts"):
+            continue
         if ext in EXTENSION_MAP:
             lang = EXTENSION_MAP[ext]
             extension_counts[lang] = extension_counts.get(lang, 0) + 1
@@ -149,6 +153,11 @@ def detect_languages(project_root: Path) -> list[LanguageInfo]:
             if list(project_root.glob(pattern)):
                 marker_languages.add(lang)
                 break
+
+    # pom.xml and build.gradle are shared by every JVM language. In a project
+    # with Kotlin sources and no Java sources they mean Kotlin, not Java.
+    if extension_counts.get("kotlin") and not extension_counts.get("java"):
+        marker_languages.discard("java")
 
     # Combine results
     all_languages = set(extension_counts.keys()) | marker_languages
