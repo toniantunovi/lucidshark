@@ -182,7 +182,7 @@ Run the quality/security pipeline. By default, scans only changed files (uncommi
 
 | Option | Description |
 |--------|-------------|
-| `--fail-on {critical,high,medium,low}` | Exit 1 if any issue in any domain is at or above this severity. Overrides the `fail_on` settings in `lucidshark.yml` |
+| `--fail-on {critical,high,medium,low}` | Exit 1 if any issue in any domain is at or above this severity. Replaces the severity rules under `fail_on` in `lucidshark.yml`; the coverage and duplication percentage rules (`below_threshold`, `above_threshold`, `N%`) still apply |
 | `--coverage-threshold PERCENT` | Coverage threshold (default: 80) |
 | `--coverage-threshold-scope {changed,project,both}` | With `--base-branch`: apply coverage threshold to changed files (default), project, or both |
 | `--linting-threshold-scope {changed,project,both}` | With `--base-branch`: apply linting threshold to changed files (default), project, or both |
@@ -304,7 +304,7 @@ Run LucidShark as a server for AI tool integration.
 | `--debounce MS` | File watcher debounce delay (default: 1000) |
 | `path` | Project directory to serve (default: `.`) |
 
-With a binary install, `serve --mcp` checks for a LucidShark update, applies it and restarts before serving. Other commands check for and download a new release in the background, and it is applied the next time LucidShark starts. Set `settings.auto_update: false` in `lucidshark.yml` to turn update checks off.
+With a binary install, `serve --mcp` checks for a LucidShark update, applies it and restarts before serving. Other commands check for and download a new release in the background, and it is applied the next time LucidShark starts. Set `settings.auto_update: false` in `lucidshark.yml` to turn update checks off; an update that was already downloaded is then not applied either.
 
 **Examples:**
 ```bash
@@ -591,7 +591,7 @@ Run quality checks on the codebase or specific files. Supports partial scanning 
 | `type_checking_threshold_scope` | string | `"changed"` | Accepted for parity with the CLI but currently has no effect over MCP |
 | `duplication_threshold_scope` | string | `"both"` | With `base_branch`: apply duplication threshold to `changed`, `project`, or `both` |
 
-The MCP scope defaults are fixed: they do not read `threshold_scope` from `lucidshark.yml`. The MCP `scan` tool also does not apply `fail_on`; it reports issues and per-domain status, and the agent decides what to fix.
+When a scope parameter is not given, coverage and duplication use `threshold_scope` from `lucidshark.yml`, then the defaults above. The MCP `scan` tool also does not apply `fail_on`; it reports issues and per-domain status, and the agent decides what to fix.
 
 **Valid domains:** `linting`, `type_checking`, `formatting`, `sast`, `sca`, `iac`, `container`, `testing`, `coverage`, `duplication`, `all`
 
@@ -1760,7 +1760,7 @@ exclude:
 | `testing.pre_command` | string | (none) | Shell command to run before tests start (e.g., start services) |
 | `testing.command` | string | (none) | Custom shell command to run tests (overrides plugin-based runner) |
 | `testing.post_command` | string | (none) | Shell command to run after tests complete (cleanup, reports, etc.) |
-| `testing.exclude` | array | [] | Accepted, but test runners do not read exclude patterns; use the runner's own config to skip tests |
+| `testing.exclude` | array | [] | Accepted, but test runners do not read exclude patterns; `validate` warns about it. Use the runner's own config to skip tests |
 | `testing.tools` | array | (auto) | Test frameworks |
 | `coverage.enabled` | bool | false | Enable coverage analysis |
 | `coverage.pre_command` | string | (none) | Shell command to run before coverage analysis starts |
@@ -1770,7 +1770,7 @@ exclude:
 | `coverage.tools` | array | **required** | Coverage tools (coverage_py, istanbul, vitest_coverage, jacoco, tarpaulin, go_cover, dotnet_coverage, gcov, lcov, scoverage, swift_coverage, simplecov, phpunit_coverage) |
 | `coverage.threshold` | int | 80 | Coverage percentage threshold |
 | `coverage.threshold_scope` | string | "changed" | With `--base-branch`: apply threshold to `changed`, `project`, or `both` |
-| `coverage.extra_args` | array | [] | Accepted but currently not used by any coverage plugin. To pass build arguments, use `testing.command` |
+| `coverage.extra_args` | array | [] | Accepted but not used by any coverage plugin; `validate` warns about it. To pass build arguments, use `testing.command` |
 | `duplication.enabled` | bool | false | Enable duplication detection |
 | `duplication.threshold` | float | 10.0 | Max allowed duplication percentage |
 | `duplication.threshold_scope` | string | "both" | With `--base-branch`: apply threshold to `changed`, `project`, or `both`. The default `both` prevents project-wide duplication from creeping up over time. See [Incremental Scanning](incremental-scanning.md#duplication) for details. |
@@ -2018,11 +2018,11 @@ Configuration for quality overview generation (`QUALITY.md`):
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `enabled` | bool | true | Accepted but currently not checked: `overview --update` always writes |
+| `enabled` | bool | true | Set to `false` to make `overview --update` write nothing |
 | `file` | string | "QUALITY.md" | Output file path (relative to project root) |
 | `history_file` | string | ".lucidshark/quality-history.json" | History file path |
 | `history_limit` | int | 90 | Maximum snapshots to retain in history |
-| `domains` | array | (see below) | Domains shown in the status table. Without an `overview` section, all ten domains are shown. If an `overview` section omits `domains`, formatting and testing are left out. An empty list hides every row |
+| `domains` | array | (see below) | Domains shown in the status table. All ten domains are shown by default. An empty list hides every row |
 | `top_files` | int | 5 | Number of top files by issue count to display (0 to disable) |
 | `health_score` | bool | true | Show health score section with visual bar |
 | `domain_table` | bool | true | Show domain status table with trends |

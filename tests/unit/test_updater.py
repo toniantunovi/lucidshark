@@ -949,6 +949,16 @@ class TestMaybeApplyPendingAndReexec:
                     maybe_apply_pending_and_reexec("0.7.0")
         mock.assert_not_called()
 
+    def test_skips_when_auto_update_disabled(self, tmp_path: Path) -> None:
+        """A staged update is not applied once auto_update is switched off."""
+        binary = tmp_path / "lucidshark"
+        binary.write_bytes(b"\x00")
+        with patch.object(sys, "frozen", True, create=True):
+            with patch("lucidshark.updater.get_self_binary_path", return_value=binary):
+                with patch("lucidshark.updater.apply_pending_update") as mock:
+                    maybe_apply_pending_and_reexec("0.7.0", auto_update=False)
+        mock.assert_not_called()
+
     def test_reexecs_when_update_applied(self, tmp_path: Path) -> None:
         binary = tmp_path / "lucidshark"
         binary.write_bytes(b"\x00")

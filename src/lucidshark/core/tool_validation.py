@@ -35,6 +35,10 @@ AUTO_DOWNLOADABLE_TOOLS = frozenset(
         "pmd",
         "checkstyle",
         "spotbugs",
+        "gosec",
+        "ktlint",
+        "ktlint_format",
+        "detekt",
     }
 )
 

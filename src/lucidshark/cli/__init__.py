@@ -13,7 +13,7 @@ from typing import Iterable, Optional
 if hasattr(signal, "SIGPIPE"):
     signal.signal(signal.SIGPIPE, signal.SIG_DFL)
 
-from lucidshark.cli.runner import CLIRunner, get_version
+from lucidshark.cli.runner import CLIRunner, auto_update_enabled, get_version
 from lucidshark.cli.arguments import build_parser
 from lucidshark.cli.exit_codes import (
     EXIT_SUCCESS,
@@ -47,7 +47,8 @@ def main(argv: Optional[Iterable[str]] = None) -> int:
     from lucidshark import __version__
     from lucidshark.updater import maybe_apply_pending_and_reexec
 
-    maybe_apply_pending_and_reexec(__version__)
+    # An update staged before `auto_update: false` was set must not be applied.
+    maybe_apply_pending_and_reexec(__version__, auto_update=auto_update_enabled())
 
     runner = CLIRunner()
     return runner.run(argv)

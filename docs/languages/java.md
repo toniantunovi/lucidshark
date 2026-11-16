@@ -9,7 +9,7 @@ Java has full tool coverage in LucidShark across all six quality domains, with s
 | Method | Indicators |
 |--------|-----------|
 | **File extensions** | `.java` |
-| **Marker files** | `pom.xml`, `build.gradle`, `build.gradle.kts` |
+| **Marker files** | `pom.xml`, `build.gradle`, `build.gradle.kts` (ignored when the project has Kotlin sources and no `.java` files) |
 | **Version detection** | `maven.compiler.source` / `java.version` from `pom.xml`, `sourceCompatibility` from `build.gradle` |
 
 ## Tools by Domain

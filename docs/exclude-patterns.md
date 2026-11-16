@@ -152,7 +152,7 @@ pipeline:
 
 **Caveats** -- exclude patterns (global and per-domain) only take effect where a tool or LucidShark actually applies them (see the table above):
 
-- **Testing:** test runners don't read exclude patterns. They use their own discovery (e.g. pytest `testpaths`), so `pipeline.testing.exclude` skips nothing. Exclude tests in the runner's own config instead.
+- **Testing:** test runners don't read exclude patterns. They use their own discovery (e.g. pytest `testpaths`), so `pipeline.testing.exclude` skips nothing, and `lucidshark validate` warns when it is set. Exclude tests in the runner's own config instead.
 - **Coverage:** only the JaCoCo and Scoverage plugins filter their reports by exclude patterns. For other coverage tools (coverage.py, Istanbul, go cover, ...), configure omissions in the tool's own config.
 
 ### How Domain Excludes Combine

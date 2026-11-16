@@ -42,6 +42,25 @@ def get_version() -> str:
     return __version__
 
 
+def auto_update_enabled() -> bool:
+    """Return False if lucidshark.yml sets ``settings.auto_update: false``.
+
+    Does a lightweight read of lucidshark.yml without a full config load.
+    A missing or unparseable config leaves auto-update on.
+    """
+    try:
+        project_config_path = find_project_config(Path.cwd())
+        if not project_config_path:
+            return True
+        raw = load_yaml_file(project_config_path)
+        settings = raw.get("settings", {})
+        if isinstance(settings, dict) and settings.get("auto_update") is False:
+            return False
+    except Exception:
+        pass  # Unreadable config -- don't block updates
+    return True
+
+
 class CLIRunner:
     """Orchestrates CLI execution with subcommand dispatch."""
 
@@ -58,25 +77,10 @@ class CLIRunner:
         self._init_cmd = None
 
     def _maybe_start_update_check(self) -> None:
-        """Start a background update check if auto_update is enabled.
-
-        Does a lightweight read of lucidshark.yml to check the auto_update
-        setting without performing a full config load.
-        """
+        """Start a background update check if auto_update is enabled."""
         from lucidshark.updater import maybe_start_background_check
 
-        auto_update = True
-        project_config_path = find_project_config(Path.cwd())
-        if project_config_path:
-            try:
-                raw = load_yaml_file(project_config_path)
-                settings = raw.get("settings", {})
-                if isinstance(settings, dict) and settings.get("auto_update") is False:
-                    auto_update = False
-            except Exception:
-                pass  # Config parse error — don't block update check
-
-        maybe_start_background_check(self._version, auto_update=auto_update)
+        maybe_start_background_check(self._version, auto_update=auto_update_enabled())
 
     @property
     def init_cmd(self):
