@@ -1,8 +1,8 @@
 # Repository Quality Overview
 
-> **Branch:** main | **Updated:** 2026-11-07 | **Commit:** `d7a7353`
+> **Branch:** main | **Updated:** 2026-11-16 | **Commit:** `fab1f4f`
 
-## Health Score: 9.1 / 10  █████████░
+## Health Score: 9.1 / 10  █████████░ ↑ +0.0
 
 | Domain | Status | Issues | Trend |
 |--------|--------|--------|-------|
@@ -12,10 +12,6 @@
 | Testing | ✓ Pass | 0 | → |
 | SCA | ✓ Pass | 0 | → |
 | SAST | ✓ Pass | 0 | → |
-| Linting | ✓ Pass | 0 | → |
-| Type Checking | ✓ Pass | 0 | → |
-| Formatting | ✓ Pass | 0 | → |
-| Testing | ✓ Pass | 0 | → |
 | Coverage | ✓ Pass | 0 | → |
 | Duplication | ✓ Pass | 49 | → |
 
@@ -45,7 +41,7 @@
 
 ## Test Coverage
 
-**84.2%** ████████░░ ↑ +0.1%
+**85.3%** ████████░░ ↑ +1.1%
 
 ## Score Trend
 
